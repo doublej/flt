@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: flights-api
+Version: 0.1.0
+Summary: FastAPI wrapper for fast-flights
+Requires-Python: >=3.11
+Requires-Dist: airportsdata>=20260208
+Requires-Dist: fast-flights @ file:../../fast-flights
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn[standard]>=0.30.0

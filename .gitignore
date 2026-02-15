@@ -1,0 +1,14 @@
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.local
+.env.*.local
+
+node_modules/
+.svelte-kit/
+build/
+
+api/.venv/
+api/__pycache__/
+api/routes/__pycache__/

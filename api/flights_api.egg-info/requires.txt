@@ -1,0 +1,4 @@
+airportsdata>=20260208
+fast-flights @ file:../../fast-flights
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0

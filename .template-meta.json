@@ -1,0 +1,13 @@
+{
+  "template": "typescript/sveltekit",
+  "rendered_at": "2026-02-14T14:59:52.735255+00:00",
+  "context": {
+    "project_name": "flights_app",
+    "project_slug": "flights-app",
+    "description": "A SvelteKit application",
+    "author": "Your Name",
+    "include_tracking": "n",
+    "mcp_servers": "none",
+    "mcp_scope": "project"
+  }
+}
