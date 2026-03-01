@@ -136,11 +136,12 @@ const maxPerSide = 3
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		font-size: 0.95rem;
-		background: var(--color-surface);
+		background: var(--color-surface-raised);
+		color: var(--color-text);
 	}
 	input:focus {
 		outline: none;
 		border-color: var(--color-primary);
-		box-shadow: 0 0 0 2px rgb(26 115 232 / 0.15);
+		box-shadow: 0 0 0 2px var(--color-amber-glow);
 	}
 </style>

@@ -75,31 +75,33 @@ function formatDate(dateStr: string) {
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    background: var(--color-bg);
+    background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 100px;
     font-size: 0.8rem;
     color: var(--color-text);
     white-space: nowrap;
     transition: background 0.15s, border-color 0.15s;
+    cursor: pointer;
   }
   .chip:hover {
     background: var(--color-primary);
     border-color: var(--color-primary);
-    color: #fff;
+    color: var(--color-bg);
   }
   .chip:hover .date,
   .chip:hover .trip-type {
-    color: rgb(255 255 255 / 0.8);
+    color: rgb(12 14 20 / 0.7);
   }
   .chip:hover .remove {
-    color: rgb(255 255 255 / 0.7);
+    color: rgb(12 14 20 / 0.6);
   }
   .chip:hover .remove:hover {
-    color: #fff;
+    color: var(--color-bg);
   }
   .route {
-    font-weight: 600;
+    font-family: var(--font-mono);
+    font-weight: 400;
   }
   .date {
     color: var(--color-muted);

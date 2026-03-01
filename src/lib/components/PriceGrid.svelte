@@ -55,10 +55,10 @@ const priceRange = $derived.by(() => {
 
 function cellColor(price: number): string {
   const { min, max } = priceRange
-  if (min === max) return '#e6f4ea'
+  if (min === max) return '#1a3a2a'
   const t = (price - min) / (max - min)
-  if (t <= 0.5) return lerpColor('#e6f4ea', '#fef7e0', t * 2)
-  return lerpColor('#fef7e0', '#fce8e6', (t - 0.5) * 2)
+  if (t <= 0.5) return lerpColor('#1a3a2a', '#2a2a1a', t * 2)
+  return lerpColor('#2a2a1a', '#3a1a1a', (t - 0.5) * 2)
 }
 
 function lerpColor(a: string, b: string, t: number): string {
@@ -196,6 +196,7 @@ let hoveredDep: string | null = $state(null)
 		font-weight: 600;
 		min-height: 50px;
 		flex-direction: column;
+		color: var(--color-text);
 	}
 	button.data {
 		border: 2px solid transparent;
@@ -207,8 +208,8 @@ let hoveredDep: string | null = $state(null)
 	button.data:hover {
 		border-color: var(--color-primary);
 	}
-.empty {
-		background: var(--color-bg);
+	.empty {
+		background: var(--color-surface-raised);
 		color: var(--color-muted);
 	}
 	.dimmed {

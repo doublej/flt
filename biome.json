@@ -1,7 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.0/schema.json",
   "files": {
-    "ignore": [".svelte-kit/", "api/"]
+    "ignore": [".svelte-kit/", "api/", ".beads/", ".wrangler/"]
   },
   "organizeImports": {
     "enabled": true

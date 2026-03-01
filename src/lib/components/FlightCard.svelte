@@ -123,6 +123,7 @@ function fmtDuration(minutes: number): string {
   }
   .card.best {
     border-color: var(--color-primary);
+    box-shadow: 0 0 12px var(--color-amber-glow);
   }
 
   /* Badge */
@@ -131,7 +132,7 @@ function fmtDuration(minutes: number): string {
     top: -8px;
     right: 12px;
     background: var(--color-primary);
-    color: #fff;
+    color: var(--color-bg);
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -176,13 +177,15 @@ function fmtDuration(minutes: number): string {
     margin-bottom: 8px;
   }
   .time {
+    font-family: var(--font-mono);
     font-size: 1.3rem;
-    font-weight: 700;
+    font-weight: 400;
     letter-spacing: -0.02em;
     white-space: nowrap;
     padding-top: 2px;
   }
   .ahead {
+    font-family: var(--font-body);
     font-size: 0.65rem;
     font-weight: 600;
     color: var(--color-error);
@@ -213,9 +216,11 @@ function fmtDuration(minutes: number): string {
 
   /* Price + chevron */
   .price {
-    font-weight: 700;
+    font-family: var(--font-mono);
+    font-weight: 400;
     font-size: 1.2rem;
     color: var(--color-primary);
+    text-shadow: 0 0 10px var(--color-amber-glow);
   }
   .chevron {
     font-size: 0.7rem;
@@ -230,7 +235,14 @@ function fmtDuration(minutes: number): string {
   .itinerary {
     margin-top: 14px;
     padding-top: 14px;
-    border-top: 1px solid var(--color-border);
+    border-top: none;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--color-muted) 0,
+      var(--color-muted) 6px,
+      transparent 6px,
+      transparent 12px
+    ) top / 100% 1px no-repeat;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -252,6 +264,7 @@ function fmtDuration(minutes: number): string {
     color: var(--color-text);
   }
   .leg-detail {
+    font-family: var(--font-mono);
     font-size: 0.78rem;
     color: var(--color-muted);
   }
@@ -272,8 +285,9 @@ function fmtDuration(minutes: number): string {
     text-align: right;
   }
   .leg-time {
+    font-family: var(--font-mono);
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 400;
     white-space: nowrap;
   }
   .leg-place {
@@ -300,9 +314,10 @@ function fmtDuration(minutes: number): string {
   .conn-line {
     flex: 1;
     height: 1px;
-    border-top: 1px dashed var(--color-border);
+    border-top: 1px dashed var(--color-track);
   }
   .conn-duration {
+    font-family: var(--font-mono);
     font-size: 0.72rem;
     color: var(--color-muted);
     white-space: nowrap;
@@ -317,7 +332,7 @@ function fmtDuration(minutes: number): string {
     margin: 2px 0;
     padding: 6px 10px;
     background: var(--color-bg);
-    border-left: 2px solid var(--color-border);
+    border-left: 2px solid var(--color-primary);
     border-radius: 0 4px 4px 0;
   }
   .layover-icon {

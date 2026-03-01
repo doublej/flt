@@ -151,13 +151,15 @@ export function fill(code: string, name: string) {
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
     font-size: 0.95rem;
+    background: var(--color-surface-raised);
+    color: var(--color-text);
     transition: border-color 0.15s;
     box-sizing: border-box;
   }
   input:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px rgb(26 115 232 / 0.15);
+    box-shadow: 0 0 0 2px var(--color-amber-glow);
   }
   .searching-indicator {
     position: absolute;
@@ -180,7 +182,7 @@ export function fill(code: string, name: string) {
     top: 100%;
     left: 0;
     right: 0;
-    background: var(--color-surface);
+    background: var(--color-surface-raised);
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
     box-shadow: var(--shadow-lg);
@@ -200,13 +202,16 @@ export function fill(code: string, name: string) {
     background: none;
     text-align: left;
     font-size: 0.9rem;
+    color: var(--color-text);
   }
   .dropdown button:hover,
   .dropdown button.highlighted {
-    background: var(--color-bg);
+    background: var(--color-surface);
   }
   .code {
-    font-weight: 700;
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 1rem;
     color: var(--color-primary);
     min-width: 36px;
   }

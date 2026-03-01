@@ -188,19 +188,22 @@ function saveAsMarkdown() {
     border-radius: var(--radius);
     font-size: 0.9rem;
     font-weight: 500;
-    margin-bottom: 1rem;
+    margin-bottom: 1rem;    border: 1px solid;
   }
   .price-banner.low {
-    background: #e6f4ea;
-    color: #137333;
+    background: rgb(63 185 80 / 0.1);
+    border-color: rgb(63 185 80 / 0.3);
+    color: var(--color-success);
   }
   .price-banner.typical {
-    background: #fef7e0;
-    color: #b45309;
+    background: rgb(240 160 48 / 0.1);
+    border-color: rgb(240 160 48 / 0.3);
+    color: var(--color-primary);
   }
   .price-banner.high {
-    background: #fce8e6;
-    color: #c5221f;
+    background: rgb(248 81 73 / 0.1);
+    border-color: rgb(248 81 73 / 0.3);
+    color: var(--color-error);
   }
   .empty {
     text-align: center;
@@ -255,7 +258,7 @@ function saveAsMarkdown() {
   .chip.active {
     background: var(--color-primary);
     border-color: var(--color-primary);
-    color: #fff;
+    color: var(--color-bg);
     font-weight: 500;
   }
 
@@ -293,7 +296,7 @@ function saveAsMarkdown() {
     position: relative;
   }
   .ai-menu[open] .ai-btn {
-    background: var(--color-surface);
+    background: var(--color-surface-raised);
     border-color: var(--color-primary);
     color: var(--color-primary);
   }
@@ -318,10 +321,10 @@ function saveAsMarkdown() {
     position: absolute;
     right: 0;
     top: calc(100% + 4px);
-    background: var(--color-surface);
+    background: var(--color-surface-raised);
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
     min-width: 170px;
@@ -339,7 +342,7 @@ function saveAsMarkdown() {
     white-space: nowrap;
   }
   .ai-dropdown button:hover {
-    background: var(--color-bg);
+    background: var(--color-surface);
     color: var(--color-primary);
   }
 
@@ -371,7 +374,7 @@ function saveAsMarkdown() {
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
     font-size: 0.85rem;
-    background: var(--color-surface);
+    background: var(--color-surface-raised);
     font-weight: 500;
     color: var(--color-text);
     cursor: pointer;

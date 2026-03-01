@@ -93,7 +93,7 @@ function toggle(b: Bucket) {
   .chip.active {
     background: var(--color-primary);
     border-color: var(--color-primary);
-    color: #fff;
+    color: var(--color-bg);
     font-weight: 500;
   }
 </style>

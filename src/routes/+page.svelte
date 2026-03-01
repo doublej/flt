@@ -138,8 +138,13 @@ async function handleSearchWithReset(params: SearchParams) {
     margin-bottom: 1.5rem;
   }
   .header h1 {
+    font-family: var(--font-mono);
     font-size: 1.8rem;
-    font-weight: 700;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-primary);
+    text-shadow: 0 0 20px var(--color-amber-glow);
   }
   .status {
     display: flex;
@@ -163,8 +168,9 @@ async function handleSearchWithReset(params: SearchParams) {
   .error {
     margin-top: 1.5rem;
     padding: 12px 16px;
-    background: #fce8e6;
-    color: #c5221f;
+    background: rgb(248 81 73 / 0.1);
+    color: var(--color-error);
+    border: 1px solid rgb(248 81 73 / 0.3);
     border-radius: var(--radius);
     text-align: center;
     font-size: 0.9rem;

@@ -63,7 +63,7 @@ function fmtDuration(minutes: number): string {
   .track-seg {
     flex: 1;
     height: 1px;
-    background: var(--color-border);
+    background: var(--color-track);
   }
   .track-lay {
     display: flex;
@@ -73,7 +73,7 @@ function fmtDuration(minutes: number): string {
   .lay-half {
     flex: 1;
     height: 1px;
-    background: var(--color-border);
+    background: var(--color-track);
   }
   .stop-dot {
     width: 6px;
@@ -91,6 +91,7 @@ function fmtDuration(minutes: number): string {
   .label-seg {
     flex: 1;
     text-align: center;
+    font-family: var(--font-mono);
     font-size: 0.64rem;
     color: var(--color-muted);
     white-space: nowrap;

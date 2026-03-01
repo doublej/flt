@@ -232,12 +232,12 @@ const today = new Date().toISOString().slice(0, 10)
 <style>
   .search-form {
     background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     padding: 2rem;
     display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
+    flex-direction: column;    gap: 1.25rem;
   }
   .trip-toggle {
     display: flex;
@@ -260,9 +260,9 @@ const today = new Date().toISOString().slice(0, 10)
     border-radius: 100px;
   }
   .toggle-btn.active {
-    background: var(--color-surface);
-    color: var(--color-primary);
-    box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+    background: var(--color-primary);
+    color: var(--color-bg);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
   }
   .row {
     display: grid;
@@ -295,12 +295,13 @@ const today = new Date().toISOString().slice(0, 10)
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
     font-size: 0.95rem;
-    background: var(--color-surface);
+    background: var(--color-surface-raised);
+    color: var(--color-text);
   }
   select:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px rgb(26 115 232 / 0.15);
+    box-shadow: 0 0 0 2px var(--color-amber-glow);
   }
   .swap-btn {
     align-self: end;
@@ -347,7 +348,7 @@ const today = new Date().toISOString().slice(0, 10)
   }
   .cached-btn:hover:not(:disabled) {
     background: var(--color-primary);
-    color: #fff;
+    color: var(--color-bg);
   }
   .cached-btn:disabled {
     opacity: 0.5;
@@ -357,18 +358,18 @@ const today = new Date().toISOString().slice(0, 10)
     flex: 1;
     padding: 12px;
     background: var(--color-primary);
-    color: #fff;
+    color: var(--color-bg);
     border: none;
     border-radius: var(--radius);
     font-size: 1rem;
     font-weight: 600;
     transition: background 0.15s, box-shadow 0.15s;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgb(26 115 232 / 0.3);
+    box-shadow: 0 2px 8px var(--color-amber-glow);
   }
   .submit:hover:not(:disabled) {
     background: var(--color-primary-hover);
-    box-shadow: 0 3px 12px rgb(26 115 232 / 0.4);
+    box-shadow: 0 3px 12px var(--color-amber-glow);
   }
   .submit:disabled {
     opacity: 0.45;
@@ -378,7 +379,7 @@ const today = new Date().toISOString().slice(0, 10)
   .swap-btn:hover {
     border-color: var(--color-primary);
     color: var(--color-primary);
-    background: var(--color-primary-bg);
+    background: rgb(240 160 48 / 0.06);
   }
   .clear-btn:hover {
     border-color: var(--color-primary);
