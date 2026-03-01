@@ -12,3 +12,5 @@ build/
 api/.venv/
 api/__pycache__/
 api/routes/__pycache__/
+.beads/dolt/
+.beads/dolt-*
