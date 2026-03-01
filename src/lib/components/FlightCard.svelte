@@ -11,6 +11,12 @@ const stopsLabel = $derived(
   flight.stops === 0 ? 'Nonstop' : `${flight.stops} stop${flight.stops > 1 ? 's' : ''}`,
 )
 const hasLegs = $derived(flight.legs.length > 0)
+const airlineCodes = $derived([...new Set(flight.legs.map((l) => l.airline))])
+const logoUrl = (code: string) => `https://www.gstatic.com/flights/airline_logos/70px/${code}.png`
+
+function hideBrokenImg(e: Event) {
+  ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+}
 
 function fmtDuration(minutes: number): string {
   const h = Math.floor(minutes / 60)
@@ -35,7 +41,10 @@ function fmtDuration(minutes: number): string {
 
   <div class="summary">
     <div class="summary-main">
-      <div class="airline">{flight.name}</div>
+      <div class="airline">
+        {#each airlineCodes as code}<img class="airline-logo" src={logoUrl(code)} alt="" onerror={hideBrokenImg} />{/each}
+        {flight.name}
+      </div>
       <div class="times-row">
         <span class="time">{flight.departure}</span>
         <FlightPath legs={flight.legs} layovers={flight.layovers} stops={flight.stops} />
@@ -74,6 +83,7 @@ function fmtDuration(minutes: number): string {
       {#each flight.legs as leg, i}
         <div class="leg">
           <div class="leg-header">
+            <img class="leg-logo" src={logoUrl(leg.airline)} alt="" onerror={hideBrokenImg} />
             <span class="leg-airline">{leg.airline_name}</span>
             <span class="leg-detail">{leg.airline} {leg.flight_number}{leg.aircraft ? ` · ${leg.aircraft}` : ''}</span>
           </div>
@@ -159,14 +169,29 @@ function fmtDuration(minutes: number): string {
     flex-shrink: 0;
   }
 
-  /* Airline name */
+  /* Airline name + logo */
   .airline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--color-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-bottom: 6px;
+  }
+  .airline-logo {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    border-radius: 2px;
+  }
+  .leg-logo {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    border-radius: 2px;
   }
 
   /* Times row with path indicator */
