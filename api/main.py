@@ -8,7 +8,7 @@ app = FastAPI(title="Flights API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:3847"],
     allow_methods=["GET"],
     allow_headers=["*"],
 )

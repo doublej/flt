@@ -25,15 +25,23 @@ Use `just` as the task runner:
 ```
 src/
 ├── routes/
-│   └── +page.svelte    # home page
-├── lib/                # shared modules
-└── app.html            # HTML shell
-svelte.config.js        # SvelteKit config
-vite.config.ts          # Vite config
-package.json            # project config, dependencies
-tsconfig.json           # TypeScript config
-biome.json              # linter/formatter config
-Justfile                # task runner
+│   ├── +layout.svelte    # root layout
+│   └── +page.svelte      # home page
+├── lib/
+│   ├── components/       # UI components
+│   ├── utils/            # utility modules
+│   ├── api.ts            # API client
+│   ├── types.ts          # shared types
+│   └── recent-searches.ts
+├── app.css               # global styles
+└── app.html              # HTML shell
+api/                      # FastAPI backend (Python, uv)
+svelte.config.js          # SvelteKit config
+vite.config.ts            # Vite config
+package.json              # project config, dependencies
+tsconfig.json             # TypeScript config
+biome.json                # linter/formatter config
+Justfile                  # task runner
 ```
 
 ## Conventions

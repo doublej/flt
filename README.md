@@ -1,34 +1,29 @@
-# flights_v3
+# flights-app
 
-A SvelteKit application
+SvelteKit + FastAPI flight search UI, backed by [`fast-flights`](../fast-flights/).
 
 ## Requirements
 
 - [Bun](https://bun.sh/)
+- [uv](https://docs.astral.sh/uv/) (for the Python API)
+- [just](https://just.systems/) (task runner)
 
 ## Getting Started
 
 ```bash
-bun install
-bun run dev
+just install        # install UI dependencies
+just install-api    # install API dependencies
+just tmux-dev       # start API + UI in tmux
 ```
 
 ## Common Commands
 
 | Command | Description |
 |---------|-------------|
-| `bun install` | Install dependencies |
-| `bun run dev` | Start Vite dev server |
-| `bun run build` | Build for production |
-| `bun run preview` | Preview production build |
-| `bun run check` | Type-check with svelte-check |
-| `bun run test` | Run tests |
-| `bun run lint` | Lint with Biome |
+| `just dev` | Start API + UI dev servers |
+| `just build` | Build for production |
+| `just check` | Run all checks (loc-check + lint + typecheck + test) |
+| `just test` | Run tests |
+| `just lint-fix` | Auto-fix lint issues |
 
-## Project Structure
-
-```
-src/
-  app.html             # HTML template
-  routes/+page.svelte  # Home page
-```
+Run `just` for the full command list.

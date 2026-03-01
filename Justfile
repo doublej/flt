@@ -18,9 +18,18 @@ _session := "flights-app"
 
 [group('develop')]
 dev:
-    cd api && uv run uvicorn main:app --reload --port 8000 & \
+    cd api && uv run uvicorn main:app --reload --port 7291 & \
     sleep 1 && bun run dev & \
     trap 'kill 0' EXIT; wait
+
+# CF Workers local dev (requires build first): simulates production environment
+[group('develop')]
+wrangler-dev: build
+    bunx wrangler pages dev --binding PASSWORD=test --binding SESSION_SECRET=$(openssl rand -hex 32)
+
+[group('develop')]
+dev-api:
+    cd api && uv run uvicorn main:app --reload --port 7291
 
 # Launch app in tmux with API (left) and UI (right) panes, opens iTerm
 [group('develop')]
@@ -30,7 +39,7 @@ tmux-dev:
         osascript -e 'tell application "iTerm" to create window with default profile command "/opt/homebrew/bin/tmux attach -t {{_session}}"'; \
     else \
         tmux new-session -d -s {{_session}} -c {{justfile_directory()}}; \
-        tmux send-keys -t {{_session}} 'cd api && uv run uvicorn main:app --reload --port 8000' Enter; \
+        tmux send-keys -t {{_session}} 'cd api && uv run uvicorn main:app --reload --port 7291' Enter; \
         tmux split-window -h -t {{_session}} -c {{justfile_directory()}}; \
         tmux send-keys -t {{_session}} 'bun run dev' Enter; \
         tmux select-pane -t {{_session}}:0.0; \

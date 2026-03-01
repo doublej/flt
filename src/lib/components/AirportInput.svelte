@@ -13,6 +13,7 @@ let query = $state('')
 let suggestions = $state<Airport[]>([])
 let open = $state(false)
 let highlighted = $state(-1)
+let searching = $state(false)
 let timer: ReturnType<typeof setTimeout> | null = null
 const listboxId = $derived(`airport-listbox-${label.toLowerCase().replace(/\s+/g, '-')}`)
 
@@ -25,6 +26,7 @@ function handleInput(e: Event) {
   query = input.value
   value = ''
   highlighted = -1
+  if (query.length >= 2) searching = true
   debounceSearch(query)
 }
 
@@ -32,12 +34,14 @@ function debounceSearch(q: string) {
   if (timer) clearTimeout(timer)
   if (q.length < 2) {
     suggestions = []
+    searching = false
     return
   }
   timer = setTimeout(async () => {
     suggestions = await searchAirports(q)
     open = suggestions.length > 0
     highlighted = -1
+    searching = false
   }, 300)
 }
 
@@ -84,22 +88,27 @@ export function fill(code: string, name: string) {
   <!-- svelte-ignore a11y_label_has_associated_control -->
   <label class="label">
     {label}
-    <input
-      type="text"
-      {placeholder}
-      value={query}
-      oninput={handleInput}
-      onkeydown={handleKeydown}
-      onfocus={() => {
-        if (suggestions.length > 0) open = true
-      }}
-      onblur={handleBlur}
-      autocomplete="off"
-      role="combobox"
-      aria-expanded={open}
-      aria-controls={listboxId}
-      aria-activedescendant={highlighted >= 0 ? `${listboxId}-opt-${highlighted}` : undefined}
-    />
+    <div class="input-wrap">
+      <input
+        type="text"
+        {placeholder}
+        value={query}
+        oninput={handleInput}
+        onkeydown={handleKeydown}
+        onfocus={() => {
+          if (suggestions.length > 0) open = true
+        }}
+        onblur={handleBlur}
+        autocomplete="off"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-activedescendant={highlighted >= 0 ? `${listboxId}-opt-${highlighted}` : undefined}
+      />
+      {#if searching}
+        <span class="searching-indicator" aria-hidden="true"></span>
+      {/if}
+    </div>
   </label>
   {#if open}
     <ul id={listboxId} class="dropdown" role="listbox">
@@ -133,6 +142,9 @@ export function fill(code: string, name: string) {
     color: var(--color-muted);
     margin-bottom: 4px;
   }
+  .input-wrap {
+    position: relative;
+  }
   input {
     width: 100%;
     padding: 10px 12px;
@@ -140,11 +152,28 @@ export function fill(code: string, name: string) {
     border-radius: var(--radius);
     font-size: 0.95rem;
     transition: border-color 0.15s;
+    box-sizing: border-box;
   }
   input:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 2px rgb(26 115 232 / 0.15);
+  }
+  .searching-indicator {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes spin {
+    to { transform: translateY(-50%) rotate(360deg); }
   }
   .dropdown {
     position: absolute;

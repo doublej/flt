@@ -21,7 +21,7 @@ function handleRemove(index: number, e: MouseEvent) {
 
 function formatDate(dateStr: string) {
   const d = new Date(`${dateStr}T00:00:00`)
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 </script>
 
@@ -53,7 +53,7 @@ function formatDate(dateStr: string) {
 <style>
   .recent {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     margin-top: 0.75rem;
   }
@@ -62,6 +62,7 @@ function formatDate(dateStr: string) {
     font-weight: 600;
     color: var(--color-muted);
     white-space: nowrap;
+    padding-top: 5px;
   }
   .chips {
     display: flex;
