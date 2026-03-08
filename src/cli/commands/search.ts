@@ -4,7 +4,17 @@ import { defineCommand } from 'citty'
 import { loadConfig, withDefaults } from '../config'
 import { applyFilters, sortOffers } from '../filter'
 import { formatError, formatOffers } from '../format'
-import { loadSession, routeTag, saveSession, throttle } from '../state'
+import {
+  createEmptySession,
+  describeSearchRequest,
+  loadCachedSearch,
+  loadSession,
+  rememberSearch,
+  saveCachedSearch,
+  saveSession,
+  setLatestSearch,
+  throttle,
+} from '../state'
 import type { Format, Offer, SortKey, View } from '../types'
 import { normalizeDate, parsePax, validateAirport } from '../validate'
 
@@ -67,44 +77,53 @@ export const searchCommand = defineCommand({
     }
 
     const pairs = buildDatePairs(query)
-    const prev = await loadSession()
-    const results: Array<{ flights: Omit<Offer, 'id'>[]; url: string; error?: string }> = []
+    const session = (await loadSession()) ?? createEmptySession()
+    const results: Array<{ offers: Offer[]; ref: string; url: string; error?: string }> = []
     for (const [d, r] of pairs) {
-      const tag = routeTag(query.from_airport, query.to_airport, d)
-      const cached = prev?.searches?.[tag]
-      if (cached && !args.refresh) {
-        results.push({ flights: cached.offers, url: cached.offers[0]?.url ?? '' })
-      } else {
-        await throttle()
-        const res = await searchSingle(d, r, query)
-        results.push({
-          flights: res.flights.map((f) => ({ ...f, url: res.url })),
-          url: res.url,
-          error: res.error,
-        })
+      const cached = args.refresh ? null : await loadCachedSearch(query, d, r)
+      if (cached) {
+        rememberSearch(session, cached)
+        results.push({ offers: cached.offers, ref: cached.ref, url: cached.offers[0]?.url ?? '' })
+        continue
       }
+
+      await throttle()
+      const res = await searchSingle(d, r, query)
+      if (!res.flights.length) {
+        results.push({ offers: [], ref: '', url: res.url, error: res.error })
+        continue
+      }
+
+      const entry = await saveCachedSearch(
+        query,
+        d,
+        r,
+        res.flights.map((f) => ({ ...f, url: res.url })),
+      )
+      rememberSearch(session, entry)
+      results.push({ offers: entry.offers, ref: entry.ref, url: res.url, error: res.error })
     }
 
-    const allFlights = results.flatMap((r) => r.flights)
+    const allFlights = results.flatMap((r) => r.offers)
 
     if (allFlights.length === 0) {
       const err = results.find((r) => r.error)?.error
       const hints: Record<string, string> = {
         http: 'Google returned an HTTP error (likely rate-limited). Try again in a few minutes.',
         no_script: 'Google served a consent/CAPTCHA page. Try again later or from a different IP.',
-        no_data: 'Page loaded but flight data was missing. Google may have changed the page structure.',
+        no_data:
+          'Page loaded but flight data was missing. Google may have changed the page structure.',
         no_flights: 'No flights found for this route/date. Try different dates or fewer stops.',
       }
-      const code = err === 'http' || err === 'no_script' ? 'BLOCKED' : (err ?? 'NO_RESULTS').toUpperCase()
-      console.log(formatError(code, hints[err ?? 'no_flights'] ?? hints.no_flights, results[0]?.url))
+      const code =
+        err === 'http' || err === 'no_script' ? 'BLOCKED' : (err ?? 'NO_RESULTS').toUpperCase()
+      console.log(
+        formatError(code, hints[err ?? 'no_flights'] ?? hints.no_flights, results[0]?.url),
+      )
       return
     }
 
-    // Save unfiltered results to cache (so different filter combos don't corrupt it)
-    const rawOffers: Offer[] = allFlights.map((f, i) => ({ ...f, id: `O${i + 1}` }))
-    const tag = routeTag(query.from_airport, query.to_airport, query.date)
-    const queryStr = `${query.from_airport} ${query.to_airport} ${query.date}`
-    const rawEntry = { offers: rawOffers, query: queryStr, timestamp: Date.now() }
+    const rawOffers: Offer[] = allFlights.map((offer, i) => ({ ...offer, id: `O${i + 1}` }))
 
     let offers = applyFilters(rawOffers, {
       depAfter: args['dep-after'],
@@ -123,12 +142,14 @@ export const searchCommand = defineCommand({
     offers = offers.map((o, i) => ({ ...o, id: `O${i + 1}` }))
     const truncated = totalAfterFilter > limit
 
-    // Cache stores unfiltered; current session stores filtered (for inspect)
-    const displayEntry = { offers, query: queryStr, timestamp: Date.now() }
-    await saveSession({
-      ...displayEntry,
-      searches: { ...prev?.searches, [tag]: rawEntry },
-    })
+    // Cache stores per-pair unfiltered results; latest session stores the current filtered view.
+    setLatestSearch(
+      session,
+      offers,
+      describeSearchRequest(query),
+      results.flatMap((result) => (result.ref ? [result.ref] : [])),
+    )
+    await saveSession(session)
 
     console.log(
       formatOffers(offers, args.fmt as Format, args.fields, args.view as View | undefined),

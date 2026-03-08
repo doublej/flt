@@ -156,7 +156,7 @@ export const itineraryCommand = defineCommand({
   args: {
     refs: {
       type: 'positional',
-      description: 'Offer refs: TAG:ID (e.g. IAO-MNL:O1 MNL-AMS:O3)',
+      description: 'Offer refs: REF:ID (e.g. IAO-MNL@20260324#A1B2C3:O1)',
       required: true,
     },
     title: { type: 'string', description: 'Itinerary title' },
@@ -175,7 +175,7 @@ export const itineraryCommand = defineCommand({
 
     const offers: Offer[] = []
     for (const ref of refs) {
-      const offer = resolveOffer(session, ref)
+      const offer = await resolveOffer(session, ref)
       if (!offer) {
         const available = listAvailableRefs(session)
         console.log(

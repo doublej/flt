@@ -33,10 +33,15 @@ If any command returns: {"err":"BLOCKED", ...}
 </on-blocked>
 
 <caching>
-- Each search is cached by route + date tag (e.g. \`IAO-MNL@0318\`).
-- Searching the same route on different dates creates separate cache entries — they do NOT overwrite each other.
-- Do not re-search the same route/date if results already exist; use \`flt inspect\` and \`flt itinerary\` instead.
-- \`flt inspect\`, \`flt itinerary\`, and \`flt airports\` read cached/local data and do not trigger Google scraping; safe to use freely.
+- Each concrete search is cached by its full query shape (exact dep date, exact return date, cabin, pax, stops, currency).
+- Fresh cache entries younger than 6 hours are reused automatically. Older entries are treated as stale and re-fetched.
+- \`--refresh\` bypasses cache even if an entry is still fresh.
+- Cross-search refs look like \`IAO-MNL@20260318#A1B2C3:O1\`.
+- Changing return date, cabin, pax, stops, or currency creates a distinct cache entry.
+- Plain IDs like \`O1\` only refer to the latest \`flt search\` result snapshot, not the whole cache.
+- After \`flt matrix\`, and for any cross-session or cross-search lookup, prefer \`REF:ID\` instead of plain \`O1\`.
+- Filtering/sorting a search changes the latest displayed snapshot, but cached raw results stay unfiltered per concrete query.
+- \`flt inspect\`, \`flt itinerary\`, \`flt takeout\`, and \`flt airports\` read cached/local data and do not trigger Google scraping; safe to use freely.
 </caching>
 </rate-limits>
 
@@ -66,7 +71,7 @@ Key options:
 <inspect>
 flt inspect <ID>
 Shortcut: flt O1
-Cross-search: flt inspect IAO-MNL@0318:O1
+Cross-search: flt inspect IAO-MNL@20260318#A1B2C3:O1
 Use \`--fmt table\` for key/value readability.
 </inspect>
 
@@ -78,8 +83,8 @@ Default output is table; use \`--fmt jsonl\` for parsing.
 </matrix>
 
 <itinerary>
-flt itinerary <TAG:ID> [TAG:ID...] [--title "..."] [--note "..."]
-Each search is tagged by route+date (e.g. IAO-MNL@0324). Reference offers as TAG:ID when combining legs.
+flt itinerary <REF:ID> [REF:ID...] [--title "..."] [--note "..."]
+Each search gets a unique ref (e.g. IAO-MNL@20260324#A1B2C3). Reference offers as REF:ID when combining legs.
 </itinerary>
 
 <airports>
@@ -95,7 +100,7 @@ Export all searches:
   flt takeout
 
 With recommended itineraries (compose from cached offers):
-  flt takeout --itin "Option A: Best value" IAO-MNL@0324:O1 MNL-AMS@0324:O1 --note "Same-day, 4h layover" --itin "Option B: Overnight" IAO-MNL@0324:O1 MNL-AMS@0325:O2 --note "Overnight in MNL"
+  flt takeout --itin "Option A: Best value" IAO-MNL@20260324#A1B2C3:O1 MNL-AMS@20260324#D4E5F6:O1 --note "Same-day, 4h layover" --itin "Option B: Overnight" IAO-MNL@20260324#A1B2C3:O1 MNL-AMS@20260325#F7A8B9:O2 --note "Overnight in MNL"
 
 Custom title:
   flt takeout --title "Siargao → Amsterdam March 2026"
@@ -125,11 +130,12 @@ The takeout file includes:
    - Keep request count low; prefer refining a single search over many new searches.
 
 4. Inspect details only for shortlisted IDs:
-   - Use \`flt O1\` / \`flt inspect O1\` to fetch URLs and full fields.
+   - Use \`flt O1\` / \`flt inspect O1\` only for the latest \`flt search\` snapshot.
+   - Use \`flt inspect REF:ID\` for anything from \`flt matrix\`, older searches, or a prior session.
 
 5. For multi-leg trips:
    - Search each leg separately (e.g., IAO→MNL then MNL→AMS).
-   - Compose 1–3 itinerary options with \`flt itinerary\` using TAG:ID refs (e.g. IAO-MNL@0324:O1).
+   - Compose 1–3 itinerary options with \`flt itinerary\` using REF:ID refs (e.g. IAO-MNL@20260324#A1B2C3:O1).
    - Minimum connection times: 2h domestic, 3h international (customs/immigration).
 
 6. End of session:
@@ -164,7 +170,7 @@ Token efficiency:
 - Use \`--fmt brief\` for quick human-readable pulls.
 - Use \`--fmt tsv\` when you need compact parsing.
 - Default \`--limit 100\` unless the user requests fewer.
-- Multiple searches coexist: each is tagged by route+date (e.g. \`IAO-MNL@0324\`), reference with \`TAG:ID\`.
+- Multiple searches coexist: each gets a unique ref (e.g. \`IAO-MNL@20260324#A1B2C3\`), reference with \`REF:ID\`.
 </response-format>
 </flt-agent-guide>`
 

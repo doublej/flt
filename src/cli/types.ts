@@ -5,19 +5,49 @@ export interface Offer extends Flight {
   url: string
 }
 
+export interface CacheQuery {
+  from_airport: string
+  to_airport: string
+  departure_date: string
+  return_date: string | null
+  adults: number
+  children: number
+  infants_in_seat: number
+  infants_on_lap: number
+  seat: 'economy' | 'premium-economy' | 'business' | 'first'
+  max_stops: number | null
+  currency: string
+}
+
 export interface SearchEntry {
   offers: Offer[]
   query: string
   timestamp: number
+  ref: string
+  cacheKey?: string
+  expiresAt?: number
+  params?: CacheQuery
 }
 
-export interface SessionState {
-  /** Latest search (backward compat) */
+export interface SessionSearch {
+  cacheKey?: string
+  query: string
+  timestamp: number
+  offerCount: number
+  offers?: Offer[]
+}
+
+export interface LatestSearch {
   offers: Offer[]
   query: string
   timestamp: number
-  /** All searches keyed by route tag, e.g. "IAO-MNL" */
-  searches?: Record<string, SearchEntry>
+  refs: string[]
+}
+
+export interface SessionState {
+  version: number
+  latest: LatestSearch | null
+  searches: Record<string, SessionSearch>
 }
 
 export type Format = 'jsonl' | 'tsv' | 'table' | 'brief'

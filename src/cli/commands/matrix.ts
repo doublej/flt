@@ -4,7 +4,16 @@ import { defineCommand } from 'citty'
 import { loadConfig, withDefaults } from '../config'
 import { parseDur, parsePrice } from '../filter'
 import { formatError } from '../format'
-import { loadSession, routeTag, saveSession, throttle } from '../state'
+import {
+  clearLatestSearch,
+  createEmptySession,
+  loadCachedSearch,
+  loadSession,
+  rememberSearch,
+  saveCachedSearch,
+  saveSession,
+  throttle,
+} from '../state'
 import type { Offer, SessionState } from '../types'
 import { normalizeDate, parsePax, validateAirport } from '../validate'
 
@@ -53,22 +62,22 @@ async function fetchAndCache(
   query: SearchQuery,
   session: SessionState,
 ): Promise<Offer[]> {
+  const cached = await loadCachedSearch(query, dep, ret)
+  if (cached) {
+    rememberSearch(session, cached)
+    return cached.offers
+  }
+
   await throttle()
   const result = await searchSingle(dep, ret, query)
-  const offers: Offer[] = result.flights.map((f, i) => ({
-    ...f,
-    id: `O${i + 1}`,
-    url: result.url,
-  }))
-
-  // Save to session so `flt search` / `flt inspect` can access the same data
-  const tag = routeTag(query.from_airport, query.to_airport, dep)
-  const queryStr = `${query.from_airport} ${query.to_airport} ${dep}`
-  session.searches = {
-    ...session.searches,
-    [tag]: { offers, query: queryStr, timestamp: Date.now() },
-  }
-  return offers
+  const entry = await saveCachedSearch(
+    query,
+    dep,
+    ret,
+    result.flights.map((f) => ({ ...f, url: result.url })),
+  )
+  rememberSearch(session, entry)
+  return entry.offers
 }
 
 function printOneWay(cells: CellResult[], fmt: string): void {
@@ -149,7 +158,9 @@ export const matrixCommand = defineCommand({
     validateAirport(args.to.toUpperCase(), 'Destination')
     const dateStart = normalizeDate(args.dateStart, 'Start date')
     const dateEnd = normalizeDate(args.dateEnd, 'End date')
-    const returnStart = args.returnStart ? normalizeDate(args.returnStart, 'Return start') : undefined
+    const returnStart = args.returnStart
+      ? normalizeDate(args.returnStart, 'Return start')
+      : undefined
     const returnEnd = args.returnEnd ? normalizeDate(args.returnEnd, 'Return end') : undefined
 
     const pax = parsePax(args.pax)
@@ -165,15 +176,10 @@ export const matrixCommand = defineCommand({
       currency: args.currency,
     }
 
-    const session: SessionState = (await loadSession()) ?? {
-      offers: [],
-      query: '',
-      timestamp: Date.now(),
-    }
+    const session: SessionState = (await loadSession()) ?? createEmptySession()
 
     const depDates = dateRange(dateStart, dateEnd)
-    const retDates =
-      returnStart && returnEnd ? dateRange(returnStart, returnEnd) : null
+    const retDates = returnStart && returnEnd ? dateRange(returnStart, returnEnd) : null
 
     if (!retDates) {
       const cells: CellResult[] = []
@@ -181,6 +187,7 @@ export const matrixCommand = defineCommand({
         const offers = await fetchAndCache(d, null, query, session)
         cells.push(pickCheapest(offers, maxDur) ?? { ...EMPTY_CELL, dep: d })
       }
+      clearLatestSearch(session)
       await saveSession(session)
       printOneWay(cells, args.fmt)
       return
@@ -204,6 +211,7 @@ export const matrixCommand = defineCommand({
       const offers = await fetchAndCache(d, r, query, session)
       cells.push(pickCheapest(offers, maxDur) ?? { ...EMPTY_CELL, dep: d, ret: r })
     }
+    clearLatestSearch(session)
     await saveSession(session)
     printGrid(depDates, retDates, cells, args.fmt)
   },

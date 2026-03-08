@@ -5,7 +5,11 @@ import { listAvailableRefs, loadSession, resolveOffer } from '../state'
 export const inspectCommand = defineCommand({
   meta: { name: 'inspect', description: 'Show details of a flight offer by ID' },
   args: {
-    id: { type: 'positional', description: 'Offer ID (e.g. O1 or IAO-MNL:O1)', required: true },
+    id: {
+      type: 'positional',
+      description: 'Offer ID (e.g. O1 or IAO-MNL@20260324#A1B2C3:O1)',
+      required: true,
+    },
     fmt: { type: 'string', description: 'Output format: json|table', default: 'json' },
   },
   async run({ args }) {
@@ -15,10 +19,12 @@ export const inspectCommand = defineCommand({
       return
     }
 
-    const offer = resolveOffer(session, args.id)
+    const offer = await resolveOffer(session, args.id)
     if (!offer) {
       const refs = listAvailableRefs(session)
-      const ids = refs.length ? refs.join(', ') : session.offers.map((o) => o.id).join(', ')
+      const ids = refs.length
+        ? refs.join(', ')
+        : (session.latest?.offers ?? []).map((o) => o.id).join(', ')
       console.log(formatError('NOT_FOUND', `Offer '${args.id}' not found. Available: ${ids}`))
       return
     }

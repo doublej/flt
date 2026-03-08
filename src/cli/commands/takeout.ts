@@ -3,8 +3,8 @@ import { join } from 'node:path'
 import { defineCommand } from 'citty'
 import { parsePrice } from '../filter'
 import { formatError } from '../format'
-import { loadSession, resolveOffer } from '../state'
-import type { Offer, SearchEntry, SessionState } from '../types'
+import { loadSession, loadSessionSearches, resolveOffer } from '../state'
+import type { Offer, SearchEntry } from '../types'
 
 interface Itinerary {
   title: string
@@ -25,31 +25,54 @@ function totalPrice(offers: Offer[]): string {
 
 function legRoute(o: Offer): string {
   if (o.legs.length === 0) return '?→?'
-  // Build chain: DEP→STOP1→STOP2→ARR using departure_airport codes (always IATA)
   const codes = [o.legs[0].departure_airport]
   for (const leg of o.legs) codes.push(leg.arrival_airport)
-  // Dedupe consecutive (shouldn't happen but defensive)
   const unique = codes.filter((c, i) => i === 0 || c !== codes[i - 1])
   return unique.join('→')
+}
+
+function formatMinutes(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h && m) return `${h}h ${m}m`
+  return h ? `${h}h` : `${m}m`
+}
+
+function formatBooking(idx: number, o: Offer): string {
+  const lines: string[] = []
+  const arr = `${o.arrival}${o.arrival_time_ahead}`
+  lines.push(
+    `**Booking ${idx}** · ${o.departure_date} · ${legRoute(o)} · ${o.price} · ${o.duration} · ${stopsLabel(o.stops)} · ${o.name} · ${o.departure}→${arr}`,
+  )
+  if (o.legs.length > 1 || o.layovers.length > 0) {
+    lines.push('')
+    lines.push('| Flight | Route | Dep | Arr | Duration | Aircraft |')
+    lines.push('|--------|-------|-----|-----|----------|----------|')
+    for (const [j, leg] of o.legs.entries()) {
+      const flt = leg.flight_number ? `${leg.airline} ${leg.flight_number}` : leg.airline_name
+      lines.push(
+        `| ${flt} | ${leg.departure_airport}→${leg.arrival_airport} | ${leg.departure_time} | ${leg.arrival_time} | ${formatMinutes(leg.duration)} | ${leg.aircraft || '—'} |`,
+      )
+      if (j < o.layovers.length) {
+        const lo = o.layovers[j]
+        lines.push(`| | *${lo.airport} layover* | | | *${formatMinutes(lo.duration)}* | |`)
+      }
+    }
+  }
+  return lines.join('\n')
 }
 
 function formatItinerary(itin: Itinerary): string {
   const lines: string[] = []
   lines.push(`### ${itin.title}`)
   lines.push('')
-  lines.push('| # | Date | Route | Price | Duration | Stops | Carrier | Dep→Arr |')
-  lines.push('|---|------|-------|------:|----------|-------|---------|---------|')
   for (const [i, o] of itin.legs.entries()) {
-    const arr = `${o.arrival}${o.arrival_time_ahead}`
-    lines.push(
-      `| ${i + 1} | ${o.departure_date} | ${legRoute(o)} | ${o.price} | ${o.duration} | ${stopsLabel(o.stops)} | ${o.name} | ${o.departure}→${arr} |`,
-    )
+    lines.push(formatBooking(i + 1, o))
+    lines.push('')
   }
-  lines.push('')
   lines.push(`**Total: ${totalPrice(itin.legs)}**`)
   if (itin.note) lines.push(`\n> ${itin.note}`)
 
-  // Booking URLs
   const urls = itin.legs.filter((o) => o.url)
   if (urls.length) {
     lines.push('')
@@ -76,7 +99,11 @@ function formatSearchSection(tag: string, entry: SearchEntry): string {
   return lines.join('\n')
 }
 
-function buildMarkdown(session: SessionState, itineraries: Itinerary[], title?: string): string {
+function buildMarkdown(
+  searches: Array<[string, SearchEntry]>,
+  itineraries: Itinerary[],
+  title?: string,
+): string {
   const sections: string[] = []
   const heading = title ?? 'Flight Search Results'
   const date = new Date().toISOString().slice(0, 10)
@@ -91,9 +118,9 @@ function buildMarkdown(session: SessionState, itineraries: Itinerary[], title?: 
   }
 
   // All searches
-  if (session.searches && Object.keys(session.searches).length > 0) {
+  if (searches.length > 0) {
     sections.push('\n## All Searches\n')
-    for (const [tag, entry] of Object.entries(session.searches)) {
+    for (const [tag, entry] of searches) {
       sections.push(formatSearchSection(tag, entry))
       sections.push('')
     }
@@ -160,7 +187,7 @@ export const takeoutCommand = defineCommand({
     for (const def of itinDefs) {
       const legs: Offer[] = []
       for (const ref of def.legs as unknown as string[]) {
-        const offer = resolveOffer(session, ref)
+        const offer = await resolveOffer(session, ref)
         if (!offer) {
           console.log(formatError('NOT_FOUND', `Offer '${ref}' not found in session.`))
           return
@@ -170,9 +197,12 @@ export const takeoutCommand = defineCommand({
       itineraries.push({ title: def.title, note: def.note, legs })
     }
 
-    const md = buildMarkdown(session, itineraries, args.title)
-    const date = new Date().toISOString().slice(0, 10)
-    const defaultPath = join(process.env.HOME ?? '.', 'Desktop', `flights-${date}.md`)
+    const searches = await loadSessionSearches(session)
+    const md = buildMarkdown(searches, itineraries, args.title)
+    const now = new Date()
+    const date = now.toISOString().slice(0, 10)
+    const time = now.toTimeString().slice(0, 5).replace(':', '')
+    const defaultPath = join(process.env.HOME ?? '.', 'Desktop', `flights-${date}-${time}.md`)
     const outPath = args.output ?? defaultPath
 
     await writeFile(outPath, md, 'utf-8')
@@ -180,7 +210,7 @@ export const takeoutCommand = defineCommand({
       JSON.stringify({
         ok: true,
         path: outPath,
-        searches: Object.keys(session.searches ?? {}).length,
+        searches: searches.length,
         itineraries: itineraries.length,
       }),
     )
