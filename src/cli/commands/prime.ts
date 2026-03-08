@@ -46,6 +46,12 @@ If any command returns: {"err":"BLOCKED", ...}
 </rate-limits>
 
 <commands>
+<session>
+flt session start
+Marks the beginning of a new search session. Takeout only includes searches made after this point.
+Run this at the start of every session before any searches.
+</session>
+
 <search>
 flt search <FROM> <TO> <DATE> [RETURN_DATE] [OPTIONS]
 Shortcut: flt AMS NRT 2026-04-10
@@ -117,6 +123,10 @@ The takeout file includes:
 </commands>
 
 <workflow description="default — follow unless user specifies otherwise">
+0. Start a fresh session scope:
+   - Run: \`flt session start\`
+   - This scopes takeout to only include searches from this session.
+
 1. Resolve airports if ambiguous:
    - If city could map to multiple airports, run: \`flt airports <query>\`
    - Choose appropriate IATA codes (or present 2–3 choices briefly).

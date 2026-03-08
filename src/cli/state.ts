@@ -290,6 +290,14 @@ export async function loadSessionSearches(
   return entries.filter((entry): entry is [string, SearchEntry] => entry !== null)
 }
 
+export async function loadSessionScopedSearches(
+  session: SessionState,
+): Promise<Array<[string, SearchEntry]>> {
+  const all = await loadSessionSearches(session)
+  if (!session.sessionStartedAt) return all
+  return all.filter(([, entry]) => entry.timestamp >= session.sessionStartedAt!)
+}
+
 export function rememberSearch(session: SessionState, entry: SearchEntry): void {
   session.searches[entry.ref] = {
     cacheKey: entry.cacheKey,
@@ -314,6 +322,11 @@ export function setLatestSearch(
 }
 
 export function clearLatestSearch(session: SessionState): void {
+  session.latest = null
+}
+
+export function startNewSession(session: SessionState): void {
+  session.sessionStartedAt = Date.now()
   session.latest = null
 }
 

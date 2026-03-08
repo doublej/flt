@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { defineCommand } from 'citty'
 import { parsePrice } from '../filter'
 import { formatError } from '../format'
-import { loadSession, loadSessionSearches, resolveOffer } from '../state'
+import { loadSession, loadSessionScopedSearches, resolveOffer } from '../state'
 import type { Offer, SearchEntry } from '../types'
 
 interface Itinerary {
@@ -197,7 +197,7 @@ export const takeoutCommand = defineCommand({
       itineraries.push({ title: def.title, note: def.note, legs })
     }
 
-    const searches = await loadSessionSearches(session)
+    const searches = await loadSessionScopedSearches(session)
     const md = buildMarkdown(searches, itineraries, args.title)
     const now = new Date()
     const date = now.toISOString().slice(0, 10)

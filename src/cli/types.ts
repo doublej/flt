@@ -48,6 +48,7 @@ export interface SessionState {
   version: number
   latest: LatestSearch | null
   searches: Record<string, SessionSearch>
+  sessionStartedAt?: number
 }
 
 export type Format = 'jsonl' | 'tsv' | 'table' | 'brief'

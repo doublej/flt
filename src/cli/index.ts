@@ -6,6 +6,7 @@ import { itineraryCommand } from './commands/itinerary'
 import { matrixCommand } from './commands/matrix'
 import { primeCommand } from './commands/prime'
 import { searchCommand } from './commands/search'
+import { sessionCommand } from './commands/session'
 import { takeoutCommand } from './commands/takeout'
 
 const SUB_COMMANDS = {
@@ -16,6 +17,7 @@ const SUB_COMMANDS = {
   airports: airportsCommand,
   prime: primeCommand,
   takeout: takeoutCommand,
+  session: sessionCommand,
   config: configCommand,
 }
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
