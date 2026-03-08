@@ -4,6 +4,9 @@
   "description": "A SvelteKit application",
   "author": "",
   "type": "module",
+  "bin": {
+    "flt": "./src/cli/index.ts"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
