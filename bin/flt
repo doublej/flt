@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+cd "$SCRIPT_DIR/.." || exit 1
+exec bun run src/cli/index.ts "$@"
