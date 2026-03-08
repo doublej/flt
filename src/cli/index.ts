@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import { defineCommand, runCommand, runMain, showUsage } from 'citty'
 import { airportsCommand } from './commands/airports'
 import { configCommand } from './commands/config'
