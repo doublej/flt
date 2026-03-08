@@ -39,7 +39,14 @@ export function searchAirports(q: string): Airport[] {
     .filter((a) => a.text.includes(search))
     .map((a) => ({ a, s: score(search, a.code, a.entry) }))
   matches.sort((x, y) => x.s - y.s || x.a.entry.name.localeCompare(y.a.entry.name))
-  return matches.slice(0, 20).map(({ a }) => ({
+  // Drop weak matches when strong matches exist:
+  // best 0-1 (IATA match) → keep only score ≤ 3 (city-level)
+  // best 2-3 (city match) → keep only score ≤ 4 (name-level)
+  const bestScore = matches[0]?.s ?? 5
+  const cutoff = bestScore <= 1 ? 4 : bestScore <= 3 ? 5 : 6
+  const filtered = matches.filter((m) => m.s < cutoff)
+  const results = filtered.length > 0 ? filtered : matches
+  return results.slice(0, 20).map(({ a }) => ({
     name: a.entry.name,
     code: a.code,
     city: a.entry.city,

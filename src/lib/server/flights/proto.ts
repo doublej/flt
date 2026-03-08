@@ -63,7 +63,10 @@ function concat(...arrays: Uint8Array[]): Uint8Array {
   const total = arrays.reduce((s, a) => s + a.length, 0)
   const out = new Uint8Array(total)
   let offset = 0
-  for (const a of arrays) { out.set(a, offset); offset += a.length }
+  for (const a of arrays) {
+    out.set(a, offset)
+    offset += a.length
+  }
   return out
 }
 
@@ -83,7 +86,12 @@ function encodeFlightData(leg: FlightLeg): Uint8Array {
   return concat(...parts)
 }
 
-function encodeInfo(legs: FlightLeg[], passengers: PassengerCounts, seat: SeatKey, trip: TripKey): Uint8Array {
+function encodeInfo(
+  legs: FlightLeg[],
+  passengers: PassengerCounts,
+  seat: SeatKey,
+  trip: TripKey,
+): Uint8Array {
   const parts: Uint8Array[] = []
 
   for (const leg of legs) {

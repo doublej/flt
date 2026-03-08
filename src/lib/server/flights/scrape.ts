@@ -4,7 +4,7 @@
  * the nested array structure via decode.ts.
  */
 
-import { extractDataArray, decodeResult, type DecodedFlight } from './decode'
+import { type DecodedFlight, decodeResult, extractDataArray } from './decode'
 
 const CHROME_HEADERS: Record<string, string> = {
   'User-Agent':
@@ -23,19 +23,33 @@ const CHROME_HEADERS: Record<string, string> = {
   Cookie: 'CONSENT=PENDING+987; SOCS=CAESHAgBEhJnd3NfMjAyMzA4MTAtMF9SQzIaAmRlIAEaBgiAo_CmBg',
 }
 
+// Global rate limiter: at most 1 request per MIN_INTERVAL_MS
+const MIN_INTERVAL_MS = 1500
+let lastRequestTime = 0
+
+async function rateLimit() {
+  const wait = lastRequestTime + MIN_INTERVAL_MS - Date.now()
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+  lastRequestTime = Date.now()
+}
+
+export type ScrapeError = 'http' | 'no_script' | 'no_data' | 'no_flights'
+
 export interface ScrapeResult {
   flights: DecodedFlight[]
-  blocked: boolean
+  error?: ScrapeError
+  httpStatus?: number
 }
 
 export async function fetchFlights(b64: string, currency: string): Promise<ScrapeResult> {
   const params = new URLSearchParams({ tfs: b64, hl: 'en', tfu: 'EgQIABABIgA', curr: currency })
 
+  await rateLimit()
   const res = await fetch(`https://www.google.com/travel/flights?${params}`, {
     headers: CHROME_HEADERS,
   })
 
-  if (!res.ok) return { flights: [], blocked: true }
+  if (!res.ok) return { flights: [], error: 'http', httpStatus: res.status }
 
   // Extract <script class="ds:1"> text via HTMLRewriter
   let scriptText = ''
@@ -47,13 +61,14 @@ export async function fetchFlights(b64: string, currency: string): Promise<Scrap
   })
   await rewriter.transform(res).text()
 
-  if (!scriptText) return { flights: [], blocked: true }
+  if (!scriptText) return { flights: [], error: 'no_script' }
 
   const data = extractDataArray(scriptText)
-  if (!data) return { flights: [], blocked: true }
+  if (!data) return { flights: [], error: 'no_data' }
 
   const flights = decodeResult(data)
-  return { flights, blocked: flights.length === 0 }
+  if (flights.length === 0) return { flights: [], error: 'no_flights' }
+  return { flights }
 }
 
 export function buildGoogleFlightsUrl(b64: string, currency: string): string {

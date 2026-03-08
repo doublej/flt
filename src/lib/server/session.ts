@@ -33,7 +33,11 @@ export async function signSession(secret: string, password: string): Promise<str
   return `${day}:${await hmac(secret, `${password}:${day}`)}`
 }
 
-export async function verifySession(secret: string, password: string, token: string): Promise<boolean> {
+export async function verifySession(
+  secret: string,
+  password: string,
+  token: string,
+): Promise<boolean> {
   const colon = token.indexOf(':')
   if (colon < 1) return false
   const day = Number(token.slice(0, colon))

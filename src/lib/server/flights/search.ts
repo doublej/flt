@@ -4,8 +4,8 @@
  */
 
 import type { Flight } from '$lib/types'
-import { encodeFlightFilter, type PassengerCounts } from './proto'
-import { fetchFlights, buildGoogleFlightsUrl } from './scrape'
+import { type PassengerCounts, encodeFlightFilter } from './proto'
+import { type ScrapeError, buildGoogleFlightsUrl, fetchFlights } from './scrape'
 
 export const MAX_RANGE_DAYS = 7
 export const MAX_TOTAL_SEARCHES = 21
@@ -34,6 +34,7 @@ export interface SearchResult {
   ret_date: string | null
   flights: Flight[]
   url: string
+  error?: ScrapeError
 }
 
 function dateRange(start: string, end: string): string[] {
@@ -88,16 +89,15 @@ export async function searchSingle(
   const b64 = encodeFlightFilter({ legs, passengers, seat: q.seat, trip })
   const url = buildGoogleFlightsUrl(b64, q.currency)
 
-  const { flights: raw, blocked } = await fetchFlights(b64, q.currency)
+  const result = await fetchFlights(b64, q.currency)
 
-  if (blocked) return { dep_date, ret_date, flights: [], url }
+  if (result.error) return { dep_date, ret_date, flights: [], url, error: result.error }
 
-  const flights: Flight[] = raw.map((f) => ({
+  const flights: Flight[] = result.flights.map((f) => ({
     ...f,
     departure_date: dep_date,
     return_date: ret_date,
-    legs: [],
-    layovers: [],
+    countries: [],
   }))
 
   return { dep_date, ret_date, flights, url }
@@ -107,7 +107,7 @@ export function parseSearchQuery(url: URL): SearchQuery {
   const get = (k: string) => url.searchParams.get(k) ?? ''
   const getNum = (k: string, def: number) => {
     const v = url.searchParams.get(k)
-    return v ? parseInt(v) : def
+    return v ? Number.parseInt(v) : def
   }
 
   const seat = get('seat') as SeatType

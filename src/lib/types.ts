@@ -15,6 +15,8 @@ export interface FlightLeg {
   departure_time: string
   arrival_time: string
   duration: number
+  operator?: string
+  seat_pitch?: string
 }
 
 export interface FlightLayover {
@@ -35,6 +37,7 @@ export interface Flight {
   price: string
   departure_date: string
   return_date: string | null
+  countries: string[]
   legs: FlightLeg[]
   layovers: FlightLayover[]
 }

@@ -71,18 +71,19 @@ function decodeSummary(b64: string): { priceStr: string } {
     const currencyBytes = price.get(3)?.[0]
 
     const amount = typeof rawPrice === 'number' ? Math.round(rawPrice / 100) : 0
-    const currency = currencyBytes instanceof Uint8Array
-      ? new TextDecoder().decode(currencyBytes)
-      : ''
+    const currency =
+      currencyBytes instanceof Uint8Array ? new TextDecoder().decode(currencyBytes) : ''
     const symbol = CURRENCY_SYMBOLS[currency] ?? ''
     const priceStr = symbol
-      ? `${symbol}${amount.toLocaleString()}`
-      : `${amount.toLocaleString()} ${currency}`
+      ? `${symbol}${amount.toLocaleString('en-US')}`
+      : `${amount.toLocaleString('en-US')} ${currency}`
     return { priceStr }
   } catch {
     return { priceStr: '' }
   }
 }
+
+import type { FlightLayover, FlightLeg } from '$lib/types'
 
 // --- Nested list helpers ---
 
@@ -99,8 +100,11 @@ function at(data: NL, ...path: number[]): NL {
 }
 
 function formatTime(t: NL): string {
-  if (!Array.isArray(t) || t.length < 2) return ''
-  return `${String(t[0]).padStart(2, '0')}:${String(t[1]).padStart(2, '0')}`
+  if (!Array.isArray(t) || t.length < 2) return '??:??'
+  const h = t[0]
+  const m = t[1]
+  if (typeof h !== 'number' || typeof m !== 'number') return '??:??'
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
 function formatDuration(minutes: number): string {
@@ -131,13 +135,53 @@ export interface DecodedFlight {
   stops: number
   delay: null
   price: string
+  legs: FlightLeg[]
+  layovers: FlightLayover[]
+}
+
+export function decodeLeg(leg: NL): FlightLeg | null {
+  if (!Array.isArray(leg)) return null
+  const airline = (at(leg, 22, 0) as string) ?? ''
+  const airline_name = (at(leg, 22, 3) as string) ?? ''
+  const flight_number = String(at(leg, 22, 1) ?? '')
+  const aircraft = (at(leg, 17) as string) ?? ''
+  const departure_airport = (at(leg, 3) as string) ?? ''
+  const arrival_airport = (at(leg, 5) as string) ?? ''
+  const departure_time = formatTime(leg[8])
+  const arrival_time = formatTime(leg[10])
+  const duration = (leg[11] as number) ?? 0
+  const operator = (at(leg, 2) as string) || undefined
+  const seat_pitch = (at(leg, 14) as string) || undefined
+  return {
+    airline,
+    airline_name,
+    flight_number,
+    aircraft,
+    departure_airport,
+    arrival_airport,
+    departure_time,
+    arrival_time,
+    duration,
+    operator,
+    seat_pitch,
+  }
+}
+
+export function decodeLayover(lay: NL): FlightLayover | null {
+  if (!Array.isArray(lay)) return null
+  return {
+    duration: (lay[0] as number) ?? 0,
+    airport: (at(lay, 1) as string) ?? '',
+    airport_name: (at(lay, 4) as string) ?? '',
+  }
 }
 
 function decodeItinerary(el: NL, is_best: boolean): DecodedFlight | null {
   try {
     const body = at(el, 0)
     const airlineNames: string[] = at(body, 1) ?? []
-    const layovers: NL[] = at(body, 13) ?? []
+    const rawLayovers: NL[] = at(body, 13) ?? []
+    const rawLegs: NL[] = at(body, 2) ?? []
     const depTime = at(body, 5)
     const arrTime = at(body, 8)
     const depDate = at(body, 4)
@@ -147,16 +191,28 @@ function decodeItinerary(el: NL, is_best: boolean): DecodedFlight | null {
     const { priceStr } = summaryB64 ? decodeSummary(summaryB64) : { priceStr: '' }
     const name = airlineNames.join(', ') || (at(body, 0) as string) || ''
 
+    const legs = Array.isArray(rawLegs)
+      ? (rawLegs.map(decodeLeg).filter(Boolean) as FlightLeg[])
+      : []
+    const layovers = Array.isArray(rawLayovers)
+      ? (rawLayovers.map(decodeLayover).filter(Boolean) as FlightLayover[])
+      : []
+
+    const firstLeg = legs[0]
+    const lastLeg = legs[legs.length - 1]
+
     return {
       is_best,
       name,
-      departure: formatTime(depTime),
-      arrival: formatTime(arrTime),
+      departure: formatTime(depTime) !== '??:??' ? formatTime(depTime) : (firstLeg?.departure_time ?? '??:??'),
+      arrival: formatTime(arrTime) !== '??:??' ? formatTime(arrTime) : (lastLeg?.arrival_time ?? '??:??'),
       arrival_time_ahead: daysAhead(depDate, arrDate),
       duration: formatDuration(travelTime),
-      stops: Array.isArray(layovers) ? layovers.length : 0,
+      stops: layovers.length,
       delay: null,
       price: priceStr,
+      legs,
+      layovers,
     }
   } catch {
     return null
