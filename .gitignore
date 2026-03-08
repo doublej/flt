@@ -14,3 +14,6 @@ api/__pycache__/
 api/routes/__pycache__/
 .beads/dolt/
 .beads/dolt-*
+.beads
+.wrangler
+.session-search
