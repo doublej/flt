@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 // @bun
 // node_modules/citty/dist/_chunks/libs/scule.mjs
 var NUMBER_CHAR_RE = /\d/;
