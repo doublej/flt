@@ -8,6 +8,7 @@ Thumbs.db
 node_modules/
 .svelte-kit/
 build/
+dist/
 
 api/.venv/
 api/__pycache__/

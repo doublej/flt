@@ -5,7 +5,7 @@
   "author": "",
   "type": "module",
   "bin": {
-    "flt": "./src/cli/index.ts"
+    "flt": "./dist/flt.js"
   },
   "scripts": {
     "dev": "vite dev",
@@ -14,7 +14,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest",
     "lint": "biome check .",
-    "lint:fix": "biome check --write ."
+    "lint:fix": "biome check --write .",
+    "prepare": "bun scripts/build-cli.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
