@@ -3,15 +3,33 @@
   import { obliterate } from 'orphan-obliterator';
   import { onMount } from 'svelte';
 
+  type Mode = 'run' | 'install' | 'agent';
+  let mode = $state<Mode>('run');
   let copied = $state(false);
 
+  const display_map: Record<Mode, string> = {
+    run: 'bunx github:doublej/flt',
+    install: 'bun install -g github:doublej/flt',
+    agent: 'bunx github:doublej/flt prime'
+  };
+
+  const copy_map: Record<Mode, string> = {
+    run: 'bunx github:doublej/flt',
+    install: 'bun install -g github:doublej/flt',
+    agent: 'Help me find flights using flt. Run `bunx github:doublej/flt prime` to get started'
+  };
+
   onMount(() => {
-    const instance = obliterate('p, .tagline, .description, .command-desc, .feature-card p, .format-card p');
+    const instance = obliterate({
+      selectors: ['p', '.tagline', '.description', '.command-desc', '.feature-card p', '.format-card p'],
+      rules: { minLastLineWords: 3, maxProtectedChars: 40 },
+      demo: true
+    });
     return () => instance.destroy();
   });
 
-  function copyInstall() {
-    navigator.clipboard.writeText('bunx github:doublej/flt');
+  function copyCommand() {
+    navigator.clipboard.writeText(copy_map[mode]);
     copied = true;
     setTimeout(() => copied = false, 2000);
   }
@@ -89,15 +107,20 @@
     <div class="container">
       <div class="badge">Built by coding agents, for travel agents</div>
       <h1>flt</h1>
-      <p class="tagline">The ultimate CLI swiss army knife for booking flights</p>
+      <p class="tagline">The ultimate CLI swiss army knife for finding flights</p>
       <p class="description">
         Search flights, compare prices across dates, build itineraries, and export
         data — all from your terminal. Designed for travel professionals who move fast.
       </p>
       <div class="hero-actions">
         <div class="install-box">
-          <code>bunx github:doublej/flt</code>
-          <button onclick={copyInstall} class="copy-btn">
+          <div class="mode-switch">
+            <button class="mode-btn" class:active={mode === 'run'} onclick={() => mode = 'run'}>Run</button>
+            <button class="mode-btn" class:active={mode === 'install'} onclick={() => mode = 'install'}>Install</button>
+            <button class="mode-btn" class:active={mode === 'agent'} onclick={() => mode = 'agent'}>Agent</button>
+          </div>
+          <code>{display_map[mode]}</code>
+          <button onclick={copyCommand} class="copy-btn">
             {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
@@ -318,7 +341,7 @@
 
   .hero-actions {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
     gap: 16px;
     flex-wrap: wrap;
@@ -330,13 +353,39 @@
     gap: 12px;
     background: var(--bg-code);
     color: var(--text-code);
-    padding: 12px 16px;
+    padding: 6px 6px 6px 6px;
     border-radius: 8px;
     font-size: 0.95rem;
   }
 
   .install-box code {
     font-size: 0.95rem;
+    padding: 0 4px;
+  }
+
+  .mode-switch {
+    display: flex;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 5px;
+    padding: 2px;
+  }
+
+  .mode-btn {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+
+  .mode-btn.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-code);
   }
 
   .copy-btn {
@@ -356,10 +405,12 @@
   }
 
   .github-link {
+    display: flex;
+    align-items: center;
     color: var(--text-secondary);
     text-decoration: none;
     font-size: 0.95rem;
-    padding: 12px 20px;
+    padding: 0 20px;
     border: 1px solid var(--border);
     border-radius: 8px;
     transition: border-color 0.2s;
