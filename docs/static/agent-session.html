@@ -11,91 +11,101 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'DM Mono', monospace;
-      background: #000;
-      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      background: #f8f8f8;
+      color: #333;
       font-size: 0.82rem;
       line-height: 1.6;
     }
 
     header {
-      border-bottom: 1px solid #222;
+      border-bottom: 1px solid #e0e0e0;
       padding: 16px 32px;
       display: flex;
       align-items: baseline;
       gap: 16px;
       position: sticky;
       top: 0;
-      background: #000;
+      background: #fff;
       z-index: 10;
     }
     header h1 { font-size: 1rem; font-weight: 500; }
-    header span { color: #555; font-size: 0.78rem; }
+    header h1 a { color: #111; text-decoration: none; }
+    header span { color: #999; font-size: 0.78rem; font-family: 'DM Mono', monospace; }
 
     /* Two-column layout */
     .row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      border-bottom: 1px solid #0a0a0a;
+      border-bottom: 1px solid #eee;
     }
-    .row:hover .left { background: #050505; }
-    .row:hover .right { background: #f7f7f7; }
+    .row:hover .left { background: #0f1219; }
+    .row:hover .right { background: #fff; }
 
     .left {
       padding: 14px 20px 14px 32px;
       overflow-x: auto;
       font-family: 'DM Mono', monospace;
+      background: #111318;
+      color: #bbb;
     }
     .right {
       padding: 14px 32px 14px 20px;
-      background: #fff;
+      background: #fafafa;
       color: #444;
-      border-left: 1px solid #e0e0e0;
-      font-family: 'DM Sans', sans-serif;
+      border-left: 1px solid #eee;
     }
 
-    /* Phase headers */
+    /* Phase headers — full-width light bar */
+    .phase-row {
+      display: block;
+      padding: 24px 32px 8px;
+      border-bottom: 1px solid #e0e0e0;
+      background: #fff;
+    }
     .phase-row .left {
-      padding-top: 24px;
-      padding-bottom: 8px;
+      padding: 0;
+      background: none;
+      color: #111;
     }
     .phase-row .right {
-      padding-top: 24px;
-      padding-bottom: 8px;
+      padding: 4px 0 0;
+      background: none;
+      color: #888;
+      border-left: none;
     }
-    .phase-row {
-      border-bottom: 1px solid #111;
-    }
-    .pn { color: #333; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; }
-    .pt { color: #fff; font-weight: 500; }
-    .phase-row .right { color: #888; }
+    .briefing .left, .briefing .right { padding-top: 24px; padding-bottom: 8px; }
+    .briefing .left { background: #fafafa; color: #555; }
+    .briefing .right { background: #fafafa; }
+    .pn { color: #999; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'DM Mono', monospace; }
+    .pt { color: #111; font-weight: 500; }
 
-    /* Transcript elements */
-    .think { color: #888; white-space: pre-wrap; word-break: break-word; margin-top: 8px; }
+    /* Terminal transcript elements */
+    .think { color: #889; white-space: pre-wrap; word-break: break-word; margin-top: 8px; }
     .think::before { content: "● "; color: #8b6cc9; }
 
-    .tool { color: #666; white-space: pre-wrap; word-break: break-word; }
+    .tool { color: #778; white-space: pre-wrap; word-break: break-word; }
     .tool::before { content: "● "; color: #8b6cc9; }
     .tool + .tool { margin-top: 4px; }
     .think + .tool { margin-top: 8px; }
-    .tc { color: #ccc; }
+    .tc { color: #ddd; }
 
     .out {
-      color: #555;
+      color: #8a8a8a;
       white-space: pre;
       padding-left: 18px;
       margin-top: 2px;
     }
-    .out::before { content: "↳ "; margin-left: -18px; color: #333; }
+    .out::before { content: "↳ "; margin-left: -18px; color: #556; }
     .hl { color: #fff; font-weight: 500; }
-    .pr { color: #7a7; }
-    .dm { color: #333; }
-    .tr { color: #444; font-style: italic; }
+    .pr { color: #8cb88c; }
+    .dm { color: #556; }
+    .tr { color: #667; font-style: italic; }
 
     /* Right side */
-    .right strong { color: #111; font-weight: 500; }
+    .right strong { color: #222; font-weight: 500; }
     .right p + p { margin-top: 6px; }
-    .result { color: #999; margin-top: 6px; display: block; }
+    .result { color: #777; margin-top: 6px; display: block; }
 
     .tag {
       display: inline-block;
@@ -112,40 +122,43 @@
     /* Summary */
     .summary {
       padding: 32px;
-      border-top: 1px solid #222;
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
     }
-    .summary h2 { font-size: 0.95rem; font-weight: 500; margin-bottom: 20px; }
+    .summary h2 { font-size: 0.95rem; font-weight: 500; margin-bottom: 20px; color: #111; }
     .sg {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 1px;
-      background: #111;
-      border: 1px solid #111;
+      background: #e0e0e0;
+      border: 1px solid #e0e0e0;
       border-radius: 3px;
       overflow: hidden;
     }
-    .sc { background: #000; padding: 16px; }
-    .sc .l { color: #333; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
-    .sc .v { font-size: 1.2rem; font-weight: 500; }
-    .sc .d { color: #444; font-size: 0.75rem; margin-top: 3px; }
+    .sc { background: #fff; padding: 16px; }
+    .sc .l { color: #999; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; font-family: 'DM Mono', monospace; }
+    .sc .v { font-size: 1.2rem; font-weight: 500; color: #111; }
+    .sc .d { color: #888; font-size: 0.75rem; margin-top: 3px; }
 
     table { margin-top: 24px; width: 100%; border-collapse: collapse; }
-    th { color: #333; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; text-align: left; padding: 6px 10px; border-bottom: 1px solid #222; }
-    td { padding: 10px; border-bottom: 1px solid #0a0a0a; color: #888; }
-    td:first-child { color: #fff; font-weight: 500; }
+    th { color: #999; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; text-align: left; padding: 6px 10px; border-bottom: 1px solid #e0e0e0; font-family: 'DM Mono', monospace; }
+    td { padding: 10px; border-bottom: 1px solid #eee; color: #666; }
+    td:first-child { color: #222; font-weight: 500; }
 
     footer {
       padding: 20px 32px;
-      border-top: 1px solid #111;
+      border-top: 1px solid #e0e0e0;
       text-align: center;
-      color: #333;
+      color: #aaa;
       font-size: 0.75rem;
+      background: #fff;
     }
 
     @media (max-width: 800px) {
       .row { grid-template-columns: 1fr; }
       .left { padding: 10px 16px; }
       .right { padding: 10px 16px; border-left: none; border-top: 1px solid #eee; }
+      .phase-row { padding-left: 16px; padding-right: 16px; }
       .sg { grid-template-columns: repeat(2, 1fr); }
       header, .summary { padding-left: 16px; padding-right: 16px; }
     }
@@ -154,15 +167,35 @@
 <body>
 
 <header>
-  <h1>flt</h1>
+  <h1><a href="/flt">flt</a></h1>
   <span>agent session &mdash; Siargao &rarr; Amsterdam &mdash; 55 calls &mdash; 12m 48s</span>
 </header>
 
+<!-- Summary -->
+<section class="summary">
+  <h2>Results</h2>
+  <div class="sg">
+    <div class="sc"><div class="l">CLI calls</div><div class="v">55</div><div class="d">matrix, search, inspect, takeout</div></div>
+    <div class="sc"><div class="l">Time</div><div class="v">12m 48s</div><div class="d">end to end</div></div>
+    <div class="sc"><div class="l">Routes tested</div><div class="v">14</div><div class="d">4 origin strategies, 6+ carriers</div></div>
+    <div class="sc"><div class="l">Date range</div><div class="v">11 days</div><div class="d">Mar 14 &ndash; 24</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Option</th><th>Price</th><th>Transit</th><th>Safety</th><th>Travel time</th></tr></thead>
+    <tbody>
+      <tr><td>A &mdash; Cheapest</td><td>&euro;530</td><td>Abu Dhabi</td><td><span class="tag o">orange</span></td><td>~25h</td></tr>
+      <tr><td>B &mdash; Earlier</td><td>&euro;582</td><td>Dubai</td><td><span class="tag o">orange</span></td><td>~25h</td></tr>
+      <tr><td>C &mdash; Non-Gulf (Cathay)</td><td>&euro;1,480</td><td>HKG + LHR</td><td><span class="tag g">green</span></td><td>~28h + overnight</td></tr>
+      <tr><td>D &mdash; Non-Gulf (Korean)</td><td>&euro;1,510</td><td>Seoul ICN</td><td><span class="tag g">green</span></td><td>~22h + overnight</td></tr>
+    </tbody>
+  </table>
+</section>
+
 <!-- Briefing -->
-<div class="row phase-row">
+<div class="row briefing">
   <div class="left">
     <div class="pn">The task</div>
-    <p style="color:#888;margin-top:4px">Find the cheapest one-way flight from Siargao (a small island in the Philippines) to Amsterdam, departing between March 14&ndash;24. Flexible on dates. Longer travel acceptable if significantly cheaper.</p>
+    <p style="margin-top:4px">Find the cheapest one-way flight from Siargao (a small island in the Philippines) to Amsterdam, departing between March 14&ndash;24. Flexible on dates. Longer travel acceptable if significantly cheaper.</p>
   </div>
   <div class="right">
     <div class="pn">The complication</div>
@@ -546,26 +579,6 @@ Leg 2  ICN&rarr;AMS  12:10&ndash;18:30  14h 20m  Boeing 787-10</div>
     <p>Export all <strong>24 cached searches</strong> to a markdown file. Every matrix scan, carrier search, and inspect result preserved.</p>
   </div>
 </div>
-
-<!-- Summary -->
-<section class="summary">
-  <h2>Results</h2>
-  <div class="sg">
-    <div class="sc"><div class="l">CLI calls</div><div class="v">55</div><div class="d">matrix, search, inspect, takeout</div></div>
-    <div class="sc"><div class="l">Time</div><div class="v">12m 48s</div><div class="d">end to end</div></div>
-    <div class="sc"><div class="l">Routes tested</div><div class="v">14</div><div class="d">4 origin strategies, 6+ carriers</div></div>
-    <div class="sc"><div class="l">Date range</div><div class="v">11 days</div><div class="d">Mar 14 &ndash; 24</div></div>
-  </div>
-  <table>
-    <thead><tr><th>Option</th><th>Price</th><th>Transit</th><th>Safety</th><th>Travel time</th></tr></thead>
-    <tbody>
-      <tr><td>A &mdash; Cheapest</td><td>&euro;530</td><td>Abu Dhabi</td><td><span class="tag o">orange</span></td><td>~25h</td></tr>
-      <tr><td>B &mdash; Earlier</td><td>&euro;582</td><td>Dubai</td><td><span class="tag o">orange</span></td><td>~25h</td></tr>
-      <tr><td>C &mdash; Non-Gulf (Cathay)</td><td>&euro;1,480</td><td>HKG + LHR</td><td><span class="tag g">green</span></td><td>~28h + overnight</td></tr>
-      <tr><td>D &mdash; Non-Gulf (Korean)</td><td>&euro;1,510</td><td>Seoul ICN</td><td><span class="tag g">green</span></td><td>~22h + overnight</td></tr>
-    </tbody>
-  </table>
-</section>
 
 <footer>flt &mdash; Flight Search CLI &mdash; doublej/flt</footer>
 
