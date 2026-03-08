@@ -1,11 +1,11 @@
 # flights-app
 
-> SvelteKit + FastAPI flight search UI, backed by `fast-flights`
+> SvelteKit flight search UI deployed on Cloudflare Pages
 
 ## Stack
 
 - TypeScript, bun, Biome, Vitest
-- SvelteKit + Vite
+- SvelteKit + Vite, Cloudflare Pages adapter
 
 ## Commands
 
@@ -13,12 +13,15 @@ Use `just` as the task runner:
 
 - `just check` — run all checks (loc-check + lint + typecheck + test)
 - `just loc-check` — check file lengths (warn >300, error >400 lines)
+- `just typecheck` — TypeScript type checking
 - `just dev` — start dev server
 - `just build` — production build
 - `just preview` — preview production build
 - `just sync` — sync SvelteKit types
 - `just test` — run tests
 - `just lint-fix` — auto-fix lint issues
+- `just install` — install dependencies
+- `just flt <command>` — flight search CLI (search, inspect, matrix, itinerary, airports, takeout, config, prime)
 
 ## Project Structure
 
@@ -26,18 +29,30 @@ Use `just` as the task runner:
 src/
 ├── routes/
 │   ├── +layout.svelte    # root layout
-│   └── +page.svelte      # home page
+│   ├── +page.svelte      # home page
+│   ├── api/              # API routes (airports, flights)
+│   └── login/            # login page
 ├── lib/
-│   ├── components/       # UI components
-│   ├── utils/            # utility modules
+│   ├── components/       # UI components (SearchForm, FlightCard, FlightMap, PriceGrid, etc.)
+│   ├── data/             # static data (airports.ts)
+│   ├── server/           # server-only code (flights/, session.ts, airports.json, cloudflare.d.ts)
+│   ├── utils/            # utility modules (dates.ts, geo.ts, markdown.ts, sort.ts)
 │   ├── api.ts            # API client
 │   ├── types.ts          # shared types
 │   └── recent-searches.ts
+├── cli/                   # flt CLI (citty, bun-only)
+│   ├── index.ts           # main entry + smart routing + subcommands
+│   ├── commands/          # search, inspect, matrix, itinerary, airports, takeout, config, prime
+│   ├── format.ts          # jsonl/tsv/table/brief formatters
+│   ├── filter.ts          # client-side post-filters + sorting
+│   ├── state.ts           # multi-search session persistence
+│   └── types.ts           # CLI-specific types
+├── hooks.server.ts       # server hooks
 ├── app.css               # global styles
 └── app.html              # HTML shell
-api/                      # FastAPI backend (Python, uv)
-svelte.config.js          # SvelteKit config
+svelte.config.js          # SvelteKit config (Cloudflare adapter)
 vite.config.ts            # Vite config
+wrangler.toml             # Cloudflare Workers config
 package.json              # project config, dependencies
 tsconfig.json             # TypeScript config
 biome.json                # linter/formatter config
