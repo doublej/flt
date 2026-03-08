@@ -159,7 +159,7 @@ flt prime
 
 ## Web UI
 
-SvelteKit app deployed on Cloudflare Pages with search form, flight cards, route maps, and price grid.
+SvelteKit app deployed on Cloudflare Pages with search form, flight cards, route maps, and price grid. See the [agent session viewer](https://doublej.github.io/flt/agent-session.html) for a visual walkthrough of a multi-leg search session.
 
 ```bash
 just dev      # start dev server

@@ -173,33 +173,31 @@ const commands = [
             {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
-        <a href="https://github.com/doublej/flt" target="_blank" class="github-link">
+      </div>
+      <div class="hero-links">
+        <a href="https://github.com/doublej/flt" target="_blank" class="hero-link">
           View on GitHub
         </a>
+        <a href="{base}/agent-session.html" class="hero-link">
+          See full real-world scenario &rarr;
+        </a>
       </div>
-    </div>
-  </section>
-
-  <!-- Agent Session -->
-  <section class="agent-session">
-    <div class="container">
-      <a href="{base}/agent-session.html" class="session-link">
-        See full real-world scenario <span class="session-arrow">&rarr;</span>
-      </a>
     </div>
   </section>
 
   <!-- Terminal Demo -->
   <section class="demo">
     <div class="container">
-      <div class="demo-narrative">
+      <div class="demo-header">
+        <div class="demo-header-text">
+          <h3 class="step-title">{steps[step].title}</h3>
+          <p class="step-description">{steps[step].description}</p>
+        </div>
         <div class="step-nav">
           <button class="nav-arrow" disabled={step === 0} onclick={() => step--}>&larr;</button>
           <span class="step-counter">{step + 1} / {steps.length}</span>
           <button class="nav-arrow" disabled={step === steps.length - 1} onclick={() => step++}>&rarr;</button>
         </div>
-        <h3 class="step-title">{steps[step].title}</h3>
-        <p class="step-description">{steps[step].description}</p>
       </div>
       <div class="terminal">
           <div class="terminal-header">
@@ -522,19 +520,26 @@ const commands = [
     border-color: #777;
   }
 
-  .github-link {
+  .hero-links {
     display: flex;
-    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 16px;
+    animation: fadeSlideUp 0.5s ease-out 0.15s forwards;
+    opacity: 0;
+  }
+
+  .hero-link {
     color: var(--text-secondary);
     text-decoration: none;
-    font-size: 0.95rem;
-    padding: 0 20px;
+    font-size: 0.9rem;
+    padding: 8px 20px;
     border: 1px solid var(--border);
     border-radius: 8px;
     transition: border-color 0.2s;
   }
 
-  .github-link:hover {
+  .hero-link:hover {
     border-color: var(--text-tertiary);
   }
 
@@ -580,16 +585,26 @@ const commands = [
     margin-left: 8px;
   }
 
-  .demo-narrative {
+  .demo-header {
     max-width: 680px;
     margin: 0 auto 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .demo-header-text {
+    flex: 1;
+    min-width: 0;
   }
 
   .step-nav {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
+    flex-shrink: 0;
+    padding-top: 2px;
   }
 
   .nav-arrow {
@@ -860,7 +875,7 @@ const commands = [
     border-radius: 6px;
     font-size: 0.85rem;
     overflow-x: auto;
-    margin: 0;
+    margin: 0 0 8px;
   }
 
   /* Output Formats */
@@ -903,29 +918,6 @@ const commands = [
     line-height: 1.5;
   }
 
-  /* Agent Session link */
-  .agent-session {
-    padding: 0;
-    text-align: center;
-  }
-
-  .session-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-
-  .session-link:hover {
-    color: var(--text-primary);
-  }
-
-  .session-arrow {
-    font-size: 0.9rem;
-  }
 
   /* CTA */
   .cta {
