@@ -11,7 +11,7 @@
   });
 
   function copyInstall() {
-    navigator.clipboard.writeText('bunx github:jurrejan/flights-app');
+    navigator.clipboard.writeText('bunx github:doublej/flt');
     copied = true;
     setTimeout(() => copied = false, 2000);
   }
@@ -96,12 +96,12 @@
       </p>
       <div class="hero-actions">
         <div class="install-box">
-          <code>bunx github:jurrejan/flights-app</code>
+          <code>bunx github:doublej/flt</code>
           <button onclick={copyInstall} class="copy-btn">
             {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
-        <a href="https://github.com/jurrejan/flights" target="_blank" class="github-link">
+        <a href="https://github.com/doublej/flt" target="_blank" class="github-link">
           View on GitHub
         </a>
       </div>
@@ -182,7 +182,7 @@
           <div class="step-number">1</div>
           <div class="step-content">
             <h3>Install globally</h3>
-            <pre><code>bun install -g github:jurrejan/flights-app</code></pre>
+            <pre><code>bun install -g github:doublej/flt</code></pre>
           </div>
         </div>
         <div class="step" style="animation-delay: 200ms">
@@ -247,7 +247,7 @@
     <div class="container">
       <h2>Ready to fly?</h2>
       <p>Install flt and start searching flights from your terminal today.</p>
-      <pre class="cta-install"><code>bun install -g github:jurrejan/flights-app</code></pre>
+      <pre class="cta-install"><code>bun install -g github:doublej/flt</code></pre>
     </div>
   </section>
 
@@ -255,7 +255,7 @@
   <footer>
     <div class="container">
       <p>
-        <a href="https://github.com/jurrejan/flights" target="_blank">GitHub</a>
+        <a href="https://github.com/doublej/flt" target="_blank">GitHub</a>
         <span class="sep">&middot;</span>
         MIT License
       </p>
