@@ -1,9 +1,0 @@
-pyproject.toml
-flights_api.egg-info/PKG-INFO
-flights_api.egg-info/SOURCES.txt
-flights_api.egg-info/dependency_links.txt
-flights_api.egg-info/requires.txt
-flights_api.egg-info/top_level.txt
-routes/__init__.py
-routes/airports.py
-routes/flights.py
