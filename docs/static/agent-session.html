@@ -145,6 +145,10 @@
 
     .think { color: #7a7a82; white-space: pre-wrap; word-break: break-word; margin-top: 10px; font-style: italic; }
 
+    .user-ctx { color: #9a8abf; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; font-family: 'DM Mono', monospace; }
+    .user-ctx + .out { margin-top: 4px; }
+    .user-ctx + .out::before { content: ""; margin-left: 0; }
+
     .hl { color: #fff; font-weight: 500; }
     .pr { color: #8cb88c; }
     .dm { color: #555; }
@@ -212,11 +216,11 @@
 <!-- Phase 1 -->
 <section class="phase">
   <div class="phase-title"><span class="pn">Phase 1</span> <span class="pt">Setup &amp; Discovery</span></div>
-  <p class="phase-desc">Load the safety briefing to understand which transit hubs are safe.</p>
+  <p class="phase-desc">The user provides a geopolitical safety briefing and the search request. The agent loads the CLI agent guide.</p>
 
   <div class="step">
     <div class="terminal">
-      <div class="tool">Bash(<span class="tc">flt prime 2&gt;&amp;1</span>)</div>
+      <div class="user-ctx">User context &mdash; safety briefing</div>
       <div class="out">RED &mdash; Do Not Transit (active conflict / closed airspace)
 Iran (IKA/THR) &middot; Iraq (BGW) &middot; Syria (DAM)
 Israel (TLV) &middot; Yemen (SAH) &middot; Palestine
@@ -235,14 +239,19 @@ Singapore (SIN)  &middot;  Istanbul (IST)
 Bangkok (BKK)    &middot;  Seoul (ICN)
 Tokyo (NRT)      &middot;  Taipei (TPE)
 Paris (CDG)      &middot;  Manila direct (MNL)</div>
+      <div class="tool">Bash(<span class="tc">flt prime 2&gt;&amp;1</span>)</div>
+      <div class="out"><span class="dm">&lt;flt-agent-guide&gt;
+&lt;identity&gt;flt &mdash; Flight Search CLI (Google Flights scraper).&lt;/identity&gt;
+&lt;rate-limits&gt; Auto-waits 3s between Google requests&hellip; &lt;/rate-limits&gt;
+&lt;commands&gt; search &middot; matrix &middot; inspect &middot; itinerary &middot; airports &middot; takeout &lt;/commands&gt;
+&lt;workflow&gt; matrix for date ranges &rarr; search best dates &rarr; inspect &rarr; itinerary &rarr; takeout &lt;/workflow&gt;
+&lt;/flt-agent-guide&gt;</span></div>
       <div class="think">Got it. Let me search for the cheapest way from Siargao (IAO) to Amsterdam (AMS) between March 14-24. I'll start with price matrices to find the best dates, then drill into the details.</div>
     </div>
     <div class="annotation">
-      <p><strong>flt prime</strong> returns the agent guide &mdash; a structured safety briefing the AI reads before planning any route.</p>
-      <p><strong>Red</strong> = closed airspace or active conflict. 13 countries. No routing under any circumstances.</p>
-      <p><strong>Orange</strong> = disrupted operations. The major Gulf hubs all have intermittent closures and suspended airspace. Flights may operate but cancellation risk is high.</p>
-      <p><strong>Green</strong> = safe and operating normally. Singapore, Istanbul, Seoul, Tokyo, Taipei, Bangkok, Paris.</p>
-      <p style="color:#bbb">This briefing shapes every routing decision that follows.</p>
+      <p>The user provides a <strong>geopolitical safety briefing</strong> with transit risk levels: 13 red-zone countries (closed airspace), 5 orange-zone Gulf hubs (disrupted operations), and 8 green-zone safe transit hubs.</p>
+      <p><strong>flt prime</strong> returns the CLI agent guide &mdash; rate-limit rules, command reference, caching behavior, and the recommended search workflow.</p>
+      <p style="color:#bbb">Both inputs shape every routing decision that follows.</p>
     </div>
   </div>
 </section>
@@ -407,12 +416,12 @@ O29 <span class="pr">&euro;1,339</span> China Southern 1 stop 38h 15m 2026-03-24
 2026-03-14  <span class="pr">&euro;113</span>      Vietjet  1      8h 20m
 2026-03-15  <span class="pr">&euro;106</span>      Scoot    0      3h 55m
 <span class="tr">&hellip; +9 lines</span></div>
+      <div class="think">SIN&rarr;AMS cheapest also routes via Gulf. Let me check for Singapore Airlines direct SIN&rarr;AMS, and also ICN&rarr;AMS.</div>
       <div class="tool">Bash(<span class="tc">flt search SIN AMS 2026-03-22 --currency EUR --limit 10 --sort price --max-stops 0 --fmt brief 2&gt;&amp;1</span>)</div>
       <div class="out">O1 <span class="pr">&euro;2,135</span> KLM direct 13h 50m 2026-03-22 01:40&rarr;08:30</div>
-      <div class="think">SIN&rarr;AMS cheapest also routes via Gulf. Let me check for Singapore Airlines direct SIN&rarr;AMS, and also ICN&rarr;AMS.</div>
     </div>
     <div class="annotation">
-      <p>MNL&rarr;Singapore cheap (&euro;91 Scoot direct). But SIN&rarr;AMS direct is <strong>&euro;2,135</strong>. Cheap SIN&rarr;AMS options all route via Gulf anyway. <strong>Dead end.</strong> <span class="tag g">SIN green</span></p>
+      <p>MNL&rarr;Singapore cheap (&euro;106 Scoot direct). But SIN&rarr;AMS direct is <strong>&euro;2,135</strong>. Cheap SIN&rarr;AMS options all route via Gulf anyway. <strong>Dead end.</strong> <span class="tag g">SIN green</span></p>
     </div>
   </div>
 
@@ -439,7 +448,7 @@ O2 <span class="pr">&euro;1,052</span> KLM direct 14h 15m 2026-03-22 23:05&rarr;
 2026-03-22  <span class="pr">&euro;473</span>      Emirates  1      19h
 2026-03-23  <span class="pr">&euro;473</span>      Emirates  1      19h
 2026-03-24  <span class="pr">&euro;473</span>      Emirates  1      19h</div>
-      <div class="think">Still Gulf-routed cheapest options. Let me check direct ICN&rarr;AMS and IST&rarr;AMS, and also MNL&rarr;IST.</div>
+      <div class="think">Let me check the IST (Istanbul, green hub) self-connect option and also Turkish Airlines from MNL directly.</div>
     </div>
     <div class="annotation">
       <p>MNL&rarr;Istanbul &euro;473, but all routes <strong>still transit DXB</strong>. Istanbul is green but unreachable from Manila without Gulf. <span class="tag o">via DXB</span></p>
