@@ -1,6 +1,7 @@
 <script lang="ts">
 import type { Flight } from '$lib/types'
 import { formatDateShort } from '$lib/utils/dates'
+import FlightMap from './FlightMap.svelte'
 import FlightPath from './FlightPath.svelte'
 
 const { flight, showDate = false }: { flight: Flight; showDate?: boolean } = $props()
@@ -56,6 +57,10 @@ function fmtDuration(minutes: number): string {
         </span>
       </div>
       <div class="meta">
+        {#if flight.countries.length > 0}
+          <span class="countries">{flight.countries.join(' \u2192 ')}</span>
+          <span class="dot">&middot;</span>
+        {/if}
         {#if showDate}
           <span class="date-tag">{formatDateShort(flight.departure_date)}{#if flight.return_date} / {formatDateShort(flight.return_date)}{/if}</span>
           <span class="dot">&middot;</span>
@@ -112,6 +117,7 @@ function fmtDuration(minutes: number): string {
           </div>
         {/if}
       {/each}
+      <FlightMap legs={flight.legs} />
     </div>
   {/if}
 </div>
@@ -223,6 +229,10 @@ function fmtDuration(minutes: number): string {
     gap: 5px;
     font-size: 0.82rem;
     color: var(--color-muted);
+  }
+  .countries {
+    font-weight: 500;
+    letter-spacing: 0.03em;
   }
   .dot {
     opacity: 0.35;

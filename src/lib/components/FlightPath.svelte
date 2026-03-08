@@ -5,13 +5,6 @@ const { legs, layovers, stops }: { legs: FlightLeg[]; layovers: FlightLayover[];
   $props()
 
 const hasLegs = $derived(legs.length > 0)
-
-function fmtDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (h && m) return `${h}h ${m}m`
-  return h ? `${h}h` : `${m}m`
-}
 </script>
 
 <div class="flight-path">
@@ -25,14 +18,6 @@ function fmtDuration(minutes: number): string {
             <span class="stop-dot"></span>
             <div class="lay-half"></div>
           </div>
-        {/if}
-      {/each}
-    </div>
-    <div class="path-labels">
-      {#each legs as leg, i}
-        <div class="label-seg" style="flex: {leg.duration}">{fmtDuration(leg.duration)}</div>
-        {#if i < layovers.length}
-          <div class="label-lay" style="flex: {layovers[i].duration}">{fmtDuration(layovers[i].duration)}</div>
         {/if}
       {/each}
     </div>
@@ -52,7 +37,6 @@ function fmtDuration(minutes: number): string {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
     min-width: 40px;
   }
   .path-track {
@@ -83,29 +67,5 @@ function fmtDuration(minutes: number): string {
     background: var(--color-surface);
     flex-shrink: 0;
     margin: 0 2px;
-  }
-  .path-labels {
-    display: flex;
-    align-items: flex-start;
-  }
-  .label-seg {
-    flex: 1;
-    text-align: center;
-    font-family: var(--font-mono);
-    font-size: 0.64rem;
-    color: var(--color-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-  }
-  .label-lay {
-    text-align: center;
-    font-size: 0.6rem;
-    color: var(--color-muted);
-    opacity: 0.7;
-    white-space: nowrap;
-    min-width: 0;
-    font-style: italic;
   }
 </style>

@@ -1,6 +1,6 @@
-import { fail, redirect } from '@sveltejs/kit'
 import { env } from '$env/dynamic/private'
-import { signSession, COOKIE, COOKIE_OPTS } from '$lib/server/session'
+import { COOKIE, COOKIE_OPTS, signSession } from '$lib/server/session'
+import { fail, redirect } from '@sveltejs/kit'
 
 export const actions = {
   default: async ({ request, cookies, url }) => {
