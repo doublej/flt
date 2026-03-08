@@ -163,7 +163,7 @@ When presenting results:
 Token efficiency:
 - Use \`--fmt brief\` for quick human-readable pulls.
 - Use \`--fmt tsv\` when you need compact parsing.
-- Default \`--limit 10\` unless the user requests more.
+- Default \`--limit 100\` unless the user requests fewer.
 - Multiple searches coexist: each is tagged by route+date (e.g. \`IAO-MNL@0324\`), reference with \`TAG:ID\`.
 </response-format>
 </flt-agent-guide>`

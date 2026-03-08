@@ -56,7 +56,7 @@ function getArgDefault(key: keyof FltConfig): unknown {
     fmt: 'table',
     seat: 'economy',
     pax: '1ad',
-    limit: '10',
+    limit: '100',
   }
   return defaults[key]
 }

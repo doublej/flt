@@ -25,7 +25,7 @@ export const searchCommand = defineCommand({
     fields: { type: 'string', description: 'Comma-separated fields' },
     view: { type: 'string', description: 'Field preset: min|std|full' },
     sort: { type: 'string', description: 'Sort by: price|dur|stops|dep', default: 'price' },
-    limit: { type: 'string', description: 'Max results', default: '10' },
+    limit: { type: 'string', description: 'Max results', default: '100' },
     'dep-after': { type: 'string', description: 'Depart after HH:MM' },
     'dep-before': { type: 'string', description: 'Depart before HH:MM' },
     'arr-after': { type: 'string', description: 'Arrive after HH:MM' },
@@ -118,8 +118,10 @@ export const searchCommand = defineCommand({
     })
     offers = sortOffers(offers, (args.sort as SortKey) ?? 'price')
     const limit = Number.parseInt(args.limit)
+    const totalAfterFilter = offers.length
     offers = offers.slice(0, limit)
     offers = offers.map((o, i) => ({ ...o, id: `O${i + 1}` }))
+    const truncated = totalAfterFilter > limit
 
     // Cache stores unfiltered; current session stores filtered (for inspect)
     const displayEntry = { offers, query: queryStr, timestamp: Date.now() }
@@ -131,5 +133,8 @@ export const searchCommand = defineCommand({
     console.log(
       formatOffers(offers, args.fmt as Format, args.fields, args.view as View | undefined),
     )
+    if (truncated) {
+      console.log(`\n  Showing ${limit} of ${totalAfterFilter} results. Use --limit to see more.`)
+    }
   },
 })
