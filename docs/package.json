@@ -1,0 +1,25 @@
+{
+  "name": "flt-docs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.7",
+    "@sveltejs/kit": "^2.11.1",
+    "@sveltejs/vite-plugin-svelte": "^5.0.4",
+    "svelte": "^5.17.0",
+    "typescript": "^5.7.3",
+    "vite": "^7.0.5"
+  },
+  "dependencies": {
+    "orphan-obliterator": "github:doublej/orphan-obliterator"
+  },
+  "trustedDependencies": [
+    "orphan-obliterator"
+  ]
+}
