@@ -4,7 +4,9 @@
   import { onMount } from 'svelte';
 
   type Mode = 'run' | 'install' | 'agent';
+  type Demo = 'search' | 'matrix' | 'itinerary';
   let mode = $state<Mode>('run');
+  let demo = $state<Demo>('search');
   let copied = $state(false);
 
   const display_map: Record<Mode, string> = {
@@ -139,23 +141,56 @@
           <span class="dot red"></span>
           <span class="dot yellow"></span>
           <span class="dot green"></span>
-          <span class="terminal-title">flt</span>
+          <div class="demo-switch">
+            <button class="demo-btn" class:active={demo === 'search'} onclick={() => demo = 'search'}>Search</button>
+            <button class="demo-btn" class:active={demo === 'matrix'} onclick={() => demo = 'matrix'}>Matrix</button>
+            <button class="demo-btn" class:active={demo === 'itinerary'} onclick={() => demo = 'itinerary'}>Itinerary</button>
+          </div>
         </div>
         <div class="terminal-body">
-          <div class="line"><span class="prompt">$</span> flt AMS NRT 2026-04-10</div>
-          <div class="line output">Searching Amsterdam → Tokyo Narita...</div>
-          <div class="line output"></div>
-          <div class="line output"><span class="result-id">O1</span> KLM KL861 direct · 11h 25m · <span class="price">€ 612</span></div>
-          <div class="line output"><span class="result-id">O2</span> ANA NH232 via HND · 13h 40m · <span class="price">€ 589</span></div>
-          <div class="line output"><span class="result-id">O3</span> JAL JL408 direct · 11h 15m · <span class="price">€ 645</span></div>
-          <div class="line output"><span class="result-id">O4</span> Turkish TK1952+TK198 via IST · 16h 10m · <span class="price">€ 487</span></div>
-          <div class="line output dim">4 results · tagged AMS-NRT@0410</div>
-          <div class="line"></div>
-          <div class="line"><span class="prompt">$</span> flt O2</div>
-          <div class="line output">ANA NH232 — Amsterdam (AMS) → Tokyo Narita (NRT)</div>
-          <div class="line output">  Depart: 10 Apr 2026 11:20 → Arrive: 11 Apr 07:00 (+1)</div>
-          <div class="line output">  Economy · 1 stop (HND) · 13h 40m total</div>
-          <div class="line output">  € 589 per passenger</div>
+          {#if demo === 'search'}
+            <div class="line"><span class="prompt">$</span> flt AMS NRT 2026-04-10</div>
+            <div class="line output">Searching Amsterdam → Tokyo Narita...</div>
+            <div class="line output"></div>
+            <div class="line output"><span class="result-id">O1</span> KLM KL861 direct · 11h 25m · <span class="price">€ 612</span></div>
+            <div class="line output"><span class="result-id">O2</span> ANA NH232 via HND · 13h 40m · <span class="price">€ 589</span></div>
+            <div class="line output"><span class="result-id">O3</span> JAL JL408 direct · 11h 15m · <span class="price">€ 645</span></div>
+            <div class="line output"><span class="result-id">O4</span> Turkish TK1952+TK198 via IST · 16h 10m · <span class="price">€ 487</span></div>
+            <div class="line output dim">4 results · tagged AMS-NRT@0410</div>
+            <div class="line"></div>
+            <div class="line"><span class="prompt">$</span> flt O2</div>
+            <div class="line output">ANA NH232 — Amsterdam (AMS) → Tokyo Narita (NRT)</div>
+            <div class="line output">  Depart: 10 Apr 2026 11:20 → Arrive: 11 Apr 07:00 (+1)</div>
+            <div class="line output">  Economy · 1 stop (HND) · 13h 40m total</div>
+            <div class="line output">  € 589 per passenger</div>
+          {:else if demo === 'matrix'}
+            <div class="line"><span class="prompt">$</span> flt matrix AMS NRT 2026-04-07 2026-04-12</div>
+            <div class="line output">Scanning 6 dates...</div>
+            <div class="line output"></div>
+            <div class="line output dim">date        cheapest  carrier  stops  duration</div>
+            <div class="line output">2026-04-07  <span class="price">€ 523</span>     Turkish  1      16h 10m</div>
+            <div class="line output">2026-04-08  <span class="price best-price">€ 487</span>     Turkish  1      16h 10m</div>
+            <div class="line output">2026-04-09  <span class="price">€ 612</span>     KLM      0      11h 25m</div>
+            <div class="line output">2026-04-10  <span class="price best-price">€ 487</span>     Turkish  1      16h 10m</div>
+            <div class="line output">2026-04-11  <span class="price">€ 545</span>     ANA      1      13h 40m</div>
+            <div class="line output">2026-04-12  <span class="price">€ 498</span>     Cathay   1      15h 05m</div>
+            <div class="line output"></div>
+            <div class="line output dim">Cheapest: Apr 8 & 10 · € 487 via Turkish</div>
+          {:else}
+            <div class="line"><span class="prompt">$</span> flt itinerary AMS-NRT@0410:O4 NRT-AMS@0418:O2 \</div>
+            <div class="line output dim">    --title "Tokyo Spring Trip"</div>
+            <div class="line output"></div>
+            <div class="line output dim">── Tokyo Spring Trip ─────────────────────</div>
+            <div class="line output dim">#  Date        Route    Price   Stops   Carrier</div>
+            <div class="line output">1  2026-04-10  AMS→NRT  <span class="price">€ 487</span>   1 stop  Turkish</div>
+            <div class="line output">2  2026-04-18  NRT→AMS  <span class="price">€ 512</span>   1 stop  ANA</div>
+            <div class="line output dim">──────────────────────────────────────────</div>
+            <div class="line output">Total: <span class="price">€ 999</span> · door-to-door: 8 days</div>
+            <div class="line"></div>
+            <div class="line"><span class="prompt">$</span> flt takeout --title "Tokyo Trip 2026"</div>
+            <div class="line output">Exported to ~/Desktop/flights-2026-04-05.md</div>
+            <div class="line output dim">3 searches · 1 itinerary</div>
+          {/if}
         </div>
       </div>
     </div>
@@ -459,6 +494,36 @@
     font-size: 0.8rem;
     font-family: 'DM Mono', monospace;
     margin-left: 8px;
+  }
+
+  .demo-switch {
+    display: flex;
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 5px;
+    padding: 2px;
+  }
+
+  .demo-btn {
+    background: none;
+    border: none;
+    color: #666;
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    transition: all 0.15s;
+  }
+
+  .demo-btn.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+  }
+
+  .best-price {
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   .terminal-body {
