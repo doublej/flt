@@ -1,106 +1,153 @@
 <script lang="ts">
-  import { base } from '$app/paths';
-  import { obliterate } from 'orphan-obliterator';
-  import { onMount } from 'svelte';
+import { base } from '$app/paths'
+import { obliterate } from 'orphan-obliterator'
+import { onMount } from 'svelte'
 
-  type Mode = 'run' | 'install' | 'agent';
-  type Demo = 'search' | 'matrix' | 'itinerary';
-  let mode = $state<Mode>('run');
-  let demo = $state<Demo>('search');
-  let copied = $state(false);
+type Mode = 'run' | 'install' | 'agent'
+let mode = $state<Mode>('agent')
+let copied = $state(false)
+let step = $state(0)
 
-  const display_map: Record<Mode, string> = {
-    run: 'bunx github:doublej/flt',
-    install: 'bun install -g github:doublej/flt',
-    agent: 'bunx github:doublej/flt prime'
-  };
+const steps = [
+  {
+    title: 'Compare prices across dates',
+    description:
+      'Client wants Amsterdam → Tokyo in April, flexible on dates. Scan a full week in one command.',
+  },
+  {
+    title: 'Search the cheapest date',
+    description: 'April 8 is €574 — the lowest. Pull all flights for that date.',
+  },
+  {
+    title: 'Inspect flight details',
+    description: 'O1 looks good. Check the layover, aircraft, and leg breakdown.',
+  },
+  {
+    title: 'Search Tokyo → Manila',
+    description: 'Client wants a week in Tokyo, then fly to Manila. Find direct flights.',
+  },
+  {
+    title: 'Search Manila → Amsterdam',
+    description: 'A week in Manila, then home. Find the return leg.',
+  },
+  {
+    title: 'Compose the itinerary',
+    description: 'Combine all three legs into one itinerary using session refs.',
+  },
+  {
+    title: 'Export for the client',
+    description: 'Generate a markdown file with all searches and the recommended itinerary.',
+  },
+]
 
-  const copy_map: Record<Mode, string> = {
-    run: 'bunx github:doublej/flt',
-    install: 'bun install -g github:doublej/flt',
-    agent: 'Help me find flights using flt. Run `bunx github:doublej/flt prime` to get started'
-  };
+const display_map: Record<Mode, string> = {
+  run: 'bunx github:doublej/flt',
+  install: 'bun install -g github:doublej/flt',
+  agent: 'bunx github:doublej/flt prime',
+}
 
-  onMount(() => {
-    const instance = obliterate({
-      selectors: ['p', '.tagline', '.description', '.command-desc', '.feature-card p', '.format-card p'],
-      rules: { minLastLineWords: 3, maxProtectedChars: 40 },
-      demo: true
-    });
-    return () => instance.destroy();
-  });
+const copy_map: Record<Mode, string> = {
+  run: 'bunx github:doublej/flt',
+  install: 'bun install -g github:doublej/flt',
+  agent: 'Help me find flights using flt. Run `bunx github:doublej/flt prime` to get started',
+}
 
-  function copyCommand() {
-    navigator.clipboard.writeText(copy_map[mode]);
-    copied = true;
-    setTimeout(() => copied = false, 2000);
+onMount(() => {
+  const instance = obliterate({
+    selectors: [
+      'p',
+      '.tagline',
+      '.description',
+      '.command-desc',
+      '.feature-card p',
+      '.format-card p',
+    ],
+    rules: { minLastLineWords: 3, maxProtectedChars: 40 },
+    demo: true,
+  })
+
+  return () => {
+    instance.destroy()
   }
+})
 
-  const features = [
-    {
-      icon: '~',
-      title: 'Smart Routing',
-      description: 'Type naturally. flt ams finds airports, flt AMS NRT 2026-04-10 searches flights, flt O1 inspects a result. No subcommands to memorize.'
-    },
-    {
-      icon: '$',
-      title: 'Price Matrix',
-      description: 'Compare fares across date ranges in a single view. Spot the cheapest travel windows instantly with the matrix command.'
-    },
-    {
-      icon: '>',
-      title: 'Session Memory',
-      description: 'Searches persist by route tag. Reference any result later with TAG:ID notation — no re-searching required.'
-    },
-    {
-      icon: '#',
-      title: 'Multiple Formats',
-      description: 'Output as JSONL for pipelines, TSV for spreadsheets, tables for quick reads, or brief summaries for client emails.'
-    },
-    {
-      icon: '@',
-      title: 'Itinerary Builder',
-      description: 'Combine multiple flight segments into complete itineraries. Export as structured data ready for booking systems.'
-    },
-    {
-      icon: '*',
-      title: 'Built for Agents',
-      description: 'Designed from the ground up by coding agents. Every command, flag, and output format optimized for the travel professional workflow.'
-    }
-  ];
+function copyCommand() {
+  navigator.clipboard.writeText(copy_map[mode])
+  copied = true
+  setTimeout(() => (copied = false), 2000)
+}
 
-  const commands = [
-    {
-      name: 'search',
-      syntax: 'flt AMS NRT 2026-04-10',
-      description: 'Search flights between any two airports on a given date'
-    },
-    {
-      name: 'matrix',
-      syntax: 'flt matrix AMS NRT --from 2026-04-01 --to 2026-04-14',
-      description: 'Price comparison grid across a date range'
-    },
-    {
-      name: 'inspect',
-      syntax: 'flt O1',
-      description: 'Deep-dive into a specific search result by its ID'
-    },
-    {
-      name: 'itinerary',
-      syntax: 'flt itinerary IAO-MNL@0318:O1 MNL-NRT@0320:O3',
-      description: 'Combine segments into a complete travel plan'
-    },
-    {
-      name: 'airports',
-      syntax: 'flt amsterdam',
-      description: 'Fuzzy search airports by city, name, or IATA code'
-    },
-    {
-      name: 'takeout',
-      syntax: 'flt takeout --format tsv',
-      description: 'Export all session data for spreadsheets or booking tools'
-    }
-  ];
+const features = [
+  {
+    icon: '~',
+    title: 'Smart Routing',
+    description:
+      'Type naturally. flt ams finds airports, flt AMS NRT 2026-04-10 searches flights, flt O1 inspects a result. No subcommands to memorize.',
+  },
+  {
+    icon: '$',
+    title: 'Price Matrix',
+    description:
+      'Compare fares across date ranges in a single view. Spot the cheapest travel windows instantly with the matrix command.',
+  },
+  {
+    icon: '>',
+    title: 'Session Memory',
+    description:
+      'Searches persist by route tag. Reference any result later with TAG:ID notation — no re-searching required.',
+  },
+  {
+    icon: '#',
+    title: 'Multiple Formats',
+    description:
+      'Output as JSONL for pipelines, TSV for spreadsheets, tables for quick reads, or brief summaries for client emails.',
+  },
+  {
+    icon: '@',
+    title: 'Itinerary Builder',
+    description:
+      'Combine multiple flight segments into complete itineraries. Export as structured data ready for booking systems.',
+  },
+  {
+    icon: '*',
+    title: 'Built for Agents',
+    description:
+      'Designed from the ground up by coding agents. Every command, flag, and output format optimized for the travel professional workflow.',
+  },
+]
+
+const commands = [
+  {
+    name: 'search',
+    syntax: 'flt AMS NRT 2026-04-10',
+    description: 'Search flights between any two airports on a given date',
+  },
+  {
+    name: 'matrix',
+    syntax: 'flt matrix AMS NRT --from 2026-04-01 --to 2026-04-14',
+    description: 'Price comparison grid across a date range',
+  },
+  {
+    name: 'inspect',
+    syntax: 'flt O1',
+    description: 'Deep-dive into a specific search result by its ID',
+  },
+  {
+    name: 'itinerary',
+    syntax: 'flt itinerary IAO-MNL@0318:O1 MNL-NRT@0320:O3',
+    description: 'Combine segments into a complete travel plan',
+  },
+  {
+    name: 'airports',
+    syntax: 'flt amsterdam',
+    description: 'Fuzzy search airports by city, name, or IATA code',
+  },
+  {
+    name: 'takeout',
+    syntax: 'flt takeout --format tsv',
+    description: 'Export all session data for spreadsheets or booking tools',
+  },
+]
 </script>
 
 <main>
@@ -112,7 +159,7 @@
       <p class="tagline">The ultimate CLI swiss army knife for finding flights</p>
       <p class="description">
         Search flights, compare prices across dates, build itineraries, and export
-        data — all from your terminal. Designed for travel professionals who move fast.
+        data — all from your terminal.
       </p>
       <div class="hero-actions">
         <div class="install-box">
@@ -133,63 +180,99 @@
     </div>
   </section>
 
+  <!-- Agent Session -->
+  <section class="agent-session">
+    <div class="container">
+      <a href="{base}/agent-session.html" class="session-link">
+        See full real-world scenario <span class="session-arrow">&rarr;</span>
+      </a>
+    </div>
+  </section>
+
   <!-- Terminal Demo -->
   <section class="demo">
     <div class="container">
-      <div class="terminal">
-        <div class="terminal-header">
-          <span class="dot red"></span>
-          <span class="dot yellow"></span>
-          <span class="dot green"></span>
-          <div class="demo-switch">
-            <button class="demo-btn" class:active={demo === 'search'} onclick={() => demo = 'search'}>Search</button>
-            <button class="demo-btn" class:active={demo === 'matrix'} onclick={() => demo = 'matrix'}>Matrix</button>
-            <button class="demo-btn" class:active={demo === 'itinerary'} onclick={() => demo = 'itinerary'}>Itinerary</button>
-          </div>
+      <div class="demo-narrative">
+        <div class="step-nav">
+          <button class="nav-arrow" disabled={step === 0} onclick={() => step--}>&larr;</button>
+          <span class="step-counter">{step + 1} / {steps.length}</span>
+          <button class="nav-arrow" disabled={step === steps.length - 1} onclick={() => step++}>&rarr;</button>
         </div>
-        <div class="terminal-body">
-          {#if demo === 'search'}
-            <div class="line"><span class="prompt">$</span> flt AMS NRT 2026-04-10</div>
-            <div class="line output">Searching Amsterdam → Tokyo Narita...</div>
-            <div class="line output"></div>
-            <div class="line output"><span class="result-id">O1</span> KLM KL861 direct · 11h 25m · <span class="price">€ 612</span></div>
-            <div class="line output"><span class="result-id">O2</span> ANA NH232 via HND · 13h 40m · <span class="price">€ 589</span></div>
-            <div class="line output"><span class="result-id">O3</span> JAL JL408 direct · 11h 15m · <span class="price">€ 645</span></div>
-            <div class="line output"><span class="result-id">O4</span> Turkish TK1952+TK198 via IST · 16h 10m · <span class="price">€ 487</span></div>
-            <div class="line output dim">4 results · tagged AMS-NRT@0410</div>
-            <div class="line"></div>
-            <div class="line"><span class="prompt">$</span> flt O2</div>
-            <div class="line output">ANA NH232 — Amsterdam (AMS) → Tokyo Narita (NRT)</div>
-            <div class="line output">  Depart: 10 Apr 2026 11:20 → Arrive: 11 Apr 07:00 (+1)</div>
-            <div class="line output">  Economy · 1 stop (HND) · 13h 40m total</div>
-            <div class="line output">  € 589 per passenger</div>
-          {:else if demo === 'matrix'}
+        <h3 class="step-title">{steps[step].title}</h3>
+        <p class="step-description">{steps[step].description}</p>
+      </div>
+      <div class="terminal">
+          <div class="terminal-header">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <div class="terminal-body">
+          {#if step === 0}
             <div class="line"><span class="prompt">$</span> flt matrix AMS NRT 2026-04-07 2026-04-12</div>
-            <div class="line output">Scanning 6 dates...</div>
             <div class="line output"></div>
-            <div class="line output dim">date        cheapest  carrier  stops  duration</div>
-            <div class="line output">2026-04-07  <span class="price">€ 523</span>     Turkish  1      16h 10m</div>
-            <div class="line output">2026-04-08  <span class="price best-price">€ 487</span>     Turkish  1      16h 10m</div>
-            <div class="line output">2026-04-09  <span class="price">€ 612</span>     KLM      0      11h 25m</div>
-            <div class="line output">2026-04-10  <span class="price best-price">€ 487</span>     Turkish  1      16h 10m</div>
-            <div class="line output">2026-04-11  <span class="price">€ 545</span>     ANA      1      13h 40m</div>
-            <div class="line output">2026-04-12  <span class="price">€ 498</span>     Cathay   1      15h 05m</div>
+            <div class="line output dim">date        cheapest  carrier         stops  duration</div>
+            <div class="line output">2026-04-07  <span class="price">€689</span>      China Southern  1      17h 20m</div>
+            <div class="line output">2026-04-08  <span class="price best-price">€574</span>      Etihad          1      19h 5m</div>
+            <div class="line output">2026-04-09  <span class="price best-price">€574</span>      Etihad          1      19h 5m</div>
+            <div class="line output">2026-04-10  <span class="price">€604</span>      Etihad          1      19h 5m</div>
+            <div class="line output">2026-04-11  <span class="price">€604</span>      Etihad          1      19h 5m</div>
+            <div class="line output">2026-04-12  <span class="price best-price">€574</span>      Etihad          1      19h 5m</div>
+          {:else if step === 1}
+            <div class="line"><span class="prompt">$</span> flt AMS NRT 2026-04-08 --limit 5</div>
             <div class="line output"></div>
-            <div class="line output dim">Cheapest: Apr 8 & 10 · € 487 via Turkish</div>
-          {:else}
-            <div class="line"><span class="prompt">$</span> flt itinerary AMS-NRT@0410:O4 NRT-AMS@0418:O2 \</div>
-            <div class="line output dim">    --title "Tokyo Spring Trip"</div>
+            <div class="line output"><span class="result-id">O1</span> <span class="price">€574</span> Etihad 1 stop 19h 5m 10:25→12:30+1</div>
+            <div class="line output"><span class="result-id">O2</span> <span class="price">€625</span> XiamenAir 1 stop 33h 15m 21:30→13:45+2</div>
+            <div class="line output"><span class="result-id">O3</span> <span class="price">€728</span> Qatar Airways 1 stop 19h 55m 16:15→19:10+1</div>
+            <div class="line output"><span class="result-id">O4</span> <span class="price">€894</span> Turkish Airlines 1 stop 21h 30m 14:40→19:10+1</div>
+            <div class="line output"><span class="result-id">O5</span> <span class="price">€897</span> Turkish Airlines 1 stop 17h 15m 18:55→19:10+1</div>
+            <div class="line output dim">Showing 5 of 28 results</div>
+          {:else if step === 2}
+            <div class="line"><span class="prompt">$</span> flt O1</div>
             <div class="line output"></div>
-            <div class="line output dim">── Tokyo Spring Trip ─────────────────────</div>
+            <div class="line output">Etihad · <span class="price">€574</span> · 1 stop · 19h 5m</div>
+            <div class="line output"></div>
+            <div class="line output dim">Leg 1  AMS→AUH  10:25–19:15  6h 50m  Airbus A321neo</div>
+            <div class="line output dim">       AUH layover 2h 10m</div>
+            <div class="line output dim">Leg 2  AUH→NRT  21:25–12:30  10h 5m  Airbus A350</div>
+          {:else if step === 3}
+            <div class="line"><span class="prompt">$</span> flt NRT MNL 2026-04-14 --direct</div>
+            <div class="line output"></div>
+            <div class="line output"><span class="result-id">O1</span> <span class="price">€175</span> Cebu Pacific direct 5h 25m 13:45→18:10</div>
+            <div class="line output"><span class="result-id">O2</span> <span class="price">€175</span> Cebu Pacific direct 5h 20m 19:15→23:35</div>
+            <div class="line output"><span class="result-id">O3</span> <span class="price">€189</span> Philippines AirAsia direct 4h 40m 11:10→14:50</div>
+            <div class="line output"><span class="result-id">O4</span> <span class="price">€273</span> Philippine Airlines direct 4h 50m 09:15→13:05</div>
+            <div class="line output dim">Showing 4 of 7 results · tagged NRT-MNL@0414</div>
+          {:else if step === 4}
+            <div class="line"><span class="prompt">$</span> flt MNL AMS 2026-04-21 --limit 5</div>
+            <div class="line output"></div>
+            <div class="line output"><span class="result-id">O1</span> <span class="price">€390</span> Air India 1 stop 26h 22:55→18:55+1</div>
+            <div class="line output"><span class="result-id">O2</span> <span class="price">€462</span> Emirates 1 stop 18h 15m 07:45→—</div>
+            <div class="line output"><span class="result-id">O3</span> <span class="price">€462</span> Emirates 1 stop 22h 35m 03:25→—</div>
+            <div class="line output"><span class="result-id">O4</span> <span class="price">€462</span> Emirates 1 stop 21h 5m 18:15→09:20+1</div>
+            <div class="line output dim">Showing 4 of 81 results · tagged MNL-AMS@0421</div>
+          {:else if step === 5}
+            <div class="line"><span class="prompt">$</span> flt itinerary AMS-NRT@0408:O1 \</div>
+            <div class="line output dim">    NRT-MNL@0414:O1 MNL-AMS@0421:O4 \</div>
+            <div class="line output dim">    --title "Tokyo + Manila Spring 2026"</div>
+            <div class="line output"></div>
+            <div class="line output dim">── Tokyo + Manila Spring 2026 ─────────────────────────────</div>
             <div class="line output dim">#  Date        Route    Price   Stops   Carrier</div>
-            <div class="line output">1  2026-04-10  AMS→NRT  <span class="price">€ 487</span>   1 stop  Turkish</div>
-            <div class="line output">2  2026-04-18  NRT→AMS  <span class="price">€ 512</span>   1 stop  ANA</div>
-            <div class="line output dim">──────────────────────────────────────────</div>
-            <div class="line output">Total: <span class="price">€ 999</span> · door-to-door: 8 days</div>
-            <div class="line"></div>
-            <div class="line"><span class="prompt">$</span> flt takeout --title "Tokyo Trip 2026"</div>
-            <div class="line output">Exported to ~/Desktop/flights-2026-04-05.md</div>
-            <div class="line output dim">3 searches · 1 itinerary</div>
+            <div class="line output">1  2026-04-08  AMS→NRT  <span class="price">€574</span>    1 stop  Etihad</div>
+            <div class="line output">2  2026-04-14  NRT→MNL  <span class="price">€175</span>    direct  Cebu Pacific</div>
+            <div class="line output">3  2026-04-21  MNL→AMS  <span class="price">€462</span>    1 stop  Emirates</div>
+            <div class="line output dim">───────────────────────────────────────────────────────────</div>
+            <div class="line output">Total: <span class="price">€1,211</span></div>
+          {:else}
+            <div class="line"><span class="prompt">$</span> flt takeout \</div>
+            <div class="line output dim">    --title "Tokyo + Manila Apr 2026" \</div>
+            <div class="line output dim">    --itin "Recommended" AMS-NRT@0408:O1 \</div>
+            <div class="line output dim">    NRT-MNL@0414:O1 MNL-AMS@0421:O4</div>
+            <div class="line output"></div>
+            <div class="line output">{'{"ok":true,'}</div>
+            <div class="line output">{' "path":"~/Desktop/flights-2026-04-05.md",'}</div>
+            <div class="line output">{' "searches":4,'}</div>
+            <div class="line output">{' "itineraries":1}'}</div>
           {/if}
         </div>
       </div>
@@ -425,7 +508,7 @@
 
   .copy-btn {
     background: none;
-    border: 1px solid #333;
+    border: 1px solid #444;
     color: var(--text-code);
     padding: 4px 12px;
     border-radius: 4px;
@@ -436,7 +519,7 @@
   }
 
   .copy-btn:hover {
-    border-color: #666;
+    border-color: #777;
   }
 
   .github-link {
@@ -469,6 +552,7 @@
     max-width: 680px;
     margin: 0 auto;
     box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    position: relative;
   }
 
   .terminal-header {
@@ -485,40 +569,70 @@
     border-radius: 50%;
   }
 
-  .dot.red { background: #ff5f57; }
-  .dot.yellow { background: #febc2e; }
-  .dot.green { background: #28c840; }
+  .dot.red { background: #e06058; }
+  .dot.yellow { background: #dba730; }
+  .dot.green { background: #5cb870; }
 
   .terminal-title {
-    color: #888;
+    color: #999;
     font-size: 0.8rem;
     font-family: 'DM Mono', monospace;
     margin-left: 8px;
   }
 
-  .demo-switch {
-    display: flex;
-    margin-left: auto;
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 5px;
-    padding: 2px;
+  .demo-narrative {
+    max-width: 680px;
+    margin: 0 auto 16px;
   }
 
-  .demo-btn {
+  .step-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .nav-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
     background: none;
-    border: none;
-    color: #666;
-    padding: 3px 10px;
-    border-radius: 4px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
     cursor: pointer;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.7rem;
+    font-size: 1rem;
     transition: all 0.15s;
   }
 
-  .demo-btn.active {
-    background: rgba(255, 255, 255, 0.1);
-    color: #ccc;
+  .nav-arrow:hover:not(:disabled) {
+    border-color: var(--text-primary);
+  }
+
+  .nav-arrow:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  .step-counter {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+  }
+
+  .step-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .step-description {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0;
   }
 
   .best-price {
@@ -531,7 +645,7 @@
     font-family: 'DM Mono', monospace;
     font-size: 0.85rem;
     line-height: 1.7;
-    color: #ccc;
+    color: #bbb;
   }
 
   .line {
@@ -539,12 +653,12 @@
   }
 
   .prompt {
-    color: #28c840;
+    color: #5cb870;
     margin-right: 8px;
   }
 
   .output {
-    color: #999;
+    color: #888;
   }
 
   .result-id {
@@ -553,12 +667,12 @@
   }
 
   .price {
-    color: #28c840;
+    color: #5cb870;
     font-weight: 500;
   }
 
   .dim {
-    color: #555;
+    color: #606060;
   }
 
   /* Features */
@@ -787,6 +901,30 @@
     color: var(--text-secondary);
     font-size: 0.95rem;
     line-height: 1.5;
+  }
+
+  /* Agent Session link */
+  .agent-session {
+    padding: 0;
+    text-align: center;
+  }
+
+  .session-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .session-link:hover {
+    color: var(--text-primary);
+  }
+
+  .session-arrow {
+    font-size: 0.9rem;
   }
 
   /* CTA */
