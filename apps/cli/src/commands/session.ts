@@ -3,8 +3,10 @@ import {
   closeActiveSession,
   createEmptySession,
   getActiveSession,
+  getSessionById,
   isSessionNameTaken,
   loadSession,
+  nukeCache,
   reopenSession,
   saveSession,
   startSession,
@@ -100,6 +102,42 @@ export const sessionCommand = defineCommand({
             searches: reopened.searchRefs.length,
           }),
         )
+      },
+    }),
+    nuke: defineCommand({
+      meta: { name: 'nuke', description: 'Delete all cached searches and session data' },
+      async run() {
+        await nukeCache()
+        console.log(JSON.stringify({ ok: true, hint: 'All cache and session data removed.' }))
+      },
+    }),
+    refs: defineCommand({
+      meta: { name: 'refs', description: 'List search refs for a session' },
+      args: {
+        id: { type: 'string', description: 'Session ID (default: active session)' },
+      },
+      async run({ args }) {
+        const state = await loadSession()
+        if (!state) {
+          console.log(JSON.stringify({ err: 'NO_SESSION', hint: 'No sessions found.' }))
+          return
+        }
+        const target = args.id
+          ? getSessionById(state, args.id)
+          : getActiveSession(state)
+        if (!target) {
+          console.log(JSON.stringify({ err: 'NOT_FOUND', hint: 'No matching session found.' }))
+          return
+        }
+        const refs = target.searchRefs.map((ref) => {
+          const search = state.searches[ref]
+          return {
+            ref,
+            query: search?.query ?? null,
+            offers: search?.offerCount ?? 0,
+          }
+        })
+        console.log(JSON.stringify({ session: target.id, name: target.name, refs }))
       },
     }),
     rename: defineCommand({

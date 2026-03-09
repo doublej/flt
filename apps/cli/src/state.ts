@@ -15,6 +15,7 @@ export {
   isFresh,
   isSessionNameTaken,
   listAvailableRefs,
+  nukeCache,
   loadCachedSearch,
   loadSearchByRef,
   loadSession,

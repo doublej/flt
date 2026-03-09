@@ -1,6 +1,7 @@
 import { defineCommand, runCommand, runMain, showUsage } from 'citty'
 import { airportsCommand } from './commands/airports'
 import { configCommand } from './commands/config'
+import { favCommand, favsCommand, unfavCommand } from './commands/fav'
 import { inspectCommand } from './commands/inspect'
 import { itineraryCommand } from './commands/itinerary'
 import { matrixCommand } from './commands/matrix'
@@ -19,6 +20,9 @@ const SUB_COMMANDS = {
   takeout: takeoutCommand,
   session: sessionCommand,
   config: configCommand,
+  fav: favCommand,
+  unfav: unfavCommand,
+  favs: favsCommand,
 }
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const FLEX_DATE = /^\d{1,2}\/\d{1,2}\/\d{4}$|^(today|tomorrow|overmorrow)$/i
@@ -29,7 +33,7 @@ const main = defineCommand({
 })
 
 // Smart routing: detect intent from raw args before citty parses them.
-// `flt ams` → airports, `flt AMS NRT 2026-04-10` → search, `flt O1` → inspect
+// `flt ams` → airports, `flt AMS NRT 2026-04-10` → search, `flt Fa3b7` → inspect
 const args = process.argv.slice(2)
 const first = args[0]
 
@@ -37,7 +41,7 @@ if (!first || first.startsWith('-')) {
   await showUsage(main)
 } else if (first in SUB_COMMANDS) {
   runMain(main)
-} else if (first.match(/^O\d+$/i)) {
+} else if (first.match(/^F[0-9a-f]{4,}$/i)) {
   runCommand(inspectCommand, { rawArgs: args })
 } else if (args.length >= 3 && (DATE_RE.test(args[2]) || FLEX_DATE.test(args[2]))) {
   runCommand(searchCommand, { rawArgs: args })

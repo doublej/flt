@@ -138,8 +138,7 @@ export const searchCommand = defineCommand({
       return
     }
 
-    const rawOffers: Offer[] = allFlights.map((offer, i) => ({ ...offer, id: `O${i + 1}` }))
-
+    const rawCount = allFlights.length
     const hasFilter = !!(
       args.carrier ||
       args['exclude-carrier'] ||
@@ -151,7 +150,7 @@ export const searchCommand = defineCommand({
       args['arr-before'] ||
       args['max-dur']
     )
-    let offers = applyFilters(rawOffers, {
+    let offers = applyFilters(allFlights, {
       depAfter: args['dep-after'],
       depBefore: args['dep-before'],
       arrAfter: args['arr-after'],
@@ -163,11 +162,16 @@ export const searchCommand = defineCommand({
       excludeCarrier: args['exclude-carrier'],
       excludeHub: args['exclude-hub'],
     })
+    if (hasFilter && offers.length === 0) {
+      console.log(
+        formatError('NO_RESULTS', `All ${rawCount} results filtered out, 0 remaining. Relax filters and retry.`),
+      )
+      return
+    }
     offers = sortOffers(offers, (args.sort as SortKey) ?? 'price')
     const limit = Number.parseInt(args.limit)
     const totalAfterFilter = offers.length
     offers = offers.slice(0, limit)
-    offers = offers.map((o, i) => ({ ...o, id: `O${i + 1}` }))
     const truncated = totalAfterFilter > limit
 
     // Cache stores per-pair unfiltered results; latest session stores the current filtered view.
@@ -187,8 +191,7 @@ export const searchCommand = defineCommand({
     const refLabel = refs.length === 1 ? refs[0] : `${refs.length} refs`
     const notes: string[] = []
     if (truncated) notes.push(`Showing ${limit} of ${totalAfterFilter} results. Use --limit to see more.`)
-    if (hasFilter) notes.push('Filtered results — O-IDs are for this view only.')
     notes.push(`ref: ${refLabel}`)
-    console.error(`\n  ${notes.join('\n  ')}`)
+    console.log(`\n  ${notes.join('\n  ')}`)
   },
 })

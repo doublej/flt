@@ -109,7 +109,11 @@ describe('cli cache state', () => {
     state.rememberSearch(session, second)
 
     expect(first.ref).not.toBe(second.ref)
-    expect(state.listAvailableRefs(session)).toEqual([`${first.ref}:O1`, `${second.ref}:O1`])
+    const refs = await state.listAvailableRefs(session)
+    expect(refs).toEqual([`${first.ref}:${first.offers[0].id}`, `${second.ref}:${second.offers[0].id}`])
+    // IDs are stable F-hashes, not positional
+    expect(first.offers[0].id).toMatch(/^F[0-9a-f]{4,}$/)
+    expect(second.offers[0].id).toMatch(/^F[0-9a-f]{4,}$/)
   })
 
   it('does not reuse stale cache entries', async () => {
@@ -173,13 +177,16 @@ describe('cli cache state', () => {
     const session = state.createEmptySession()
     const query = sampleQuery()
     const entry = await state.saveCachedSearch(query, '2026-03-16', null, [sampleOffer()])
+    const offerId = entry.offers[0].id
 
     state.rememberSearch(session, entry)
     state.clearLatestSearch(session)
 
-    await expect(state.resolveOffer(session, 'O1')).resolves.toBeNull()
-    await expect(state.resolveOffer(session, `${entry.ref}:O1`)).resolves.toMatchObject({
-      id: 'O1',
+    // Plain ID only resolves from latest (which was cleared)
+    await expect(state.resolveOffer(session, offerId)).resolves.toBeNull()
+    // REF:ID resolves from cached searches
+    await expect(state.resolveOffer(session, `${entry.ref}:${offerId}`)).resolves.toMatchObject({
+      id: offerId,
     })
   })
 })

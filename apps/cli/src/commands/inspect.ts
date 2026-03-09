@@ -7,7 +7,7 @@ export const inspectCommand = defineCommand({
   args: {
     id: {
       type: 'positional',
-      description: 'Offer ID (e.g. O1 or IAO-MNL@20260324#A1B2C3:O1)',
+      description: 'Offer ID (e.g. Fa3b7 or REF:Fa3b7)',
       required: true,
     },
     fmt: { type: 'string', description: 'Output format: json|table', default: 'json' },

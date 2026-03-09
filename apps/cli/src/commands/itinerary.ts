@@ -109,7 +109,7 @@ export const itineraryCommand = defineCommand({
     for (const ref of refs) {
       const offer = await resolveOffer(session, ref)
       if (!offer) {
-        const available = listAvailableRefs(session)
+        const available = await listAvailableRefs(session)
         console.log(
           formatError('NOT_FOUND', `Offer '${ref}' not found. Available: ${available.join(', ')}`),
         )

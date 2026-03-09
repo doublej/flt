@@ -5,14 +5,15 @@ import { applyFilters } from '../filter'
 import { loadConfig, withDefaults } from '../config'
 import { formatError } from '../format'
 import {
-  clearLatestSearch,
   createEmptySession,
+  describeSearchRequest,
   ensureActiveSession,
   loadCachedSearch,
   loadSession,
   rememberSearch,
   saveCachedSearch,
   saveSession,
+  setLatestSearch,
   throttle,
 } from '../state'
 import type { Offer, SessionState } from '../types'
@@ -23,11 +24,11 @@ async function fetchAndCache(
   ret: string | null,
   query: SearchQuery,
   session: SessionState,
-): Promise<Offer[]> {
+): Promise<{ offers: Offer[]; ref: string }> {
   const cached = await loadCachedSearch(query, dep, ret)
   if (cached) {
     rememberSearch(session, cached)
-    return cached.offers
+    return { offers: cached.offers, ref: cached.ref }
   }
 
   await throttle()
@@ -39,7 +40,7 @@ async function fetchAndCache(
     result.flights.map((f) => ({ ...f, url: result.url })),
   )
   rememberSearch(session, entry)
-  return entry.offers
+  return { offers: entry.offers, ref: entry.ref }
 }
 
 function printOneWay(cells: CellResult[], fmt: string): void {
@@ -172,13 +173,19 @@ export const matrixCommand = defineCommand({
     const depDates = dateRange(dateStart, dateEnd)
     const retDates = returnStart && returnEnd ? dateRange(returnStart, returnEnd) : null
 
+    const allOffers: Offer[] = []
+    const allRefs: string[] = []
+
     if (!retDates) {
       const cells: CellResult[] = []
       for (const d of depDates) {
-        const offers = filterOffers(await fetchAndCache(d, null, query, session))
-        cells.push(pickCheapest(offers, maxDur) ?? { ...EMPTY_CELL, dep: d })
+        const { offers, ref } = await fetchAndCache(d, null, query, session)
+        const filtered = filterOffers(offers)
+        allOffers.push(...filtered)
+        if (ref) allRefs.push(ref)
+        cells.push(pickCheapest(filtered, maxDur) ?? { ...EMPTY_CELL, dep: d })
       }
-      clearLatestSearch(session)
+      setLatestSearch(session, allOffers, describeSearchRequest(query), allRefs)
       await saveSession(session)
       printOneWay(cells, args.fmt)
       return
@@ -199,10 +206,13 @@ export const matrixCommand = defineCommand({
 
     const cells: CellResult[] = []
     for (const [d, r] of pairs) {
-      const offers = filterOffers(await fetchAndCache(d, r, query, session))
-      cells.push(pickCheapest(offers, maxDur) ?? { ...EMPTY_CELL, dep: d, ret: r })
+      const { offers, ref } = await fetchAndCache(d, r, query, session)
+      const filtered = filterOffers(offers)
+      allOffers.push(...filtered)
+      if (ref) allRefs.push(ref)
+      cells.push(pickCheapest(filtered, maxDur) ?? { ...EMPTY_CELL, dep: d, ret: r })
     }
-    clearLatestSearch(session)
+    setLatestSearch(session, allOffers, describeSearchRequest(query), allRefs)
     await saveSession(session)
     printGrid(depDates, retDates, cells, args.fmt)
   },
