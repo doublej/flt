@@ -14,9 +14,14 @@ export interface FltConfig {
   marker?: string
   trs?: string
   tp_token?: string
+  exclude_hub?: string
+  exclude_region?: string
 }
 
-const VALID_KEYS = new Set<keyof FltConfig>(['currency', 'fmt', 'seat', 'pax', 'limit', 'marker', 'trs', 'tp_token'])
+const VALID_KEYS = new Set<keyof FltConfig>([
+  'currency', 'fmt', 'seat', 'pax', 'limit', 'marker', 'trs', 'tp_token',
+  'exclude_hub', 'exclude_region',
+])
 
 export async function loadConfig(): Promise<FltConfig> {
   try {
@@ -36,6 +41,12 @@ export function isValidKey(key: string): key is keyof FltConfig {
   return VALID_KEYS.has(key as keyof FltConfig)
 }
 
+/** Config key → CLI arg key mapping (underscores → hyphens where they differ) */
+const CONFIG_TO_ARG: Partial<Record<keyof FltConfig, string>> = {
+  exclude_hub: 'exclude-hub',
+  exclude_region: 'exclude-region',
+}
+
 /** Merge config defaults with CLI args (CLI args win when explicitly provided) */
 export function withDefaults<T extends Record<string, unknown>>(
   args: T,
@@ -45,8 +56,9 @@ export function withDefaults<T extends Record<string, unknown>>(
   const merged = { ...args }
   for (const key of keys) {
     const val = config[key]
-    if (val != null && (merged[key] == null || merged[key] === getArgDefault(key))) {
-      ;(merged as Record<string, unknown>)[key] = val
+    const argKey = CONFIG_TO_ARG[key] ?? key
+    if (val != null && (merged[argKey] == null || merged[argKey] === getArgDefault(key))) {
+      ;(merged as Record<string, unknown>)[argKey] = val
     }
   }
   return merged
