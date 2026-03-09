@@ -49602,6 +49602,9 @@ function searchAirports(q) {
 function isValidAirport(code) {
   return code in _airports;
 }
+function airportCity(code) {
+  return _airports[code]?.city ?? null;
+}
 // ../../packages/core/src/dates.ts
 var ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
 var DMY_SLASH = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
@@ -49782,7 +49785,18 @@ import { homedir } from "os";
 import { join } from "path";
 var CONFIG_DIR = join(homedir(), ".config", "flt");
 var CONFIG_FILE = join(CONFIG_DIR, "config.json");
-var VALID_KEYS = new Set(["currency", "fmt", "seat", "pax", "limit", "marker", "trs", "tp_token"]);
+var VALID_KEYS = new Set([
+  "currency",
+  "fmt",
+  "seat",
+  "pax",
+  "limit",
+  "marker",
+  "trs",
+  "tp_token",
+  "exclude_hub",
+  "exclude_region"
+]);
 async function loadConfig() {
   try {
     const raw = await readFile(CONFIG_FILE, "utf-8");
@@ -49799,12 +49813,17 @@ async function saveConfig(config) {
 function isValidKey(key) {
   return VALID_KEYS.has(key);
 }
+var CONFIG_TO_ARG = {
+  exclude_hub: "exclude-hub",
+  exclude_region: "exclude-region"
+};
 function withDefaults(args, config, keys) {
   const merged = { ...args };
   for (const key of keys) {
     const val = config[key];
-    if (val != null && (merged[key] == null || merged[key] === getArgDefault(key))) {
-      merged[key] = val;
+    const argKey = CONFIG_TO_ARG[key] ?? key;
+    if (val != null && (merged[argKey] == null || merged[argKey] === getArgDefault(key))) {
+      merged[argKey] = val;
     }
   }
   return merged;
@@ -49878,11 +49897,20 @@ function assignFlightIds(flights) {
     return { ...flight, id };
   });
 }
+function migrateOfferIds(offers) {
+  if (offers.length > 0 && !offers[0].id.startsWith("F")) {
+    return assignFlightIds(offers);
+  }
+  return offers;
+}
 async function loadCacheFile(cacheKey) {
   try {
     const raw = await readFile2(cacheFilePath(cacheKey), "utf-8");
     const parsed = JSON.parse(raw);
-    return parsed.version === CACHE_VERSION ? parsed : null;
+    if (parsed.version !== CACHE_VERSION)
+      return null;
+    parsed.offers = migrateOfferIds(parsed.offers);
+    return parsed;
   } catch {
     return null;
   }
@@ -50010,7 +50038,7 @@ async function loadSession() {
       const searches = await normalizeSearches(state.searches ?? {});
       return {
         version: SESSION_VERSION,
-        latest: state.latest ?? null,
+        latest: state.latest ? { ...state.latest, offers: migrateOfferIds(state.latest.offers) } : null,
         searches,
         sessions: state.sessions ?? [],
         activeSessionId: state.activeSessionId
@@ -50066,7 +50094,7 @@ function materializeSearch(ref, search) {
   if (!search.offers)
     return null;
   return {
-    offers: search.offers,
+    offers: migrateOfferIds(search.offers),
     query: search.query,
     ref,
     timestamp: search.timestamp
@@ -50201,7 +50229,17 @@ async function resolveOffer(session, ref) {
     const entry = await loadSearchByRef(session, searchRef);
     return entry?.offers.find((offer) => offer.id.toUpperCase() === id.toUpperCase()) ?? null;
   }
-  return session.latest?.offers.find((offer) => offer.id.toUpperCase() === ref.toUpperCase()) ?? null;
+  const upper = ref.toUpperCase();
+  const fromLatest = session.latest?.offers.find((offer) => offer.id.toUpperCase() === upper);
+  if (fromLatest)
+    return fromLatest;
+  for (const searchRef of Object.keys(session.searches)) {
+    const entry = await loadSearchByRef(session, searchRef);
+    const match = entry?.offers.find((offer) => offer.id.toUpperCase() === upper);
+    if (match)
+      return match;
+  }
+  return null;
 }
 function addFavorite(session, offer) {
   const active = getActiveSession(session);
@@ -50227,7 +50265,7 @@ function removeFavorite(session, offerId) {
 function getFavorites(session, sessionId) {
   const id = sessionId ?? session.activeSessionId;
   const s = id ? session.sessions.find((sess) => sess.id === id) : undefined;
-  return s?.favorites ?? [];
+  return migrateOfferIds(s?.favorites ?? []);
 }
 async function listAvailableRefs(session) {
   const entries = await Promise.all(Object.entries(session.searches).map(async ([ref, search]) => {
@@ -57378,7 +57416,7 @@ function findConnectionRoutes(from, to, options = {}) {
   if (via?.length) {
     return findRoutesViaWaypoints(from, to, via.map((w) => w.toUpperCase()), graph, options, excluded);
   }
-  const { minStops = 5, maxStops = 10, maxDetour = 3 } = options;
+  const { minStops = 0, maxStops = 10, maxDetour = 3 } = options;
   const dist = createDistanceCache();
   const directKm = dist(from, to);
   const maxTotalKm = maxDetour && directKm ? directKm * maxDetour : null;
@@ -57495,6 +57533,37 @@ function buildRoute(path, directKm, dist) {
     detourRatio: detour
   };
 }
+function findBridgeHubs(from, to, maxDepth = 2, options = {}) {
+  const graph = getGraph(options);
+  from = from.toUpperCase();
+  to = to.toUpperCase();
+  const bfs = (start, depth) => {
+    const visited = new Set([start]);
+    let frontier = [start];
+    for (let d = 0;d < depth; d++) {
+      const next = [];
+      for (const node of frontier) {
+        for (const neighbor of graph.get(node) ?? []) {
+          if (!visited.has(neighbor)) {
+            visited.add(neighbor);
+            next.push(neighbor);
+          }
+        }
+      }
+      frontier = next;
+    }
+    visited.delete(start);
+    return visited;
+  };
+  const fromSet = bfs(from, maxDepth);
+  const toSet = bfs(to, maxDepth);
+  const bridges = [...fromSet].filter((code) => toSet.has(code)).sort();
+  return {
+    fromReach: [...graph.get(from) ?? []].sort(),
+    toReach: [...graph.get(to) ?? []].sort(),
+    bridges
+  };
+}
 function formatRoute(route) {
   return route.path.join(" \u2192 ");
 }
@@ -57505,6 +57574,34 @@ function summarizeRoute(route) {
   if (route.detourRatio)
     meta.push(`${route.detourRatio}x direct`);
   return `${formatRoute(route)} (${meta.join(", ")})`;
+}
+// ../../packages/core/src/regions.ts
+var REGIONS = {
+  gulf: ["DXB", "DOH", "AUH", "BAH", "MCT", "KWI"],
+  middleeast: ["DXB", "DOH", "AUH", "BAH", "MCT", "KWI", "RUH", "JED", "AMM", "TLV", "CAI", "BGW", "IKA", "THR"],
+  russia: ["SVO", "DME", "LED", "VKO"],
+  belarus: ["MSQ"]
+};
+function resolveRegions(input) {
+  const codes = [];
+  for (const token of input.split(",").map((s) => s.trim().toLowerCase())) {
+    const region = REGIONS[token];
+    if (region)
+      codes.push(...region);
+    else
+      codes.push(token.toUpperCase());
+  }
+  return [...new Set(codes)];
+}
+function mergeExclusions(hub, region) {
+  if (!hub && !region)
+    return;
+  const codes = [];
+  if (hub)
+    codes.push(...hub.split(",").map((s) => s.trim().toUpperCase()));
+  if (region)
+    codes.push(...resolveRegions(region));
+  return [...new Set(codes)].join(",") || undefined;
 }
 // ../../packages/core/src/date-range.ts
 function dateRange2(start, end) {
@@ -57559,78 +57656,6 @@ var airportsCommand = defineCommand({
       console.log(JSON.stringify(a));
   }
 });
-// src/commands/config.ts
-var configCommand = defineCommand({
-  meta: { name: "config", description: "Get/set CLI defaults (currency, fmt, seat, pax, limit)" },
-  args: {
-    key: { type: "positional", description: "Config key (or omit to list all)", required: false },
-    value: { type: "positional", description: "Value to set (omit to read)", required: false },
-    unset: { type: "boolean", description: "Remove a key", default: false }
-  },
-  async run({ args }) {
-    const config = await loadConfig();
-    if (!args.key) {
-      const entries = Object.entries(config).filter(([, v]) => v != null);
-      if (entries.length === 0) {
-        console.log("No config set. Use `flt config <key> <value>` to set defaults.");
-        return;
-      }
-      for (const [k, v] of entries)
-        console.log(`${k} = ${v}`);
-      return;
-    }
-    if (!isValidKey(args.key)) {
-      console.log(`Unknown key '${args.key}'. Valid: currency, fmt, seat, pax, limit`);
-      return;
-    }
-    if (args.unset) {
-      delete config[args.key];
-      await saveConfig(config);
-      console.log(`Unset '${args.key}'`);
-      return;
-    }
-    if (!args.value) {
-      console.log(config[args.key] ?? "(not set)");
-      return;
-    }
-    config[args.key] = args.value;
-    await saveConfig(config);
-    console.log(`${args.key} = ${args.value}`);
-  }
-});
-
-// src/commands/connections.ts
-var connectionsCommand = defineCommand({
-  meta: { name: "connections", description: "Find multi-stop routes through real airline connections" },
-  args: {
-    from: { type: "positional", description: "Origin IATA code", required: true },
-    to: { type: "positional", description: "Destination IATA code", required: true },
-    "min-stops": { type: "string", description: "Minimum intermediate stops (default: 5)" },
-    "max-stops": { type: "string", description: "Maximum intermediate stops (default: 10)" },
-    "max-results": { type: "string", description: "Max results (default: 50)" },
-    "max-detour": { type: "string", description: 'Max detour ratio or "none" for unlimited (default: 3.0)' },
-    via: { type: "string", description: "Required waypoints in order, comma-separated" },
-    exclude: { type: "string", description: "Airports to exclude, comma-separated" }
-  },
-  async run({ args }) {
-    const routes = findConnectionRoutes(args.from, args.to, {
-      minStops: args["min-stops"] ? Number(args["min-stops"]) : undefined,
-      maxStops: args["max-stops"] ? Number(args["max-stops"]) : undefined,
-      maxResults: args["max-results"] ? Number(args["max-results"]) : undefined,
-      maxDetour: args["max-detour"] === "none" ? null : args["max-detour"] ? Number(args["max-detour"]) : undefined,
-      via: args.via?.split(",").map((s) => s.trim()),
-      exclude: args.exclude?.split(",").map((s) => s.trim())
-    });
-    if (routes.length === 0) {
-      console.log("No routes found.");
-      return;
-    }
-    for (const route of routes) {
-      console.log(summarizeRoute(route));
-    }
-  }
-});
-
 // src/types.ts
 var DEFAULT_FIELDS = "id,price,stops,dur,car,dep,arr,date";
 var VIEW_FIELDS = {
@@ -57701,6 +57726,316 @@ function formatError(err, hint, url) {
     obj.url = url;
   return JSON.stringify(obj);
 }
+// src/validate.ts
+function normalizeDate(d, label) {
+  const iso = parseFlexDate(d);
+  if (!iso) {
+    console.log(JSON.stringify({
+      err: "BAD_DATE",
+      hint: `${label} '${d}' is not a valid date. Use YYYY-MM-DD, DD/MM/YYYY, or 'tomorrow'.`
+    }));
+    process.exit(1);
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  if (iso < today) {
+    console.log(JSON.stringify({
+      err: "PAST_DATE",
+      hint: `${label} ${iso} is in the past (today: ${today}).`
+    }));
+    process.exit(1);
+  }
+  return iso;
+}
+function validateAirport(code, label) {
+  if (!isValidAirport(code)) {
+    console.log(JSON.stringify({ err: "BAD_AIRPORT", hint: `${label} '${code}' is not a known IATA code.` }));
+    process.exit(1);
+  }
+}
+function parsePax(s) {
+  const ad = Number.parseInt(s.match(/(\d+)ad/)?.[1] ?? "1");
+  const ch = Number.parseInt(s.match(/(\d+)ch/)?.[1] ?? "0");
+  const ins = Number.parseInt(s.match(/(\d+)is/)?.[1] ?? "0");
+  const inl = Number.parseInt(s.match(/(\d+)il/)?.[1] ?? "0");
+  const inf = Number.parseInt(s.match(/(\d+)in(?![sl])/)?.[1] ?? "0");
+  return { adults: ad, children: ch, infants_in_seat: ins, infants_on_lap: inl || inf };
+}
+
+// src/commands/compare.ts
+function stopsLabel4(n) {
+  if (n < 0)
+    return "-";
+  if (n === 0)
+    return "direct";
+  return `${n} stop${n > 1 ? "s" : ""}`;
+}
+function printRows(rows, fmt) {
+  if (fmt === "jsonl") {
+    for (const r of rows)
+      console.log(JSON.stringify(r));
+    return;
+  }
+  if (fmt === "brief") {
+    for (const r of rows)
+      console.log(`${r.id} ${r.cheapest} ${r.route} ${r.carrier} ${stopsLabel4(r.stops)} ${r.duration}`);
+    return;
+  }
+  const headers = ["route", "cheapest", "carrier", "stops", "duration", "id"];
+  const data = rows.map((r) => [
+    r.route,
+    r.cheapest,
+    r.carrier,
+    stopsLabel4(r.stops),
+    r.duration,
+    r.id
+  ]);
+  const widths = headers.map((h, i) => Math.max(h.length, ...data.map((r) => r[i].length)));
+  console.log(headers.map((h, i) => h.padEnd(widths[i])).join("  "));
+  for (const r of data)
+    console.log(r.map((v, i) => v.padEnd(widths[i])).join("  "));
+}
+var compareCommand = defineCommand({
+  meta: {
+    name: "compare",
+    description: "Compare cheapest prices across multiple origins or destinations"
+  },
+  args: {
+    from: {
+      type: "positional",
+      description: "Origin(s) \u2014 comma-separated IATA codes",
+      required: true
+    },
+    to: {
+      type: "positional",
+      description: "Destination(s) \u2014 comma-separated IATA codes",
+      required: true
+    },
+    date: { type: "positional", description: "Departure date (YYYY-MM-DD)", required: true },
+    seat: { type: "string", default: "economy" },
+    pax: { type: "string", default: "1ad" },
+    "max-stops": { type: "string" },
+    currency: { type: "string", default: "EUR" },
+    fmt: { type: "string", default: "table" },
+    direct: { type: "boolean", default: false },
+    carrier: { type: "string" },
+    "exclude-carrier": { type: "string" },
+    "exclude-hub": { type: "string" },
+    "exclude-region": { type: "string" },
+    "max-dur": { type: "string" },
+    refresh: { type: "boolean", default: false }
+  },
+  async run({ args: rawArgs }) {
+    const config = await loadConfig();
+    const args = withDefaults(rawArgs, config, ["currency", "fmt", "seat", "pax", "exclude_hub", "exclude_region"]);
+    const origins = args.from.split(",").map((s) => s.trim().toUpperCase());
+    const dests = args.to.split(",").map((s) => s.trim().toUpperCase());
+    if (origins.length > 1 && dests.length > 1) {
+      console.log(formatError("BAD_INPUT", "Only one side can have multiple airports. Use A,B,C TO or FROM A,B,C."));
+      return;
+    }
+    const date = normalizeDate(args.date, "Departure date");
+    const pairs = origins.flatMap((o) => dests.map((d) => [o, d]));
+    for (const [o, d] of pairs) {
+      validateAirport(o, "Origin");
+      validateAirport(d, "Destination");
+    }
+    const pax = parsePax(args.pax);
+    const maxStops = args["max-stops"] != null ? Number.parseInt(args["max-stops"]) : undefined;
+    const excludeHub = mergeExclusions(args["exclude-hub"], args["exclude-region"]);
+    const filterOpts = {
+      maxDur: args["max-dur"] ? Number.parseInt(args["max-dur"]) : undefined,
+      maxStops,
+      direct: args.direct,
+      carrier: args.carrier,
+      excludeCarrier: args["exclude-carrier"],
+      excludeHub
+    };
+    const session = await loadSession() ?? createEmptySession();
+    const label = origins.length > 1 ? `${origins.join("/")} \u2192 ${dests[0]}` : `${origins[0]} \u2192 ${dests.join("/")}`;
+    const { autoStarted } = ensureActiveSession(session, label);
+    if (autoStarted)
+      console.error(`[session] Auto-started "${label}".`);
+    const rows = [];
+    const allOffers = [];
+    const allRefs = [];
+    for (const [from, to] of pairs) {
+      const query = {
+        from_airport: from,
+        to_airport: to,
+        date,
+        ...pax,
+        seat: args.seat,
+        max_stops: maxStops,
+        currency: args.currency
+      };
+      const cached = args.refresh ? null : await loadCachedSearch(query, date, null);
+      let offers;
+      let ref = "";
+      if (cached) {
+        rememberSearch(session, cached);
+        offers = cached.offers;
+        ref = cached.ref;
+      } else {
+        await throttle();
+        const res = await searchSingle(date, null, query);
+        if (!res.flights.length) {
+          rows.push({
+            route: `${from} \u2192 ${to}`,
+            cheapest: "-",
+            carrier: "-",
+            stops: -1,
+            duration: "-",
+            id: "-"
+          });
+          continue;
+        }
+        const entry = await saveCachedSearch(query, date, null, res.flights.map((f) => ({ ...f, url: res.url })));
+        rememberSearch(session, entry);
+        offers = entry.offers;
+        ref = entry.ref;
+      }
+      if (ref)
+        allRefs.push(ref);
+      const filtered = applyFilters(offers, filterOpts);
+      allOffers.push(...filtered);
+      if (filtered.length === 0) {
+        rows.push({
+          route: `${from} \u2192 ${to}`,
+          cheapest: "-",
+          carrier: "-",
+          stops: -1,
+          duration: "-",
+          id: "-"
+        });
+      } else {
+        const best = sortOffers(filtered, "price")[0];
+        rows.push({
+          route: `${from} \u2192 ${to}`,
+          cheapest: best.price,
+          carrier: best.name,
+          stops: best.stops,
+          duration: best.duration,
+          id: best.id
+        });
+      }
+    }
+    setLatestSearch(session, allOffers, label, allRefs);
+    await saveSession(session);
+    rows.sort((a, b) => parsePrice(a.cheapest) - parsePrice(b.cheapest));
+    printRows(rows, args.fmt);
+    if (allRefs.length)
+      console.log(`
+  refs: ${allRefs.join(", ")}`);
+  }
+});
+
+// src/commands/config.ts
+var configCommand = defineCommand({
+  meta: { name: "config", description: "Get/set CLI defaults (currency, fmt, seat, pax, limit)" },
+  args: {
+    key: { type: "positional", description: "Config key (or omit to list all)", required: false },
+    value: { type: "positional", description: "Value to set (omit to read)", required: false },
+    unset: { type: "boolean", description: "Remove a key", default: false }
+  },
+  async run({ args }) {
+    const config = await loadConfig();
+    if (!args.key) {
+      const entries = Object.entries(config).filter(([, v]) => v != null);
+      if (entries.length === 0) {
+        console.log("No config set. Use `flt config <key> <value>` to set defaults.");
+        return;
+      }
+      for (const [k, v] of entries)
+        console.log(`${k} = ${v}`);
+      return;
+    }
+    if (!isValidKey(args.key)) {
+      console.log(`Unknown key '${args.key}'. Valid: currency, fmt, seat, pax, limit`);
+      return;
+    }
+    if (args.unset) {
+      delete config[args.key];
+      await saveConfig(config);
+      console.log(`Unset '${args.key}'`);
+      return;
+    }
+    if (!args.value) {
+      console.log(config[args.key] ?? "(not set)");
+      return;
+    }
+    config[args.key] = args.value;
+    await saveConfig(config);
+    console.log(`${args.key} = ${args.value}`);
+  }
+});
+
+// src/commands/connections.ts
+function labelCode(code) {
+  const city = airportCity(code);
+  return city ? `${code} (${city})` : code;
+}
+function summarizeWithNames(route) {
+  const path = route.path.map(labelCode).join(" \u2192 ");
+  const meta = [`${route.stopCount} stops`];
+  if (route.totalKm)
+    meta.push(`${route.totalKm.toLocaleString()} km`);
+  if (route.detourRatio)
+    meta.push(`${route.detourRatio}x direct`);
+  return `${path} (${meta.join(", ")})`;
+}
+var connectionsCommand = defineCommand({
+  meta: { name: "connections", description: "Find multi-stop routes through real airline connections" },
+  args: {
+    from: { type: "positional", description: "Origin IATA code", required: true },
+    to: { type: "positional", description: "Destination IATA code", required: true },
+    "min-stops": { type: "string", description: "Minimum intermediate stops (default: 0)" },
+    "max-stops": { type: "string", description: "Maximum intermediate stops (default: 10)" },
+    "max-results": { type: "string", description: "Max results (default: 50)" },
+    "max-detour": { type: "string", description: 'Max detour ratio or "none" for unlimited (default: 3.0)' },
+    via: { type: "string", description: "Required waypoints in order, comma-separated" },
+    exclude: { type: "string", description: "Airports to exclude, comma-separated" },
+    "exclude-region": {
+      type: "string",
+      description: "Exclude hub regions: gulf, middleeast, russia, belarus (comma-separated, mixable with IATA codes)"
+    },
+    names: { type: "boolean", description: "Show city names alongside IATA codes", default: false }
+  },
+  async run({ args }) {
+    const excludeCodes = mergeExclusions(args.exclude, args["exclude-region"]);
+    const routes = findConnectionRoutes(args.from, args.to, {
+      minStops: args["min-stops"] ? Number(args["min-stops"]) : undefined,
+      maxStops: args["max-stops"] ? Number(args["max-stops"]) : undefined,
+      maxResults: args["max-results"] ? Number(args["max-results"]) : undefined,
+      maxDetour: args["max-detour"] === "none" ? null : args["max-detour"] ? Number(args["max-detour"]) : undefined,
+      via: args.via?.split(",").map((s) => s.trim()),
+      exclude: excludeCodes?.split(",")
+    });
+    const fmt = args.names ? summarizeWithNames : summarizeRoute;
+    if (routes.length === 0) {
+      const { fromReach, toReach, bridges } = findBridgeHubs(args.from, args.to, 2, {
+        exclude: excludeCodes?.split(",")
+      });
+      console.log("No routes found.");
+      const label = args.names ? labelCode : (c) => c;
+      if (bridges.length) {
+        console.log(`
+Bridge hubs (reachable from both within 2 hops): ${bridges.slice(0, 15).map(label).join(", ")}`);
+        console.log(`Tip: try --via ${bridges[0]}`);
+      } else {
+        if (fromReach.length)
+          console.log(`
+${label(args.from.toUpperCase())} connects to: ${fromReach.slice(0, 10).map(label).join(", ")}`);
+        if (toReach.length)
+          console.log(`${label(args.to.toUpperCase())} connects to: ${toReach.slice(0, 10).map(label).join(", ")}`);
+      }
+      return;
+    }
+    for (const route of routes) {
+      console.log(fmt(route));
+    }
+  }
+});
+
 // src/commands/fav.ts
 var favCommand = defineCommand({
   meta: { name: "fav", description: "Star a flight offer as favorite" },
@@ -57845,7 +58180,7 @@ var inspectCommand = defineCommand({
 });
 
 // src/commands/itinerary.ts
-function stopsLabel4(n) {
+function stopsLabel5(n) {
   if (n === 0)
     return "direct";
   return `${n} stop${n > 1 ? "s" : ""}`;
@@ -57858,7 +58193,7 @@ function renderTable(offers, title, note) {
     Route: o.legs.length >= 2 ? `${o.legs[0].departure_airport}\u2192${o.legs.at(-1)?.arrival_airport}` : `${o.legs[0]?.departure_airport ?? "?"}\u2192${o.legs[0]?.arrival_airport ?? "?"}`,
     Price: o.price,
     Dur: o.duration,
-    Stops: stopsLabel4(o.stops),
+    Stops: stopsLabel5(o.stops),
     Carrier: o.name,
     Dep: o.departure === "??:??" ? "\u2014" : o.departure,
     Arr: `${o.arrival === "??:??" ? "\u2014" : o.arrival}${o.arrival_time_ahead}`
@@ -57941,40 +58276,6 @@ ${warnings.join(`
 `)}`);
   }
 });
-// src/validate.ts
-function normalizeDate(d, label) {
-  const iso = parseFlexDate(d);
-  if (!iso) {
-    console.log(JSON.stringify({
-      err: "BAD_DATE",
-      hint: `${label} '${d}' is not a valid date. Use YYYY-MM-DD, DD/MM/YYYY, or 'tomorrow'.`
-    }));
-    process.exit(1);
-  }
-  const today = new Date().toISOString().slice(0, 10);
-  if (iso < today) {
-    console.log(JSON.stringify({
-      err: "PAST_DATE",
-      hint: `${label} ${iso} is in the past (today: ${today}).`
-    }));
-    process.exit(1);
-  }
-  return iso;
-}
-function validateAirport(code, label) {
-  if (!isValidAirport(code)) {
-    console.log(JSON.stringify({ err: "BAD_AIRPORT", hint: `${label} '${code}' is not a known IATA code.` }));
-    process.exit(1);
-  }
-}
-function parsePax(s) {
-  const ad = Number.parseInt(s.match(/(\d+)ad/)?.[1] ?? "1");
-  const ch = Number.parseInt(s.match(/(\d+)ch/)?.[1] ?? "0");
-  const ins = Number.parseInt(s.match(/(\d+)is/)?.[1] ?? "0");
-  const inl = Number.parseInt(s.match(/(\d+)il/)?.[1] ?? "0");
-  const inf = Number.parseInt(s.match(/(\d+)in(?![sl])/)?.[1] ?? "0");
-  return { adults: ad, children: ch, infants_in_seat: ins, infants_on_lap: inl || inf };
-}
 
 // src/commands/matrix.ts
 async function fetchAndCache(dep, ret, query, session) {
@@ -58061,19 +58362,25 @@ var matrixCommand = defineCommand({
       type: "string",
       description: "Exclude layover airports (comma-separated IATA codes)"
     },
+    "exclude-region": {
+      type: "string",
+      description: "Exclude hub regions: gulf, middleeast, russia, belarus (comma-separated, mixable with IATA codes)"
+    },
     direct: { type: "boolean", description: "Direct flights only", default: false },
     currency: { type: "string", default: "EUR" },
-    fmt: { type: "string", description: "Output format: table|tsv|jsonl", default: "table" }
+    fmt: { type: "string", description: "Output format: table|tsv|jsonl", default: "table" },
+    sort: { type: "string", description: "Sort one-way results by: price|dep (default: dep)", default: "dep" },
+    limit: { type: "string", description: "Max rows for one-way results", default: "50" }
   },
   async run({ args: rawArgs }) {
     const config = await loadConfig();
-    const args = withDefaults(rawArgs, config, ["currency", "fmt", "seat", "pax"]);
+    const args = withDefaults(rawArgs, config, ["currency", "fmt", "seat", "pax", "limit", "exclude_hub", "exclude_region"]);
     validateAirport(args.from.toUpperCase(), "Origin");
     validateAirport(args.to.toUpperCase(), "Destination");
     const dateStart = normalizeDate(args.dateStart, "Start date");
     const dateEnd = normalizeDate(args.dateEnd, "End date");
-    const returnStart = args.returnStart ? normalizeDate(args.returnStart, "Return start") : undefined;
-    const returnEnd = args.returnEnd ? normalizeDate(args.returnEnd, "Return end") : undefined;
+    const returnStart = args.returnStart && parseFlexDate(args.returnStart) ? normalizeDate(args.returnStart, "Return start") : undefined;
+    const returnEnd = args.returnEnd && parseFlexDate(args.returnEnd) ? normalizeDate(args.returnEnd, "Return end") : undefined;
     const pax = parsePax(args.pax);
     const maxStops = args["max-stops"] != null ? Number.parseInt(args["max-stops"]) : undefined;
     const maxDur = args["max-dur"] != null ? Number.parseInt(args["max-dur"]) : undefined;
@@ -58092,13 +58399,14 @@ var matrixCommand = defineCommand({
     if (autoStarted) {
       console.error(`[session] Auto-started "${activeSession.name}" (${activeSession.id}). Use \`flt session start "name"\` to name sessions, or \`flt session close\` to end one.`);
     }
+    const excludeHub = mergeExclusions(args["exclude-hub"], args["exclude-region"]);
     const filterOpts = {
       maxDur,
       maxStops,
       direct: args.direct,
       carrier: args.carrier,
       excludeCarrier: args["exclude-carrier"],
-      excludeHub: args["exclude-hub"]
+      excludeHub
     };
     const hasFilter = !!(args.carrier || args["exclude-carrier"] || args["exclude-hub"] || args.direct);
     const filterOffers = (offers) => hasFilter ? applyFilters(offers, filterOpts) : offers;
@@ -58118,6 +58426,12 @@ var matrixCommand = defineCommand({
       }
       setLatestSearch(session, allOffers, describeSearchRequest(query), allRefs);
       await saveSession(session);
+      const sortKey = args.sort ?? "dep";
+      if (sortKey === "price")
+        cells2.sort((a, b) => parsePrice(a.cheapest) - parsePrice(b.cheapest));
+      const limit = Number.parseInt(args.limit);
+      if (limit > 0 && cells2.length > limit)
+        cells2.splice(limit);
       printOneWay(cells2, args.fmt);
       return;
     }
@@ -58160,7 +58474,7 @@ RATE LIMITS \u2014 Google blocks rapid scraping:
 CACHING:
 - Cached by full query shape (dep/ret date, cabin, pax, stops, currency). Fresh <6h; \`--refresh\` bypasses.
 - Flight IDs (e.g. \`Fa3b7\`) are stable hashes from legs \u2014 survive re-filter/sort/search.
-- Plain IDs resolve from latest \`flt search\` snapshot only. Use \`REF:ID\` for cross-search lookups.
+- Plain IDs resolve across ALL session searches (latest first). \`REF:ID\` for explicit cross-search lookups.
 - Refs: \`IAO-MNL@20260318#A1B2C3:Fa3b7\`. Changing any query param = distinct cache entry.
 - Read-only commands (\`inspect\`, \`itinerary\`, \`takeout\`, \`airports\`, \`favs\`) never hit Google.
 
@@ -58184,14 +58498,21 @@ SEARCH:
   Shortcuts: \`flt AMS NRT 2026-04-10\` | RT: \`flt AMS NRT 2026-04-10 2026-04-18\`
   Options: --seat economy|premium-economy|business|first  --pax 1ad|2ad1ch|1ad1in
     --max-stops 0|1|2  --currency EUR|USD|...  --direct  --limit <N>
-    --carrier "<sub>"  --exclude-carrier "X,Y"  --exclude-hub "DXB,DOH"
+    --carrier "<sub>"  --exclude-carrier "X,Y"  --exclude-hub "DXB,DOH"  --exclude-region "gulf,russia"
     --dep-after/before HH:MM  --arr-after/before HH:MM  --max-dur <min>
     --sort price|dur|stops|dep  --fmt jsonl|tsv|table|brief  --view min|std|full  --fields <csv>
 
 MATRIX:
   One-way: flt matrix <FROM> <TO> <START> <END>
   Round-trip: flt matrix <FROM> <TO> <DEP_START> <DEP_END> <RET_START> <RET_END>
-  Same filter options as search. Default output: table; \`--fmt jsonl\` for parsing.
+  Same filter options as search. One-way supports \`--sort price\` and \`--limit N\`.
+  Default output: table; \`--fmt jsonl\` for parsing.
+
+COMPARE (multi-origin or multi-destination cheapest comparison):
+  flt compare KUL,BKK,MNL AMS 2026-03-22          # cheapest from each origin
+  flt compare CEB KUL,BKK,ICN 2026-03-19           # cheapest to each destination
+  Only one side can be comma-separated. Same filter options as search.
+  Output: table sorted by cheapest price, showing best offer per route.
 
 INSPECT:
   flt inspect <ID>  |  flt Fa3b7  |  flt inspect IAO-MNL@20260318#A1B2C3:Fa3b7
@@ -58213,17 +58534,60 @@ FAVORITES (session-scoped, survive cache expiry):
 CONNECTIONS (local route graph, no Google):
   flt connections <FROM> <TO> [OPTIONS]
   Options: --min-stops 5  --max-stops 10  --max-results 50  --max-detour 3.0|none
-    --via "IST,BKK"  --exclude "DXB,DOH"
+    --via "IST,BKK"  --exclude "DXB,DOH"  --exclude-region "middleeast,russia"
+    --names  (show city names alongside IATA codes)
+  When no routes found: shows bridge hubs (airports reachable from both ends) + direct connections.
+
+REGIONS (--exclude-region shorthand, mixable with IATA codes):
+  gulf: DXB, DOH, AUH, BAH, MCT, KWI
+  middleeast: DXB, DOH, AUH, BAH, MCT, KWI, RUH, JED, AMM, TLV, CAI, BGW, IKA, THR
+  russia: SVO, DME, LED, VKO
+  belarus: MSQ
+
+CONFIG DEFAULTS (persist with \`flt config\`, avoid repeating flags):
+  flt config exclude_region middleeast   # auto-applied to search/matrix/compare
+  flt config exclude_hub "DXB,DOH"      # same \u2014 CLI flags override when provided
 </commands>
 
-<workflow>
-1. Resolve ambiguous airports: \`flt airports <query>\`, pick IATA codes.
-2. For multi-stop (5+): run \`flt connections\` first to discover viable paths.
-3. Strategy: flexible dates \u2192 \`flt matrix\` (small range). Fixed dates \u2192 \`flt search\`.
-4. Filter after first fetch \u2014 prefer refining one search over running many.
-5. Inspect/fav only shortlisted IDs. Use \`REF:ID\` for anything not from the latest search.
-6. Multi-leg: search each leg separately \u2192 compose with \`flt itinerary\`. Min connection: 2h domestic, 3h international.
-7. Finish: \`flt takeout\` with \`--itin\` flags for recommended options. Mention auto-close to user.
+<workflow strict="true">
+Follow these phases IN ORDER. Do not skip ahead. Each phase has a gate \u2014 meet it before proceeding.
+
+PHASE 1 \u2014 RESOLVE (gate: all airports are IATA codes)
+- Resolve ambiguous cities/airports: \`flt airports <query>\`, confirm IATA codes with user.
+- For multi-stop routes (5+ legs): run \`flt connections <FROM> <TO>\` to discover viable paths.
+- Compare transit hubs if needed: \`flt compare KUL,BKK,IST AMS 2026-03-22\`.
+\u2192 Gate: every origin, destination, and waypoint is a confirmed IATA code before searching.
+
+PHASE 2 \u2014 SEARCH (gate: all legs have search results)
+- One search per leg. Flexible dates \u2192 \`flt matrix\` (\u22647 combos). Fixed dates \u2192 \`flt search\`.
+- Refine with filters (--carrier, --max-stops, --dep-after, etc.) \u2014 prefer filtering one search over running many.
+- Present top 3\u20135 per leg to the user with price, duration, stops, carrier, times.
+\u2192 Gate: every leg in the planned route has at least one search with results.
+
+PHASE 3 \u2014 SHORTLIST (gate: user has approved favorites for every leg)
+- \`flt fav <ID>\` promising offers \u2014 they survive cache expiry and are the basis for itineraries.
+- Use \`flt inspect <ID>\` for detail on candidates. Use \`flt favs\` to review the full shortlist.
+- Ask the user to confirm their preferred offer per leg. Do NOT proceed until each leg has a user-approved fav.
+\u2192 Gate: \`flt favs\` shows at least one favorited offer per leg, and the user has confirmed the picks.
+
+PHASE 4 \u2014 COMPOSE (gate: itinerary previewed and user-approved)
+- Build itinerary: \`flt itinerary <REF:ID> [REF:ID...] --title "..."\`.
+- Use full REF:ID format (e.g. \`AMS-NRT@20260410#A1B2C3:Fa3b7\`) for precision, or plain IDs which search all session results.
+- Review the output: check connection times (min 2h domestic, 3h international), total price, travel time.
+- If connections are too tight or the user wants changes, go back to Phase 2/3 for that leg.
+\u2192 Gate: user has seen the composed itinerary table and approved it.
+
+PHASE 5 \u2014 DELIVER
+- \`flt takeout --itin "Label" REF:ID REF:ID [--note "..."] --title "Trip Title"\`.
+- For PDF export: add \`--pdf\`.
+- Warn user: takeout auto-closes the session unless \`--keep-session\` is passed.
+- Present the output path and a summary of what was exported.
+
+RULES:
+- Never compose an itinerary from offers the user hasn't reviewed.
+- Never run takeout without a previewed itinerary (Phase 4).
+- If the user asks to skip phases, acknowledge the skip explicitly and note what was skipped.
+- When presenting options, always show the offer ID so the user can fav/inspect it.
 </workflow>
 
 <errors>
@@ -58322,11 +58686,15 @@ var searchCommand = defineCommand({
       type: "string",
       description: "Exclude layover airports (comma-separated IATA codes)"
     },
+    "exclude-region": {
+      type: "string",
+      description: "Exclude hub regions: gulf, middleeast, russia, belarus (comma-separated, mixable with IATA codes)"
+    },
     refresh: { type: "boolean", description: "Force fresh fetch (skip cache)", default: false }
   },
   async run({ args: rawArgs }) {
     const config = await loadConfig();
-    const args = withDefaults(rawArgs, config, ["currency", "fmt", "seat", "pax", "limit"]);
+    const args = withDefaults(rawArgs, config, ["currency", "fmt", "seat", "pax", "limit", "exclude_hub", "exclude_region"]);
     validateAirport(args.from.toUpperCase(), "Origin");
     validateAirport(args.to.toUpperCase(), "Destination");
     const date = normalizeDate(args.date, "Departure date");
@@ -58386,7 +58754,8 @@ var searchCommand = defineCommand({
       return;
     }
     const rawCount = allFlights.length;
-    const hasFilter = !!(args.carrier || args["exclude-carrier"] || args["exclude-hub"] || args.direct || args["dep-after"] || args["dep-before"] || args["arr-after"] || args["arr-before"] || args["max-dur"]);
+    const excludeHub = mergeExclusions(args["exclude-hub"], args["exclude-region"]);
+    const hasFilter = !!(args.carrier || args["exclude-carrier"] || excludeHub || args.direct || args["dep-after"] || args["dep-before"] || args["arr-after"] || args["arr-before"] || args["max-dur"]);
     let offers = applyFilters(allFlights, {
       depAfter: args["dep-after"],
       depBefore: args["dep-before"],
@@ -58397,7 +58766,7 @@ var searchCommand = defineCommand({
       direct: args.direct,
       carrier: args.carrier,
       excludeCarrier: args["exclude-carrier"],
-      excludeHub: args["exclude-hub"]
+      excludeHub
     });
     if (hasFilter && offers.length === 0) {
       console.log(formatError("NO_RESULTS", `All ${rawCount} results filtered out, 0 remaining. Relax filters and retry.`));
@@ -60427,10 +60796,11 @@ var anyWindow;
 var jsPDF;
 
 // src/pdf-map.ts
-var BG = "#0c0e14";
-var ARC = "#f0a030";
-var DOT = "#f0a030";
-var LABEL = "#e6edf3";
+var MAP_BG = "#f0f0f0";
+var MAP_BORDER = "#e0e0e0";
+var ARC = "#2266cc";
+var DOT = "#2a2a2a";
+var LABEL = "#2a2a2a";
 var PAD = 0.12;
 function drawRouteMap(doc, legs, x, y, width, height) {
   const airports = new Set;
@@ -60449,10 +60819,12 @@ function drawRouteMap(doc, legs, x, y, width, height) {
   if (coords.size < 2)
     return;
   const proj = buildProjection(coords, x, y, width, height);
-  doc.setFillColor(BG);
-  doc.roundedRect(x, y, width, height, 2, 2, "F");
+  doc.setFillColor(MAP_BG);
+  doc.setDrawColor(MAP_BORDER);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(x, y, width, height, 3, 3, "FD");
   doc.setDrawColor(ARC);
-  doc.setLineWidth(0.4);
+  doc.setLineWidth(0.5);
   for (const leg of legs) {
     const from = coords.get(leg.departure_airport);
     const to = coords.get(leg.arrival_airport);
@@ -60465,13 +60837,13 @@ function drawRouteMap(doc, legs, x, y, width, height) {
       doc.line(x1, y1, x2, y2);
     }
   }
-  doc.setFontSize(6);
+  doc.setFontSize(7);
   doc.setTextColor(LABEL);
   for (const [iata, coord] of coords) {
     const [px, py] = proj(coord);
     doc.setFillColor(DOT);
     doc.circle(px, py, 1.2, "F");
-    doc.text(iata, px + 2, py - 1.5);
+    doc.text(iata, px + 2.5, py - 1.5);
   }
 }
 function buildProjection(coords, bx, by, bw, bh) {
@@ -60493,16 +60865,28 @@ function buildProjection(coords, bx, by, bw, bh) {
 }
 
 // src/pdf.ts
-var BG2 = "#0c0e14";
-var SURFACE = "#161b22";
-var TEXT = "#e6edf3";
-var MUTED = "#7d8590";
-var AMBER = "#f0a030";
-var FONT = "courier";
+var TEXT = "#2a2a2a";
+var MUTED = "#888888";
+var ACCENT = "#2266cc";
+var BORDER = "#e0e0e0";
+var SURFACE = "#f5f5f5";
+var WARN = "#cc6600";
+var FONT = "helvetica";
+var MARGIN = 15;
+function safe(s) {
+  return s.replace(/\u2192/g, ">").replace(/\u2014/g, "-").replace(/\u00B7/g, "-");
+}
 function fmtStops(n) {
   if (n === 0)
     return "Nonstop";
   return `${n} stop${n > 1 ? "s" : ""}`;
+}
+function fmtMinutes(minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h && m)
+    return `${h}h ${m}m`;
+  return h ? `${h}h` : `${m}m`;
 }
 function uniqueLegs(offers) {
   const seen = new Set;
@@ -60514,107 +60898,241 @@ function uniqueLegs(offers) {
     return true;
   }));
 }
-function offerRoute(o) {
-  const from = o.legs[0]?.departure_airport ?? "?";
-  const to = o.legs[o.legs.length - 1]?.arrival_airport ?? "?";
-  return `${from} > ${to}`;
+function legRoute2(o) {
+  if (o.legs.length === 0)
+    return "? > ?";
+  const codes = [o.legs[0].departure_airport];
+  for (const leg of o.legs)
+    codes.push(leg.arrival_airport);
+  return codes.filter((c, i) => i === 0 || c !== codes[i - 1]).join(" > ");
+}
+function totalPrice2(offers) {
+  const total = offers.reduce((sum, o) => sum + parsePrice(o.price), 0);
+  const cur = (offers[0]?.price ?? "EUR0").replace(/[0-9.,\s]/g, "") || "EUR";
+  return `${cur}${Math.round(total)}`;
+}
+function formatSearchHeading(tag, entry) {
+  const match = tag.match(/^([A-Z]{3})-([A-Z]{3})@(\d{4})(\d{2})(\d{2})/);
+  if (!match)
+    return entry.query;
+  const [, from, to, y, m, d] = match;
+  const date = new Date(Number(y), Number(m) - 1, Number(d));
+  const fmt = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `${from} > ${to} - ${fmt}`;
+}
+function lastTableY(doc, fallback) {
+  return doc.lastAutoTable?.finalY ?? fallback;
+}
+function fitText(doc, text, cx, y, maxW, maxSize) {
+  let size = maxSize;
+  doc.setFontSize(size);
+  while (doc.getTextWidth(text) > maxW && size > 8) {
+    size -= 1;
+    doc.setFontSize(size);
+  }
+  doc.text(text, cx, y, { align: "center" });
+}
+function wrappedText(doc, text, x, y, maxW) {
+  const lines = doc.splitTextToSize(text, maxW);
+  for (const line of lines) {
+    doc.text(line, x, y);
+    y += 4;
+  }
+  return y;
 }
 async function generatePdf(opts) {
-  const doc = new import_jspdf.jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const doc = new import_jspdf.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
-  const H = doc.internal.pageSize.getHeight();
-  doc.setFont(FONT);
-  fillPage(doc, W, H);
-  let cy = 14;
-  doc.setFontSize(18);
-  doc.setTextColor(AMBER);
-  doc.text(opts.title ?? "FLIGHT SEARCH RESULTS", W / 2, cy, { align: "center" });
-  cy += 6;
+  const usable = W - MARGIN * 2;
+  let cy = 20;
+  doc.setFont(FONT, "bold");
+  doc.setTextColor(TEXT);
+  fitText(doc, safe(opts.title ?? "Flight Search Results"), W / 2, cy, usable, 22);
+  cy += 7;
+  doc.setFont(FONT, "normal");
   doc.setFontSize(9);
   doc.setTextColor(MUTED);
-  doc.text(new Date().toLocaleDateString("en-US", { dateStyle: "long" }), W / 2, cy, {
+  doc.text(`Generated ${new Date().toLocaleDateString("en-US", { dateStyle: "long" })}`, W / 2, cy, {
     align: "center"
   });
-  cy += 6;
+  cy += 5;
+  drawAccentLine(doc, W, cy);
+  cy += 8;
   const allOffers = opts.searches.flatMap(([, e]) => e.offers);
-  const legs = uniqueLegs(allOffers);
-  if (legs.length > 0) {
-    const mapW = Math.min(240, W - 20);
-    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 55);
-    cy += 60;
+  const allItinLegs = opts.itineraries.flatMap((it) => it.legs);
+  const mapOffers = allOffers.length > 0 ? allOffers : allItinLegs;
+  const legs = uniqueLegs(mapOffers);
+  if (legs.length >= 2 && legs.length <= 15) {
+    const mapW = Math.min(130, usable);
+    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 35);
+    cy += 41;
   }
-  const top = allOffers.slice(0, 15);
-  if (top.length > 0) {
-    autoTable(doc, {
-      startY: cy,
-      margin: { left: 10, right: 10 },
-      head: [["#", "Price", "Carrier", "Route", "Date", "Dep > Arr", "Duration", "Stops"]],
-      body: top.map((o, i) => [
-        String(i + 1),
-        o.price,
-        o.name,
-        offerRoute(o),
-        o.departure_date,
-        `${o.departure} > ${o.arrival}`,
-        o.duration,
-        fmtStops(o.stops)
-      ]),
-      ...tableTheme()
-    });
+  const rowLimit = opts.searches.length > 5 ? 5 : 10;
+  for (const [tag, entry] of opts.searches) {
+    cy = renderSearchSection(doc, tag, entry, opts.affiliate, opts.filters, W, cy, rowLimit);
+  }
+  if (opts.searches.length === 0 && opts.itineraries.length > 0) {
+    for (const itin of opts.itineraries) {
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(TEXT);
+      doc.text(safe(itin.title), MARGIN, cy);
+      doc.setFont(FONT, "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(MUTED);
+      const info = `${itin.legs.length} legs - ${totalPrice2(itin.legs)}`;
+      doc.text(info, MARGIN, cy + 4);
+      cy += 10;
+    }
   }
   for (const itin of opts.itineraries) {
-    renderItinerary(doc, itin, opts.affiliate, opts.filters, W, H);
+    renderItinerary(doc, itin, opts.affiliate, opts.filters, W);
   }
   return Buffer.from(doc.output("arraybuffer"));
 }
-function renderItinerary(doc, it, affiliate, filters, W, H) {
+function renderSearchSection(doc, tag, entry, affiliate, filters, W, cy, rowLimit = 10) {
+  const heading = formatSearchHeading(tag, entry);
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(TEXT);
+  doc.text(safe(heading), MARGIN, cy);
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(MUTED);
+  const meta = `${entry.offers.length} results - ${new Date(entry.timestamp).toLocaleString()}`;
+  doc.text(safe(meta), MARGIN, cy + 4);
+  cy += 8;
+  const top = entry.offers.slice(0, rowLimit);
+  if (top.length > 0) {
+    autoTable(doc, {
+      startY: cy,
+      margin: { left: MARGIN, right: MARGIN },
+      head: [["ID", "Price", "Stops", "Duration", "Carrier", "Date", "Dep > Arr"]],
+      body: top.map((o) => {
+        const arr = `${o.arrival}${o.arrival_time_ahead}`;
+        return [o.id, o.price, fmtStops(o.stops), o.duration, o.name, o.departure_date, `${o.departure} > ${arr}`];
+      }),
+      ...tableTheme()
+    });
+    cy = lastTableY(doc, cy + 30) + 4;
+  }
+  const cheapest = entry.offers[0];
+  if (cheapest) {
+    const urls = buildOfferBookingUrls(cheapest, affiliate, filters);
+    if (urls) {
+      for (const [program, url] of Object.entries(urls)) {
+        doc.setTextColor(ACCENT);
+        doc.setFontSize(7);
+        doc.textWithLink(`Book: ${PROGRAM_LABELS[program] ?? program}`, MARGIN + 2, cy, { url });
+        cy += 4;
+      }
+    }
+  }
+  cy += 4;
+  return cy;
+}
+function renderItinerary(doc, it, affiliate, filters, W) {
   doc.addPage();
-  fillPage(doc, W, H);
-  let cy = 14;
-  doc.setFont(FONT);
-  doc.setFontSize(14);
-  doc.setTextColor(AMBER);
-  doc.text(it.title.toUpperCase(), W / 2, cy, { align: "center" });
+  const usable = W - MARGIN * 2;
+  let cy = 20;
+  doc.setFont(FONT, "bold");
+  doc.setTextColor(ACCENT);
+  fitText(doc, safe(it.title), W / 2, cy, usable, 16);
+  cy += 5;
+  drawAccentLine(doc, W, cy);
   cy += 8;
   const legs = uniqueLegs(it.legs);
   if (legs.length > 0) {
-    const mapW = Math.min(200, W - 20);
-    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 45);
-    cy += 50;
+    const mapW = Math.min(100, usable);
+    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 30);
+    cy += 36;
   }
-  autoTable(doc, {
-    startY: cy,
-    margin: { left: 10, right: 10 },
-    head: [["#", "Price", "Carrier", "Route", "Date", "Dep > Arr", "Duration", "Stops"]],
-    body: it.legs.map((o, i) => [
-      String(i + 1),
-      o.price,
-      o.name,
-      offerRoute(o),
-      o.departure_date,
-      `${o.departure} > ${o.arrival}`,
-      o.duration,
-      fmtStops(o.stops)
-    ]),
-    ...tableTheme()
-  });
-  const lastY = doc.lastAutoTable?.finalY ?? cy + 30;
-  let linkY = lastY + 8;
+  for (const [i, offer] of it.legs.entries()) {
+    cy = renderBookingBlock(doc, offer, i + 1, affiliate, it.filters ?? filters, usable, cy);
+  }
+  const warnings = checkConnections(it.legs);
+  if (warnings.length > 0) {
+    doc.setFont(FONT, "italic");
+    doc.setFontSize(7.5);
+    doc.setTextColor(WARN);
+    for (const w of warnings) {
+      doc.text(safe(w), MARGIN, cy);
+      cy += 4;
+    }
+    cy += 2;
+  }
+  const ttt = totalTravelTime(it.legs);
+  if (ttt) {
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(MUTED);
+    doc.text(`Total travel time: ${ttt}`, MARGIN, cy);
+    cy += 6;
+  }
+  drawTotalBadge(doc, totalPrice2(it.legs), MARGIN, cy);
+  cy += 12;
+  if (it.note) {
+    doc.setFont(FONT, "italic");
+    doc.setFontSize(8);
+    doc.setTextColor(MUTED);
+    doc.text(safe(it.note), MARGIN, cy);
+  }
+}
+function renderBookingBlock(doc, offer, idx, affiliate, filters, usable, cy) {
+  const arr = `${offer.arrival}${offer.arrival_time_ahead}`;
+  const summary = `Booking ${idx} - ${offer.departure_date} - ${legRoute2(offer)} - ${offer.price} - ${offer.duration} - ${fmtStops(offer.stops)} - ${offer.name} - ${offer.departure}>${arr}`;
+  doc.setFont(FONT, "bold");
   doc.setFontSize(8);
-  doc.setTextColor(MUTED);
-  doc.text("BOOKING LINKS", 10, linkY);
-  linkY += 5;
-  for (const offer of it.legs) {
-    const urls = buildOfferBookingUrls(offer, affiliate, it.filters ?? filters);
-    if (!urls)
-      continue;
+  doc.setTextColor(TEXT);
+  cy = wrappedText(doc, safe(summary), MARGIN, cy, usable);
+  cy += 1;
+  if (offer.legs.length > 1 || offer.layovers.length > 0) {
+    const body = [];
+    for (const [j, leg] of offer.legs.entries()) {
+      const flt = leg.flight_number ? `${leg.airline} ${leg.flight_number}` : leg.airline_name;
+      body.push([
+        flt,
+        `${leg.departure_airport} > ${leg.arrival_airport}`,
+        leg.departure_time,
+        leg.arrival_time,
+        fmtMinutes(leg.duration),
+        leg.aircraft || "-"
+      ]);
+      if (j < offer.layovers.length) {
+        const lo = offer.layovers[j];
+        const s = { fontStyle: "italic", textColor: MUTED };
+        body.push([
+          { content: "", styles: s },
+          { content: `${lo.airport} layover`, styles: s },
+          { content: "", styles: s },
+          { content: "", styles: s },
+          { content: fmtMinutes(lo.duration), styles: s },
+          { content: "", styles: s }
+        ]);
+      }
+    }
+    autoTable(doc, {
+      startY: cy,
+      margin: { left: MARGIN + 4, right: MARGIN },
+      head: [["Flight", "Route", "Dep", "Arr", "Duration", "Aircraft"]],
+      body,
+      ...tableTheme(),
+      styles: { ...tableTheme().styles, fontSize: 7 },
+      headStyles: { ...tableTheme().headStyles, fontSize: 7 }
+    });
+    cy = lastTableY(doc, cy + 20) + 3;
+  }
+  const urls = buildOfferBookingUrls(offer, affiliate, filters);
+  if (urls) {
     for (const [program, url] of Object.entries(urls)) {
-      const label = `${offerRoute(offer)} - ${PROGRAM_LABELS[program] ?? program}`;
-      doc.setTextColor(AMBER);
-      doc.textWithLink(label, 10, linkY, { url });
-      linkY += 4.5;
+      doc.setTextColor(ACCENT);
+      doc.setFontSize(7);
+      doc.textWithLink(`Book: ${PROGRAM_LABELS[program] ?? program}`, MARGIN + 4, cy, { url });
+      cy += 4;
     }
   }
+  cy += 3;
+  return cy;
 }
 function buildOfferBookingUrls(offer, affiliate, filters) {
   if (!affiliate)
@@ -60634,26 +61152,37 @@ function tableTheme() {
   return {
     styles: {
       font: FONT,
-      fontSize: 7,
+      fontSize: 8,
       textColor: TEXT,
-      fillColor: BG2,
-      lineColor: "#2d333b",
-      lineWidth: 0.2,
-      cellPadding: 2
+      fillColor: "#ffffff",
+      lineColor: BORDER,
+      lineWidth: 0.15,
+      cellPadding: 2.5
     },
     headStyles: {
-      fillColor: SURFACE,
-      textColor: AMBER,
-      fontSize: 7,
-      fontStyle: "normal"
+      fillColor: ACCENT,
+      textColor: "#ffffff",
+      fontSize: 8,
+      fontStyle: "bold"
     },
     alternateRowStyles: { fillColor: SURFACE },
     theme: "grid"
   };
 }
-function fillPage(doc, W, H) {
-  doc.setFillColor(BG2);
-  doc.rect(0, 0, W, H, "F");
+function drawAccentLine(doc, W, y) {
+  doc.setDrawColor(ACCENT);
+  doc.setLineWidth(0.6);
+  doc.line(W / 2 - 25, y, W / 2 + 25, y);
+}
+function drawTotalBadge(doc, price, x, y) {
+  const label = `Total: ${price}`;
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(10);
+  const tw = doc.getTextWidth(label) + 12;
+  doc.setFillColor(ACCENT);
+  doc.roundedRect(x, y - 5, tw, 8, 2, 2, "F");
+  doc.setTextColor("#ffffff");
+  doc.text(label, x + 6, y + 0.5);
 }
 
 // src/commands/takeout.ts
@@ -60768,6 +61297,7 @@ var SUB_COMMANDS = {
   inspect: inspectCommand,
   itinerary: itineraryCommand,
   matrix: matrixCommand,
+  compare: compareCommand,
   airports: airportsCommand,
   prime: primeCommand,
   takeout: takeoutCommand,
