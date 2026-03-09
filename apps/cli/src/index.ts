@@ -33,7 +33,7 @@ const main = defineCommand({
 const args = process.argv.slice(2)
 const first = args[0]
 
-if (!first || first === '--help' || first === '-h') {
+if (!first || first.startsWith('-')) {
   await showUsage(main)
 } else if (first in SUB_COMMANDS) {
   runMain(main)
