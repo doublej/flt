@@ -41,15 +41,15 @@ const steps = [
 ]
 
 const display_map: Record<Mode, string> = {
-  run: 'git clone github:doublej/flt && cd flt && bun i && just flt',
-  install: 'git clone github:doublej/flt && cd flt && bun i',
-  agent: 'just flt prime',
+  run: 'bunx github:doublej/flt',
+  install: 'bun install -g github:doublej/flt',
+  agent: 'bunx github:doublej/flt prime',
 }
 
 const copy_map: Record<Mode, string> = {
-  run: 'git clone git@github.com:doublej/flt.git && cd flt && bun install && just flt',
-  install: 'git clone git@github.com:doublej/flt.git && cd flt && bun install',
-  agent: 'Help me find flights using flt. Run `just flt prime` to get started',
+  run: 'bunx github:doublej/flt',
+  install: 'bun install -g github:doublej/flt',
+  agent: 'Help me find flights using flt. Run `bunx github:doublej/flt prime` to get started',
 }
 
 onMount(() => {
@@ -320,8 +320,8 @@ const commands = [
         <div class="step" style="animation-delay: 0ms">
           <div class="step-number">1</div>
           <div class="step-content">
-            <h3>Clone the repo</h3>
-            <pre><code>git clone git@github.com:doublej/flt.git && cd flt && bun install</code></pre>
+            <h3>Install globally</h3>
+            <pre><code>bun install -g github:doublej/flt</code></pre>
           </div>
         </div>
         <div class="step" style="animation-delay: 200ms">
@@ -386,7 +386,7 @@ const commands = [
     <div class="container">
       <h2>Ready to fly?</h2>
       <p>Install flt and start searching flights from your terminal today.</p>
-      <pre class="cta-install"><code>git clone git@github.com:doublej/flt.git && cd flt && bun install</code></pre>
+      <pre class="cta-install"><code>bun install -g github:doublej/flt</code></pre>
     </div>
   </section>
 

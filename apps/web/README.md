@@ -7,8 +7,16 @@ Flight search CLI powered by Google Flights. Search routes, compare prices acros
 Requires [Bun](https://bun.sh).
 
 ```bash
-git clone git@github.com:doublej/flt.git
-cd flt
+# run directly
+bunx github:doublej/flt
+
+# install globally
+bun install -g github:doublej/flt
+```
+
+Or clone and use the Justfile:
+
+```bash
 bun install
 just flt <command> [options]
 ```

@@ -1,4 +1,7 @@
 {
   "private": true,
-  "workspaces": ["packages/*", "apps/*", "docs"]
+  "workspaces": ["packages/*", "apps/*", "docs"],
+  "bin": {
+    "flt": "apps/cli/bin/flt"
+  }
 }
