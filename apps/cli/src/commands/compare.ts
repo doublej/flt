@@ -90,7 +90,7 @@ export const compareCommand = defineCommand({
   },
   async run({ args: rawArgs }) {
     const config = await loadConfig()
-    const args = withDefaults(rawArgs, config, ['currency', 'fmt', 'seat', 'pax'])
+    const args = withDefaults(rawArgs, config, ['currency', 'fmt', 'seat', 'pax', 'exclude_hub', 'exclude_region'])
 
     const origins = args.from.split(',').map((s: string) => s.trim().toUpperCase())
     const dests = args.to.split(',').map((s: string) => s.trim().toUpperCase())

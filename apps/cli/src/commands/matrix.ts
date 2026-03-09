@@ -121,7 +121,7 @@ export const matrixCommand = defineCommand({
     },
     'exclude-region': {
       type: 'string',
-      description: 'Exclude hub regions: gulf, russia, belarus (comma-separated, mixable with IATA codes)',
+      description: 'Exclude hub regions: gulf, middleeast, russia, belarus (comma-separated, mixable with IATA codes)',
     },
     direct: { type: 'boolean', description: 'Direct flights only', default: false },
     currency: { type: 'string', default: 'EUR' },
@@ -131,7 +131,7 @@ export const matrixCommand = defineCommand({
   },
   async run({ args: rawArgs }) {
     const config = await loadConfig()
-    const args = withDefaults(rawArgs, config, ['currency', 'fmt', 'seat', 'pax', 'limit'])
+    const args = withDefaults(rawArgs, config, ['currency', 'fmt', 'seat', 'pax', 'limit', 'exclude_hub', 'exclude_region'])
 
     validateAirport(args.from.toUpperCase(), 'Origin')
     validateAirport(args.to.toUpperCase(), 'Destination')
