@@ -31,7 +31,7 @@ export { type FlightLeg as ProtoFlightLeg, type PassengerCounts, encodeFlightFil
 export { type DecodedFlight, decodeLeg, decodeLayover, decodeResult, extractDataArray } from './decode'
 
 // Airports
-export { searchAirports, isValidAirport } from './airports'
+export { searchAirports, isValidAirport, airportCity } from './airports'
 
 // Dates
 export { parseFlexDate, formatDateShort } from './dates'
@@ -148,6 +148,7 @@ export {
 export {
   type ConnectionMapOptions,
   type ConnectionRoute,
+  findBridgeHubs,
   findConnectionRoutes,
   formatRoute,
   summarizeRoute,

@@ -1,6 +1,7 @@
 /** Geographic hub groups for --exclude-region. */
 const REGIONS: Record<string, string[]> = {
   gulf: ['DXB', 'DOH', 'AUH', 'BAH', 'MCT', 'KWI'],
+  middleeast: ['DXB', 'DOH', 'AUH', 'BAH', 'MCT', 'KWI', 'RUH', 'JED', 'AMM', 'TLV', 'CAI', 'BGW', 'IKA', 'THR'],
   russia: ['SVO', 'DME', 'LED', 'VKO'],
   belarus: ['MSQ'],
 }

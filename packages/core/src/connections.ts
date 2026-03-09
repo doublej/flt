@@ -3,7 +3,7 @@
  *
  * Given origin, destination, and optional waypoints, discovers every path
  * that uses actual airline connections. Designed as a preparation/planning step
- * before searching — maps out what's possible with 5-10+ intermediate stops.
+ * before searching — maps out what's possible from simple 1-stop to complex 10+ stop routes.
  */
 
 import { type RouteGraph, buildRouteGraph } from './routes'
@@ -23,7 +23,7 @@ export interface ConnectionRoute {
 }
 
 export interface ConnectionMapOptions {
-  /** Minimum intermediate stops (default: 5) */
+  /** Minimum intermediate stops (default: 0) */
   minStops?: number
   /** Maximum intermediate stops (default: 10) */
   maxStops?: number
@@ -88,7 +88,7 @@ export function findConnectionRoutes(
     return findRoutesViaWaypoints(from, to, via.map((w) => w.toUpperCase()), graph, options, excluded)
   }
 
-  const { minStops = 5, maxStops = 10, maxDetour = 3.0 } = options
+  const { minStops = 0, maxStops = 10, maxDetour = 3.0 } = options
   const dist = createDistanceCache()
   const directKm = dist(from, to)
   const maxTotalKm = maxDetour && directKm ? directKm * maxDetour : null
@@ -246,6 +246,47 @@ function buildRoute(
     totalKm,
     directKm: directKm ? Math.round(directKm) : null,
     detourRatio: detour,
+  }
+}
+
+/** Find airports reachable from origin within maxDepth hops, intersected with airports that can reach dest. */
+export function findBridgeHubs(
+  from: string,
+  to: string,
+  maxDepth = 2,
+  options: ConnectionMapOptions = {},
+): { fromReach: string[]; toReach: string[]; bridges: string[] } {
+  const graph = getGraph(options)
+  from = from.toUpperCase()
+  to = to.toUpperCase()
+
+  const bfs = (start: string, depth: number): Set<string> => {
+    const visited = new Set<string>([start])
+    let frontier = [start]
+    for (let d = 0; d < depth; d++) {
+      const next: string[] = []
+      for (const node of frontier) {
+        for (const neighbor of graph.get(node) ?? []) {
+          if (!visited.has(neighbor)) {
+            visited.add(neighbor)
+            next.push(neighbor)
+          }
+        }
+      }
+      frontier = next
+    }
+    visited.delete(start)
+    return visited
+  }
+
+  const fromSet = bfs(from, maxDepth)
+  const toSet = bfs(to, maxDepth)
+  const bridges = [...fromSet].filter((code) => toSet.has(code)).sort()
+
+  return {
+    fromReach: [...graph.get(from) ?? []].sort(),
+    toReach: [...graph.get(to) ?? []].sort(),
+    bridges,
   }
 }
 

@@ -58,3 +58,8 @@ export function searchAirports(q: string): Airport[] {
 export function isValidAirport(code: string): boolean {
   return code in _airports
 }
+
+/** Get city name for an IATA code, or null if unknown */
+export function airportCity(code: string): string | null {
+  return _airports[code]?.city ?? null
+}
