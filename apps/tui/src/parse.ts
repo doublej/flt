@@ -11,7 +11,7 @@ export interface SearchOptions {
   refresh: boolean
 }
 
-const OPT_RE = /\/([A-Z$]+)(\d*[A-Z]*)/g
+const OPT_RE = /\/(DA|DB|AA|AB|DM|SP|SD|SS|ST|[$A-Z])([0-9A-Z]*)/g
 
 function parseTime(hhmm: string): string {
   const h = hhmm.slice(0, 2)
