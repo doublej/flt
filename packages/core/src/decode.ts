@@ -201,11 +201,20 @@ function decodeItinerary(el: NL, is_best: boolean): DecodedFlight | null {
     const firstLeg = legs[0]
     const lastLeg = legs[legs.length - 1]
 
+    let departure = formatTime(depTime) !== '??:??' ? formatTime(depTime) : (firstLeg?.departure_time ?? '??:??')
+    const arrival = formatTime(arrTime) !== '??:??' ? formatTime(arrTime) : (lastLeg?.arrival_time ?? '??:??')
+    if (departure === '??:??' && arrival !== '??:??' && travelTime > 0) {
+      const [ah, am] = arrival.split(':').map(Number)
+      const total = ah * 60 + am - travelTime
+      const norm = ((total % 1440) + 1440) % 1440
+      departure = `${String(Math.floor(norm / 60)).padStart(2, '0')}:${String(norm % 60).padStart(2, '0')}`
+    }
+
     return {
       is_best,
       name,
-      departure: formatTime(depTime) !== '??:??' ? formatTime(depTime) : (firstLeg?.departure_time ?? '??:??'),
-      arrival: formatTime(arrTime) !== '??:??' ? formatTime(arrTime) : (lastLeg?.arrival_time ?? '??:??'),
+      departure,
+      arrival,
       arrival_time_ahead: daysAhead(depDate, arrDate),
       duration: formatDuration(travelTime),
       stops: layovers.length,

@@ -43,6 +43,14 @@ export const searchCommand = defineCommand({
     'max-dur': { type: 'string', description: 'Max duration in minutes' },
     direct: { type: 'boolean', description: 'Direct flights only', default: false },
     carrier: { type: 'string', description: 'Filter by airline name/code' },
+    'exclude-carrier': {
+      type: 'string',
+      description: 'Exclude airlines (comma-separated names/codes)',
+    },
+    'exclude-hub': {
+      type: 'string',
+      description: 'Exclude layover airports (comma-separated IATA codes)',
+    },
     refresh: { type: 'boolean', description: 'Force fresh fetch (skip cache)', default: false },
   },
   async run({ args: rawArgs }) {
@@ -132,6 +140,17 @@ export const searchCommand = defineCommand({
 
     const rawOffers: Offer[] = allFlights.map((offer, i) => ({ ...offer, id: `O${i + 1}` }))
 
+    const hasFilter = !!(
+      args.carrier ||
+      args['exclude-carrier'] ||
+      args['exclude-hub'] ||
+      args.direct ||
+      args['dep-after'] ||
+      args['dep-before'] ||
+      args['arr-after'] ||
+      args['arr-before'] ||
+      args['max-dur']
+    )
     let offers = applyFilters(rawOffers, {
       depAfter: args['dep-after'],
       depBefore: args['dep-before'],
@@ -141,6 +160,8 @@ export const searchCommand = defineCommand({
       maxStops,
       direct: args.direct,
       carrier: args.carrier,
+      excludeCarrier: args['exclude-carrier'],
+      excludeHub: args['exclude-hub'],
     })
     offers = sortOffers(offers, (args.sort as SortKey) ?? 'price')
     const limit = Number.parseInt(args.limit)
@@ -161,8 +182,13 @@ export const searchCommand = defineCommand({
     console.log(
       formatOffers(offers, args.fmt as Format, args.fields, args.view as View | undefined),
     )
-    if (truncated) {
-      console.log(`\n  Showing ${limit} of ${totalAfterFilter} results. Use --limit to see more.`)
-    }
+
+    const refs = results.flatMap((result) => (result.ref ? [result.ref] : []))
+    const refLabel = refs.length === 1 ? refs[0] : `${refs.length} refs`
+    const notes: string[] = []
+    if (truncated) notes.push(`Showing ${limit} of ${totalAfterFilter} results. Use --limit to see more.`)
+    if (hasFilter) notes.push('Filtered results — O-IDs are for this view only.')
+    notes.push(`ref: ${refLabel}`)
+    console.error(`\n  ${notes.join('\n  ')}`)
   },
 })

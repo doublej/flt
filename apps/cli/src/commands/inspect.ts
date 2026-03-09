@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty'
 import { formatError } from '../format'
-import { listAvailableRefs, loadSession, resolveOffer } from '../state'
+import { loadSession, resolveOffer } from '../state'
 
 export const inspectCommand = defineCommand({
   meta: { name: 'inspect', description: 'Show details of a flight offer by ID' },
@@ -21,11 +21,25 @@ export const inspectCommand = defineCommand({
 
     const offer = await resolveOffer(session, args.id)
     if (!offer) {
-      const refs = listAvailableRefs(session)
-      const ids = refs.length
-        ? refs.join(', ')
-        : (session.latest?.offers ?? []).map((o) => o.id).join(', ')
-      console.log(formatError('NOT_FOUND', `Offer '${args.id}' not found. Available: ${ids}`))
+      const latestIds = (session.latest?.offers ?? []).map((o) => o.id)
+      if (latestIds.length) {
+        console.log(
+          formatError('NOT_FOUND', `Offer '${args.id}' not found. Available in latest search: ${latestIds.join(', ')}`),
+        )
+      } else {
+        const searchRefs = Object.keys(session.searches)
+        const recent = searchRefs.slice(-10)
+        const overflow = searchRefs.length - recent.length
+        const hint = overflow > 0
+          ? `${recent.join(', ')} (+${overflow} more)`
+          : recent.join(', ')
+        console.log(
+          formatError(
+            'NOT_FOUND',
+            `Offer '${args.id}' not found. No latest search. Use REF:ID format, e.g. ${recent[recent.length - 1] ?? 'REF'}:O1. Refs: ${hint}`,
+          ),
+        )
+      }
       return
     }
 

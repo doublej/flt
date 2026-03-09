@@ -9,6 +9,8 @@ export interface FilterOpts {
   maxStops?: number
   direct?: boolean
   carrier?: string
+  excludeCarrier?: string
+  excludeHub?: string
 }
 
 function timeToMin(t: string): number | null {
@@ -39,6 +41,19 @@ export function applyFilters(offers: Offer[], opts: FilterOpts): Offer[] {
       const codeMatch =
         c.length === 2 && o.legs.some((l) => l.flight_number.toLowerCase().startsWith(c))
       if (!nameMatch && !codeMatch) return false
+    }
+    if (opts.excludeCarrier) {
+      const excluded = opts.excludeCarrier.split(',').map((s) => s.trim().toLowerCase())
+      const nameHit = excluded.some((c) => o.name.toLowerCase().includes(c))
+      const codeHit = excluded.some(
+        (c) => c.length === 2 && o.legs.some((l) => l.flight_number.toLowerCase().startsWith(c)),
+      )
+      if (nameHit || codeHit) return false
+    }
+    if (opts.excludeHub) {
+      const hubs = new Set(opts.excludeHub.split(',').map((s) => s.trim().toUpperCase()))
+      const hasHub = o.layovers.some((l) => hubs.has(l.airport))
+      if (hasHub) return false
     }
     const dep = timeToMin(o.departure)
     const arr = timeToMin(o.arrival)

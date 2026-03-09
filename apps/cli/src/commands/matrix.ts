@@ -1,6 +1,7 @@
 import { type SearchQuery, type SeatType, searchSingle } from '@flights/core'
 import { type CellResult, dateRange, pickCheapest } from '@flights/core'
 import { defineCommand } from 'citty'
+import { applyFilters } from '../filter'
 import { loadConfig, withDefaults } from '../config'
 import { formatError } from '../format'
 import {
@@ -108,6 +109,16 @@ export const matrixCommand = defineCommand({
     pax: { type: 'string', default: '1ad' },
     'max-stops': { type: 'string' },
     'max-dur': { type: 'string', description: 'Max duration in minutes (filters before cheapest)' },
+    carrier: { type: 'string', description: 'Filter by airline name/code' },
+    'exclude-carrier': {
+      type: 'string',
+      description: 'Exclude airlines (comma-separated names/codes)',
+    },
+    'exclude-hub': {
+      type: 'string',
+      description: 'Exclude layover airports (comma-separated IATA codes)',
+    },
+    direct: { type: 'boolean', description: 'Direct flights only', default: false },
     currency: { type: 'string', default: 'EUR' },
     fmt: { type: 'string', description: 'Output format: table|tsv|jsonl', default: 'table' },
   },
@@ -146,13 +157,25 @@ export const matrixCommand = defineCommand({
       )
     }
 
+    const filterOpts = {
+      maxDur,
+      maxStops,
+      direct: args.direct,
+      carrier: args.carrier,
+      excludeCarrier: args['exclude-carrier'],
+      excludeHub: args['exclude-hub'],
+    }
+    const hasFilter = !!(args.carrier || args['exclude-carrier'] || args['exclude-hub'] || args.direct)
+    const filterOffers = (offers: Offer[]) =>
+      hasFilter ? applyFilters(offers, filterOpts) : offers
+
     const depDates = dateRange(dateStart, dateEnd)
     const retDates = returnStart && returnEnd ? dateRange(returnStart, returnEnd) : null
 
     if (!retDates) {
       const cells: CellResult[] = []
       for (const d of depDates) {
-        const offers = await fetchAndCache(d, null, query, session)
+        const offers = filterOffers(await fetchAndCache(d, null, query, session))
         cells.push(pickCheapest(offers, maxDur) ?? { ...EMPTY_CELL, dep: d })
       }
       clearLatestSearch(session)
@@ -176,7 +199,7 @@ export const matrixCommand = defineCommand({
 
     const cells: CellResult[] = []
     for (const [d, r] of pairs) {
-      const offers = await fetchAndCache(d, r, query, session)
+      const offers = filterOffers(await fetchAndCache(d, r, query, session))
       cells.push(pickCheapest(offers, maxDur) ?? { ...EMPTY_CELL, dep: d, ret: r })
     }
     clearLatestSearch(session)
