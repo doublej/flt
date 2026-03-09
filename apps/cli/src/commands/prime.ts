@@ -14,7 +14,7 @@ RATE LIMITS — Google blocks rapid scraping:
 CACHING:
 - Cached by full query shape (dep/ret date, cabin, pax, stops, currency). Fresh <6h; \`--refresh\` bypasses.
 - Flight IDs (e.g. \`Fa3b7\`) are stable hashes from legs — survive re-filter/sort/search.
-- Plain IDs resolve from latest \`flt search\` snapshot only. Use \`REF:ID\` for cross-search lookups.
+- Plain IDs resolve across ALL session searches (latest first). \`REF:ID\` for explicit cross-search lookups.
 - Refs: \`IAO-MNL@20260318#A1B2C3:Fa3b7\`. Changing any query param = distinct cache entry.
 - Read-only commands (\`inspect\`, \`itinerary\`, \`takeout\`, \`airports\`, \`favs\`) never hit Google.
 
@@ -74,23 +74,60 @@ FAVORITES (session-scoped, survive cache expiry):
 CONNECTIONS (local route graph, no Google):
   flt connections <FROM> <TO> [OPTIONS]
   Options: --min-stops 5  --max-stops 10  --max-results 50  --max-detour 3.0|none
-    --via "IST,BKK"  --exclude "DXB,DOH"  --exclude-region "gulf,russia"
+    --via "IST,BKK"  --exclude "DXB,DOH"  --exclude-region "middleeast,russia"
+    --names  (show city names alongside IATA codes)
+  When no routes found: shows bridge hubs (airports reachable from both ends) + direct connections.
 
 REGIONS (--exclude-region shorthand, mixable with IATA codes):
   gulf: DXB, DOH, AUH, BAH, MCT, KWI
+  middleeast: DXB, DOH, AUH, BAH, MCT, KWI, RUH, JED, AMM, TLV, CAI, BGW, IKA, THR
   russia: SVO, DME, LED, VKO
   belarus: MSQ
+
+CONFIG DEFAULTS (persist with \`flt config\`, avoid repeating flags):
+  flt config exclude_region middleeast   # auto-applied to search/matrix/compare
+  flt config exclude_hub "DXB,DOH"      # same — CLI flags override when provided
 </commands>
 
-<workflow>
-1. Resolve ambiguous airports: \`flt airports <query>\`, pick IATA codes.
-2. For multi-stop (5+): run \`flt connections\` first to discover viable paths.
-3. Compare transit hubs: \`flt compare KUL,BKK,IST AMS 2026-03-22\` — ranks cheapest per route in one call.
-4. Strategy: flexible dates → \`flt matrix\` (small range). Fixed dates → \`flt search\`.
-5. Filter after first fetch — prefer refining one search over running many.
-6. Fav promising offers early with \`flt fav <ID>\` — they survive cache expiry. Use \`flt favs\` to review shortlist.
-7. Multi-leg: search each leg separately → compose with \`flt itinerary\`. Min connection: 2h domestic, 3h international.
-8. Finish: \`flt takeout\` with \`--itin\` flags for recommended options. Mention auto-close to user.
+<workflow strict="true">
+Follow these phases IN ORDER. Do not skip ahead. Each phase has a gate — meet it before proceeding.
+
+PHASE 1 — RESOLVE (gate: all airports are IATA codes)
+- Resolve ambiguous cities/airports: \`flt airports <query>\`, confirm IATA codes with user.
+- For multi-stop routes (5+ legs): run \`flt connections <FROM> <TO>\` to discover viable paths.
+- Compare transit hubs if needed: \`flt compare KUL,BKK,IST AMS 2026-03-22\`.
+→ Gate: every origin, destination, and waypoint is a confirmed IATA code before searching.
+
+PHASE 2 — SEARCH (gate: all legs have search results)
+- One search per leg. Flexible dates → \`flt matrix\` (≤7 combos). Fixed dates → \`flt search\`.
+- Refine with filters (--carrier, --max-stops, --dep-after, etc.) — prefer filtering one search over running many.
+- Present top 3–5 per leg to the user with price, duration, stops, carrier, times.
+→ Gate: every leg in the planned route has at least one search with results.
+
+PHASE 3 — SHORTLIST (gate: user has approved favorites for every leg)
+- \`flt fav <ID>\` promising offers — they survive cache expiry and are the basis for itineraries.
+- Use \`flt inspect <ID>\` for detail on candidates. Use \`flt favs\` to review the full shortlist.
+- Ask the user to confirm their preferred offer per leg. Do NOT proceed until each leg has a user-approved fav.
+→ Gate: \`flt favs\` shows at least one favorited offer per leg, and the user has confirmed the picks.
+
+PHASE 4 — COMPOSE (gate: itinerary previewed and user-approved)
+- Build itinerary: \`flt itinerary <REF:ID> [REF:ID...] --title "..."\`.
+- Use full REF:ID format (e.g. \`AMS-NRT@20260410#A1B2C3:Fa3b7\`) for precision, or plain IDs which search all session results.
+- Review the output: check connection times (min 2h domestic, 3h international), total price, travel time.
+- If connections are too tight or the user wants changes, go back to Phase 2/3 for that leg.
+→ Gate: user has seen the composed itinerary table and approved it.
+
+PHASE 5 — DELIVER
+- \`flt takeout --itin "Label" REF:ID REF:ID [--note "..."] --title "Trip Title"\`.
+- For PDF export: add \`--pdf\`.
+- Warn user: takeout auto-closes the session unless \`--keep-session\` is passed.
+- Present the output path and a summary of what was exported.
+
+RULES:
+- Never compose an itinerary from offers the user hasn't reviewed.
+- Never run takeout without a previewed itinerary (Phase 4).
+- If the user asks to skip phases, acknowledge the skip explicitly and note what was skipped.
+- When presenting options, always show the offer ID so the user can fav/inspect it.
 </workflow>
 
 <errors>
