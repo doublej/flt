@@ -89,11 +89,21 @@ export function assignFlightIds(flights: Omit<Offer, 'id'>[]): Offer[] {
   })
 }
 
+/** Migrate old sequential O-prefix IDs to stable F-hash IDs. */
+function migrateOfferIds(offers: Offer[]): Offer[] {
+  if (offers.length > 0 && !offers[0].id.startsWith('F')) {
+    return assignFlightIds(offers)
+  }
+  return offers
+}
+
 async function loadCacheFile(cacheKey: string): Promise<CacheFile | null> {
   try {
     const raw = await readFile(cacheFilePath(cacheKey), 'utf-8')
     const parsed = JSON.parse(raw) as CacheFile
-    return parsed.version === CACHE_VERSION ? parsed : null
+    if (parsed.version !== CACHE_VERSION) return null
+    parsed.offers = migrateOfferIds(parsed.offers)
+    return parsed
   } catch {
     return null
   }
@@ -252,7 +262,9 @@ export async function loadSession(): Promise<SessionState | null> {
       const searches = await normalizeSearches(state.searches ?? {})
       return {
         version: SESSION_VERSION,
-        latest: state.latest ?? null,
+        latest: state.latest
+          ? { ...state.latest, offers: migrateOfferIds(state.latest.offers) }
+          : null,
         searches,
         sessions: state.sessions ?? [],
         activeSessionId: state.activeSessionId,
@@ -321,7 +333,7 @@ export async function nukeCache(): Promise<void> {
 function materializeSearch(ref: string, search: SessionSearch): SearchEntry | null {
   if (!search.offers) return null
   return {
-    offers: search.offers,
+    offers: migrateOfferIds(search.offers),
     query: search.query,
     ref,
     timestamp: search.timestamp,
@@ -487,14 +499,23 @@ export async function throttle(): Promise<void> {
   lastRequestTime = Date.now()
 }
 
-/** Look up an offer by "REF:ID" or plain ID (latest search only). */
+/** Look up an offer by "REF:ID" or plain ID (latest search first, then all session searches). */
 export async function resolveOffer(session: SessionState, ref: string): Promise<Offer | null> {
   if (ref.includes(':')) {
     const [searchRef, id] = ref.split(':')
     const entry = await loadSearchByRef(session, searchRef)
     return entry?.offers.find((offer) => offer.id.toUpperCase() === id.toUpperCase()) ?? null
   }
-  return session.latest?.offers.find((offer) => offer.id.toUpperCase() === ref.toUpperCase()) ?? null
+  const upper = ref.toUpperCase()
+  const fromLatest = session.latest?.offers.find((offer) => offer.id.toUpperCase() === upper)
+  if (fromLatest) return fromLatest
+  // Search across all cached searches
+  for (const searchRef of Object.keys(session.searches)) {
+    const entry = await loadSearchByRef(session, searchRef)
+    const match = entry?.offers.find((offer) => offer.id.toUpperCase() === upper)
+    if (match) return match
+  }
+  return null
 }
 
 /** Add an offer to the active session's favorites. */
@@ -525,7 +546,7 @@ export function removeFavorite(session: SessionState, offerId: string): boolean 
 export function getFavorites(session: SessionState, sessionId?: string): Offer[] {
   const id = sessionId ?? session.activeSessionId
   const s = id ? session.sessions.find((sess) => sess.id === id) : undefined
-  return s?.favorites ?? []
+  return migrateOfferIds(s?.favorites ?? [])
 }
 
 /** List all available offer refs across stored searches. */
