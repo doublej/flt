@@ -3,14 +3,15 @@ import type { Offer } from '$lib/types'
 import { offerBookingUrls } from '$lib/utils/booking'
 import { drawRouteMap } from '$lib/utils/pdf-map'
 import type { BookingFilters, ProgramName } from '@flights/core/booking'
-import { PROGRAM_LABELS } from '@flights/core/booking'
+import { PROGRAM_LABELS, resolveIata } from '@flights/core/booking'
+import { parsePrice } from '@flights/core/filter'
 
-// Colors matching app theme
-const BG = '#0c0e14'
-const SURFACE = '#161b22'
-const TEXT = '#e6edf3'
-const MUTED = '#7d8590'
-const AMBER = '#f0a030'
+const TEXT = '#2a2a2a'
+const MUTED = '#888888'
+const ACCENT = '#2266cc'
+const BORDER = '#e0e0e0'
+const SURFACE = '#f5f5f5'
+const MARGIN = 15
 
 interface PdfOpts {
   offers: Offer[]
@@ -23,7 +24,6 @@ async function loadFont(): Promise<string> {
   if (fontCache) return fontCache
   const res = await fetch('/fonts/DepartureMono-Regular.woff2')
   const buf = await res.arrayBuffer()
-  // jsPDF needs base64
   const bytes = new Uint8Array(buf)
   let binary = ''
   for (const b of bytes) binary += String.fromCharCode(b)
@@ -48,6 +48,18 @@ function uniqueLegs(offers: Offer[]) {
   )
 }
 
+function offerRoute(o: Offer): string {
+  const from = resolveIata(o.legs[0]?.departure_airport ?? '') ?? o.legs[0]?.departure_airport ?? '?'
+  const to = resolveIata(o.legs[o.legs.length - 1]?.arrival_airport ?? '') ?? o.legs[o.legs.length - 1]?.arrival_airport ?? '?'
+  return `${from} > ${to}`
+}
+
+function totalPrice(offers: Offer[]): string {
+  const total = offers.reduce((sum, o) => sum + parsePrice(o.price), 0)
+  const cur = (offers[0]?.price ?? '\u20AC0').replace(/[0-9.,\s]/g, '') || '\u20AC'
+  return `${cur}${Math.round(total)}`
+}
+
 export async function generatePdf({ offers, filters }: PdfOpts): Promise<void> {
   const [{ jsPDF }, autoTable, fontData] = await Promise.all([
     import('jspdf'),
@@ -57,85 +69,61 @@ export async function generatePdf({ offers, filters }: PdfOpts): Promise<void> {
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const W = doc.internal.pageSize.getWidth()
-  const H = doc.internal.pageSize.getHeight()
 
-  // Embed font
   doc.addFileToVFS('DepartureMono.woff2', fontData)
   doc.addFont('DepartureMono.woff2', 'DepartureMono', 'normal')
-  doc.setFont('DepartureMono')
+  const FONT = 'DepartureMono'
+  doc.setFont(FONT)
 
-  // Page 1 background
-  fillPage(doc, W, H)
+  // Page 1: overview
+  let cy = 20
+  doc.setFontSize(22)
+  doc.setTextColor(TEXT)
+  doc.text('Flight Search Results', W / 2, cy, { align: 'center' })
+  cy += 7
 
-  // Header
-  let cy = 14
-  doc.setFontSize(18)
-  doc.setTextColor(AMBER)
-  doc.text('FLIGHT SEARCH RESULTS', W / 2, cy, { align: 'center' })
-
-  cy += 6
   doc.setFontSize(9)
   doc.setTextColor(MUTED)
-  doc.text(new Date().toLocaleDateString('en-US', { dateStyle: 'long' }), W / 2, cy, {
+  doc.text(`Generated ${new Date().toLocaleDateString('en-US', { dateStyle: 'long' })}`, W / 2, cy, {
     align: 'center',
   })
-  cy += 6
+  cy += 5
+  drawAccentLine(doc, W, cy)
+  cy += 8
 
-  // Route map
   const legs = uniqueLegs(offers)
   if (legs.length > 0) {
-    const mapW = Math.min(240, W - 20)
-    const mapX = (W - mapW) / 2
-    drawRouteMap(doc, legs, mapX, cy, mapW, 55)
-    cy += 60
+    const mapW = Math.min(240, W - MARGIN * 2)
+    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 50)
+    cy += 56
   }
 
-  // Flights table (top 15)
   const top = offers.slice(0, 15)
-  const tableBody = top.map((o, i) => [
-    String(i + 1),
-    o.price,
-    o.name,
-    `${o.legs[0]?.departure_airport ?? '?'} → ${o.legs[o.legs.length - 1]?.arrival_airport ?? '?'}`,
-    o.departure_date,
-    `${o.departure} → ${o.arrival}`,
-    o.duration,
-    fmtStops(o.stops),
-  ])
-
-  autoTable(doc, {
-    startY: cy,
-    margin: { left: 10, right: 10 },
-    head: [['#', 'Price', 'Carrier', 'Route', 'Date', 'Dep → Arr', 'Duration', 'Stops']],
-    body: tableBody,
-    styles: {
-      font: 'DepartureMono',
-      fontSize: 7,
-      textColor: TEXT,
-      fillColor: BG,
-      lineColor: '#2d333b',
-      lineWidth: 0.2,
-      cellPadding: 2,
-    },
-    headStyles: {
-      fillColor: SURFACE,
-      textColor: AMBER,
-      fontSize: 7,
-      fontStyle: 'normal',
-    },
-    alternateRowStyles: { fillColor: SURFACE },
-    theme: 'grid',
-  })
+  if (top.length > 0) {
+    autoTable(doc, {
+      startY: cy,
+      margin: { left: MARGIN, right: MARGIN },
+      head: [['#', 'Price', 'Carrier', 'Route', 'Date', 'Dep > Arr', 'Duration', 'Stops']],
+      body: top.map((o, i) => [
+        String(i + 1),
+        o.price,
+        o.name,
+        offerRoute(o),
+        o.departure_date,
+        `${o.departure} > ${o.arrival}`,
+        o.duration,
+        fmtStops(o.stops),
+      ]),
+      ...tableTheme(FONT),
+    })
+  }
 
   // Itineraries
   const itineraries = listItineraries().filter((it) => it.legs.length > 0)
-  if (itineraries.length > 0) {
-    for (const it of itineraries) {
-      renderItinerary(doc, autoTable, it, filters, W, H)
-    }
+  for (const it of itineraries) {
+    renderItinerary(doc, autoTable, it, filters, W, FONT)
   }
 
-  // Download
   const now = new Date()
   const ts = `${now.toISOString().slice(0, 10)}-${pad2(now.getHours())}${pad2(now.getMinutes())}`
   doc.save(`flights-${ts}.pdf`)
@@ -147,86 +135,115 @@ function renderItinerary(
   it: StoredItinerary,
   filters: BookingFilters | undefined,
   W: number,
-  H: number,
+  FONT: string,
 ): void {
   doc.addPage()
-  fillPage(doc, W, H)
 
-  let cy = 14
-  doc.setFont('DepartureMono')
-  doc.setFontSize(14)
-  doc.setTextColor(AMBER)
-  doc.text(it.name.toUpperCase(), W / 2, cy, { align: 'center' })
+  let cy = 20
+  doc.setFont(FONT)
+  doc.setFontSize(16)
+  doc.setTextColor(ACCENT)
+  doc.text(it.name, W / 2, cy, { align: 'center' })
+  cy += 5
+  drawAccentLine(doc, W, cy)
   cy += 8
 
-  // Mini route map
   const legs = uniqueLegs(it.legs)
   if (legs.length > 0) {
-    const mapW = Math.min(200, W - 20)
-    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 45)
-    cy += 50
+    const mapW = Math.min(200, W - MARGIN * 2)
+    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 42)
+    cy += 48
   }
-
-  // Legs table
-  const body = it.legs.map((o, i) => [
-    String(i + 1),
-    o.price,
-    o.name,
-    `${o.legs[0]?.departure_airport ?? '?'} → ${o.legs[o.legs.length - 1]?.arrival_airport ?? '?'}`,
-    o.departure_date,
-    `${o.departure} → ${o.arrival}`,
-    o.duration,
-    fmtStops(o.stops),
-  ])
 
   autoTable(doc, {
     startY: cy,
-    margin: { left: 10, right: 10 },
-    head: [['#', 'Price', 'Carrier', 'Route', 'Date', 'Dep → Arr', 'Duration', 'Stops']],
-    body,
-    styles: {
-      font: 'DepartureMono',
-      fontSize: 7,
-      textColor: TEXT,
-      fillColor: BG,
-      lineColor: '#2d333b',
-      lineWidth: 0.2,
-      cellPadding: 2,
-    },
-    headStyles: {
-      fillColor: SURFACE,
-      textColor: AMBER,
-      fontSize: 7,
-      fontStyle: 'normal',
-    },
-    alternateRowStyles: { fillColor: SURFACE },
-    theme: 'grid',
+    margin: { left: MARGIN, right: MARGIN },
+    head: [['#', 'Price', 'Carrier', 'Route', 'Date', 'Dep \u2192 Arr', 'Duration', 'Stops']],
+    body: it.legs.map((o, i) => [
+      String(i + 1),
+      o.price,
+      o.name,
+      offerRoute(o),
+      o.departure_date,
+      `${o.departure} > ${o.arrival}`,
+      o.duration,
+      fmtStops(o.stops),
+    ]),
+    ...tableTheme(FONT),
   })
 
-  // Booking links
   const lastY = (doc as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? cy + 30
-  let linkY = lastY + 8
+  let linkY = lastY + 6
+  drawTotalBadge(doc, totalPrice(it.legs), MARGIN, linkY, FONT)
+  linkY += 12
+
+  doc.setFont(FONT)
   doc.setFontSize(8)
-  doc.setTextColor(MUTED)
-  doc.text('BOOKING LINKS', 10, linkY)
+  doc.setTextColor(TEXT)
+  doc.text('Booking Links', MARGIN, linkY)
   linkY += 5
 
   for (const offer of it.legs) {
     const urls = offerBookingUrls(offer, filters)
     if (!urls) continue
-    const route = `${offer.legs[0]?.departure_airport ?? '?'} → ${offer.legs[offer.legs.length - 1]?.arrival_airport ?? '?'}`
+    const route = offerRoute(offer)
     for (const [program, url] of Object.entries(urls)) {
-      const label = `${route} — ${PROGRAM_LABELS[program as ProgramName] ?? program}`
-      doc.setTextColor(AMBER)
-      doc.textWithLink(label, 10, linkY, { url })
+      const label = `${route}  -  ${PROGRAM_LABELS[program as ProgramName] ?? program}`
+      doc.setTextColor(ACCENT)
+      doc.setFontSize(7.5)
+      doc.textWithLink(label, MARGIN + 2, linkY, { url })
       linkY += 4.5
     }
   }
 }
 
-function fillPage(doc: InstanceType<typeof import('jspdf').jsPDF>, W: number, H: number): void {
-  doc.setFillColor(BG)
-  doc.rect(0, 0, W, H, 'F')
+function tableTheme(font: string) {
+  return {
+    styles: {
+      font,
+      fontSize: 8,
+      textColor: TEXT,
+      fillColor: '#ffffff',
+      lineColor: BORDER,
+      lineWidth: 0.15,
+      cellPadding: 2.5,
+    },
+    headStyles: {
+      fillColor: ACCENT,
+      textColor: '#ffffff',
+      fontSize: 8,
+      fontStyle: 'normal' as const,
+    },
+    alternateRowStyles: { fillColor: SURFACE },
+    theme: 'grid' as const,
+  }
+}
+
+function drawAccentLine(
+  doc: InstanceType<typeof import('jspdf').jsPDF>,
+  W: number,
+  y: number,
+): void {
+  doc.setDrawColor(ACCENT)
+  doc.setLineWidth(0.6)
+  doc.line(W / 2 - 25, y, W / 2 + 25, y)
+}
+
+function drawTotalBadge(
+  doc: InstanceType<typeof import('jspdf').jsPDF>,
+  price: string,
+  x: number,
+  y: number,
+  font: string,
+): void {
+  const label = `Total: ${price}`
+  doc.setFont(font)
+  doc.setFontSize(10)
+  const tw = doc.getTextWidth(label) + 12
+  doc.setFillColor(ACCENT)
+  doc.roundedRect(x, y - 5, tw, 8, 2, 2, 'F')
+  doc.setTextColor('#ffffff')
+  doc.text(label, x + 6, y + 0.5)
 }
 
 function pad2(n: number): string {

@@ -9,16 +9,18 @@ import {
   type ProgramName,
   type SearchEntry,
   buildBookingUrls,
+  parsePrice,
   resolveIata,
 } from '@flights/core'
 import { drawRouteMap } from './pdf-map'
 
-const BG = '#0c0e14'
-const SURFACE = '#161b22'
-const TEXT = '#e6edf3'
-const MUTED = '#7d8590'
-const AMBER = '#f0a030'
-const FONT = 'courier'
+const TEXT = '#2a2a2a'
+const MUTED = '#888888'
+const ACCENT = '#2266cc'
+const BORDER = '#e0e0e0'
+const SURFACE = '#f5f5f5'
+const FONT = 'helvetica'
+const MARGIN = 15
 
 function fmtStops(n: number): string {
   if (n === 0) return 'Nonstop'
@@ -38,9 +40,15 @@ function uniqueLegs(offers: Offer[]) {
 }
 
 function offerRoute(o: Offer): string {
-  const from = o.legs[0]?.departure_airport ?? '?'
-  const to = o.legs[o.legs.length - 1]?.arrival_airport ?? '?'
+  const from = resolveIata(o.legs[0]?.departure_airport ?? '') ?? o.legs[0]?.departure_airport ?? '?'
+  const to = resolveIata(o.legs[o.legs.length - 1]?.arrival_airport ?? '') ?? o.legs[o.legs.length - 1]?.arrival_airport ?? '?'
   return `${from} > ${to}`
+}
+
+function totalPrice(offers: Offer[]): string {
+  const total = offers.reduce((sum, o) => sum + parsePrice(o.price), 0)
+  const cur = (offers[0]?.price ?? '\u20AC0').replace(/[0-9.,\s]/g, '') || '\u20AC'
+  return `${cur}${Math.round(total)}`
 }
 
 interface PdfOpts {
@@ -56,39 +64,38 @@ export async function generatePdf(opts: PdfOpts): Promise<Buffer> {
   const W = doc.internal.pageSize.getWidth()
   const H = doc.internal.pageSize.getHeight()
 
-  doc.setFont(FONT)
-  fillPage(doc, W, H)
+  // Page 1: overview
+  let cy = 20
+  doc.setFont(FONT, 'bold')
+  doc.setFontSize(22)
+  doc.setTextColor(TEXT)
+  doc.text(opts.title ?? 'Flight Search Results', W / 2, cy, { align: 'center' })
+  cy += 7
 
-  // Header
-  let cy = 14
-  doc.setFontSize(18)
-  doc.setTextColor(AMBER)
-  doc.text(opts.title ?? 'FLIGHT SEARCH RESULTS', W / 2, cy, { align: 'center' })
-  cy += 6
+  doc.setFont(FONT, 'normal')
   doc.setFontSize(9)
   doc.setTextColor(MUTED)
-  doc.text(new Date().toLocaleDateString('en-US', { dateStyle: 'long' }), W / 2, cy, {
+  doc.text(`Generated ${new Date().toLocaleDateString('en-US', { dateStyle: 'long' })}`, W / 2, cy, {
     align: 'center',
   })
-  cy += 6
+  cy += 5
+  drawAccentLine(doc, W, cy)
+  cy += 8
 
-  // Collect all offers for page 1 map + table
   const allOffers = opts.searches.flatMap(([, e]) => e.offers)
 
-  // Route map
   const legs = uniqueLegs(allOffers)
   if (legs.length > 0) {
-    const mapW = Math.min(240, W - 20)
-    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 55)
-    cy += 60
+    const mapW = Math.min(240, W - MARGIN * 2)
+    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 50)
+    cy += 56
   }
 
-  // Flights table (top 15)
   const top = allOffers.slice(0, 15)
   if (top.length > 0) {
     autoTable(doc, {
       startY: cy,
-      margin: { left: 10, right: 10 },
+      margin: { left: MARGIN, right: MARGIN },
       head: [['#', 'Price', 'Carrier', 'Route', 'Date', 'Dep > Arr', 'Duration', 'Stops']],
       body: top.map((o, i) => [
         String(i + 1),
@@ -104,9 +111,8 @@ export async function generatePdf(opts: PdfOpts): Promise<Buffer> {
     })
   }
 
-  // Itineraries
   for (const itin of opts.itineraries) {
-    renderItinerary(doc, itin, opts.affiliate, opts.filters, W, H)
+    renderItinerary(doc, itin, opts.affiliate, opts.filters, W)
   }
 
   return Buffer.from(doc.output('arraybuffer'))
@@ -118,29 +124,29 @@ function renderItinerary(
   affiliate: AffiliateConfig | null,
   filters: BookingFilters | undefined,
   W: number,
-  H: number,
 ): void {
   doc.addPage()
-  fillPage(doc, W, H)
 
-  let cy = 14
-  doc.setFont(FONT)
-  doc.setFontSize(14)
-  doc.setTextColor(AMBER)
-  doc.text(it.title.toUpperCase(), W / 2, cy, { align: 'center' })
+  let cy = 20
+  doc.setFont(FONT, 'bold')
+  doc.setFontSize(16)
+  doc.setTextColor(ACCENT)
+  doc.text(it.title, W / 2, cy, { align: 'center' })
+  cy += 5
+  drawAccentLine(doc, W, cy)
   cy += 8
 
   const legs = uniqueLegs(it.legs)
   if (legs.length > 0) {
-    const mapW = Math.min(200, W - 20)
-    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 45)
-    cy += 50
+    const mapW = Math.min(200, W - MARGIN * 2)
+    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 42)
+    cy += 48
   }
 
   autoTable(doc, {
     startY: cy,
-    margin: { left: 10, right: 10 },
-    head: [['#', 'Price', 'Carrier', 'Route', 'Date', 'Dep > Arr', 'Duration', 'Stops']],
+    margin: { left: MARGIN, right: MARGIN },
+    head: [['#', 'Price', 'Carrier', 'Route', 'Date', 'Dep \u2192 Arr', 'Duration', 'Stops']],
     body: it.legs.map((o, i) => [
       String(i + 1),
       o.price,
@@ -154,21 +160,39 @@ function renderItinerary(
     ...tableTheme(),
   })
 
-  // Booking links
   const lastY = (doc as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? cy + 30
-  let linkY = lastY + 8
+  let linkY = lastY + 6
+  drawTotalBadge(doc, totalPrice(it.legs), MARGIN, linkY)
+  linkY += 12
+
+  if (it.note) {
+    doc.setFont(FONT, 'italic')
+    doc.setFontSize(8)
+    doc.setTextColor(MUTED)
+    doc.text(it.note, MARGIN, linkY)
+    linkY += 6
+  }
+
+  const hasLinks = it.legs.some(
+    (o) => buildOfferBookingUrls(o, affiliate, it.filters ?? filters) !== null,
+  )
+  if (!hasLinks) return
+
+  doc.setFont(FONT, 'bold')
   doc.setFontSize(8)
-  doc.setTextColor(MUTED)
-  doc.text('BOOKING LINKS', 10, linkY)
+  doc.setTextColor(TEXT)
+  doc.text('Booking Links', MARGIN, linkY)
   linkY += 5
 
+  doc.setFont(FONT, 'normal')
   for (const offer of it.legs) {
     const urls = buildOfferBookingUrls(offer, affiliate, it.filters ?? filters)
     if (!urls) continue
     for (const [program, url] of Object.entries(urls)) {
-      const label = `${offerRoute(offer)} - ${PROGRAM_LABELS[program as ProgramName] ?? program}`
-      doc.setTextColor(AMBER)
-      doc.textWithLink(label, 10, linkY, { url })
+      const label = `${offerRoute(offer)}  -  ${PROGRAM_LABELS[program as ProgramName] ?? program}`
+      doc.setTextColor(ACCENT)
+      doc.setFontSize(7.5)
+      doc.textWithLink(label, MARGIN + 2, linkY, { url })
       linkY += 4.5
     }
   }
@@ -199,25 +223,37 @@ function tableTheme() {
   return {
     styles: {
       font: FONT,
-      fontSize: 7,
+      fontSize: 8,
       textColor: TEXT,
-      fillColor: BG,
-      lineColor: '#2d333b',
-      lineWidth: 0.2,
-      cellPadding: 2,
+      fillColor: '#ffffff',
+      lineColor: BORDER,
+      lineWidth: 0.15,
+      cellPadding: 2.5,
     },
     headStyles: {
-      fillColor: SURFACE,
-      textColor: AMBER,
-      fontSize: 7,
-      fontStyle: 'normal' as const,
+      fillColor: ACCENT,
+      textColor: '#ffffff',
+      fontSize: 8,
+      fontStyle: 'bold' as const,
     },
     alternateRowStyles: { fillColor: SURFACE },
     theme: 'grid' as const,
   }
 }
 
-function fillPage(doc: jsPDF, W: number, H: number): void {
-  doc.setFillColor(BG)
-  doc.rect(0, 0, W, H, 'F')
+function drawAccentLine(doc: jsPDF, W: number, y: number): void {
+  doc.setDrawColor(ACCENT)
+  doc.setLineWidth(0.6)
+  doc.line(W / 2 - 25, y, W / 2 + 25, y)
+}
+
+function drawTotalBadge(doc: jsPDF, price: string, x: number, y: number): void {
+  const label = `Total: ${price}`
+  doc.setFont(FONT, 'bold')
+  doc.setFontSize(10)
+  const tw = doc.getTextWidth(label) + 12
+  doc.setFillColor(ACCENT)
+  doc.roundedRect(x, y - 5, tw, 8, 2, 2, 'F')
+  doc.setTextColor('#ffffff')
+  doc.text(label, x + 6, y + 0.5)
 }

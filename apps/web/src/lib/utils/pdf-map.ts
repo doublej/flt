@@ -6,11 +6,12 @@ interface Leg {
   arrival_airport: string
 }
 
-const BG = '#0c0e14'
-const ARC = '#f0a030'
-const DOT = '#f0a030'
-const LABEL = '#e6edf3'
-const PAD = 0.12 // fraction of box to pad
+const MAP_BG = '#f0f0f0'
+const MAP_BORDER = '#e0e0e0'
+const ARC = '#2266cc'
+const DOT = '#2a2a2a'
+const LABEL = '#2a2a2a'
+const PAD = 0.12
 
 export function drawRouteMap(
   doc: jsPDF,
@@ -28,13 +29,13 @@ export function drawRouteMap(
 
   const proj = buildProjection(coords, x, y, width, height)
 
-  // Background
-  doc.setFillColor(BG)
-  doc.roundedRect(x, y, width, height, 2, 2, 'F')
+  doc.setFillColor(MAP_BG)
+  doc.setDrawColor(MAP_BORDER)
+  doc.setLineWidth(0.3)
+  doc.roundedRect(x, y, width, height, 3, 3, 'FD')
 
-  // Arcs
   doc.setDrawColor(ARC)
-  doc.setLineWidth(0.4)
+  doc.setLineWidth(0.5)
   for (const leg of legs) {
     const from = coords.get(leg.departure_airport)
     const to = coords.get(leg.arrival_airport)
@@ -47,14 +48,13 @@ export function drawRouteMap(
     }
   }
 
-  // Dots + labels
-  doc.setFontSize(6)
+  doc.setFontSize(7)
   doc.setTextColor(LABEL)
   for (const [iata, coord] of coords) {
     const [px, py] = proj(coord)
     doc.setFillColor(DOT)
     doc.circle(px, py, 1.2, 'F')
-    doc.text(iata, px + 2, py - 1.5)
+    doc.text(iata, px + 2.5, py - 1.5)
   }
 }
 
