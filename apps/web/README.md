@@ -1,178 +1,131 @@
-# flt
+# flights-app (web)
 
-Flight search CLI powered by Google Flights. Search routes, compare prices across dates, build multi-leg itineraries, and export results — all from the terminal.
+SvelteKit flight search UI deployed on Cloudflare Pages. Powered by `@flights/core`.
 
-## Install
-
-Requires [Bun](https://bun.sh).
+## Quick start
 
 ```bash
-# run directly
-bunx github:doublej/flt
-
-# install globally
-bun install -g github:doublej/flt
+bun install        # from monorepo root
+just dev           # start dev server
 ```
 
-Or clone and use the Justfile:
+Or directly: `bun --filter flights-app dev`
 
-```bash
-bun install
-just flt <command> [options]
-```
+## Features
 
-## Smart routing
+- **Search form** — origin/destination with autocomplete, one-way or round-trip, flexible dates (days before/after), cabin class, passengers, currency
+- **Streaming results** — multi-date searches use SSE streaming with live progress; single-date searches return all at once
+- **Price grid** — heatmap matrix of cheapest fares by departure/return date combination (green = low, red = high); click a cell to filter results
+- **Filter panel** — stops (non-stop / 1 stop / 2+), price range slider, airlines, departure/arrival time ranges, max duration
+- **Sort** — best, price, duration, stops, departure time, date
+- **Flight cards** — airline logos, times, route path, duration, stops, price; expand for leg-by-leg detail with aircraft info, layover times, and route map
+- **Route map** — Leaflet map with great-circle arcs between waypoints (dark CartoDB tiles, amber markers)
+- **Booking links** — affiliate links (Aviasales via Travelpayouts) and Google Flights fallback per offer
+- **Itinerary builder** — combine offers into multi-leg trips stored in localStorage; connection time warnings, total price and door-to-door travel time
+- **AI tools** — copy/save results as markdown, export takeout document with affiliate booking links
+- **Recent searches** — last 5 searches stored in localStorage with one-click re-run
+- **Preferences** — passengers, cabin class, and currency persist across sessions via localStorage
+- **Price trend banner** — shows "prices are low/typical/high right now" when data is available
 
-The CLI detects intent from raw arguments — no subcommand needed:
+## API endpoints
 
-```bash
-flt AMS NRT 2026-04-10              # search flights
-flt AMS NRT 2026-04-10 2026-04-20   # round trip
-flt ams                              # find airports
-flt O1                               # inspect last result
-```
+### `GET /api/airports`
+
+Airport search by name, city, or IATA code.
+
+| Param | Description |
+|-------|-------------|
+| `q` | Search query (min 1 character) |
+
+Returns `Airport[]`.
+
+### `GET /api/flights`
+
+Single search (all date combinations resolved in one JSON response).
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `from_airport` | yes | Origin IATA code |
+| `to_airport` | yes | Destination IATA code |
+| `date` | yes | Departure date (`YYYY-MM-DD`) |
+| `return_date` | | Return date |
+| `date_end` | | Flexible departure end date |
+| `return_date_end` | | Flexible return end date |
+| `adults` | | Number of adults (default `1`) |
+| `children` | | Number of children |
+| `infants_in_seat` | | Infants in seat |
+| `infants_on_lap` | | Infants on lap |
+| `seat` | | `economy` / `premium-economy` / `business` / `first` |
+| `max_stops` | | `0`, `1`, or `2` |
+| `currency` | | Currency code (default `EUR`) |
+
+Returns `{ current_price, flights, google_flights_url }`.
+
+### `GET /api/flights/stream`
+
+Same parameters as `/api/flights`. Returns an SSE stream with events:
+
+| Event | Data | Description |
+|-------|------|-------------|
+| `progress` | `{ completed, total }` | Search progress per date pair |
+| `flights` | `Flight[]` | Batch of results as they arrive |
+| `error` | `{ detail }` | Per-date-pair error |
+| `done` | `{ current_price, google_flights_url }` | Stream complete |
+
+Used automatically for multi-date (flexible) searches.
+
+## Authentication
+
+Password-gated via two environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `PASSWORD` | App password |
+| `SESSION_SECRET` | HMAC secret (`openssl rand -hex 32`) |
+
+Sessions are stateless HMAC tokens stored in a `session` cookie (30-day expiry, httpOnly, secure, sameSite=lax). Uses Web Crypto (`HMAC` + `SHA-256`).
+
+**Local dev without auth:** if `PASSWORD` or `SESSION_SECRET` is not set, the auth hook is skipped entirely.
+
+## Deployment
+
+Deployed on **Cloudflare Pages** with `@sveltejs/adapter-cloudflare`.
+
+| Setting | Value |
+|---------|-------|
+| Build command | `bun run build` |
+| Build output | `.svelte-kit/cloudflare` |
+| Root directory | `apps/web` |
+| Compatibility flags | `nodejs_compat` |
+
+Set `PASSWORD` and `SESSION_SECRET` in the CF Pages dashboard under Environment Variables.
+
+## Design
+
+Dark theme with amber accents.
+
+| Token | Value |
+|-------|-------|
+| Background | `#0c0e14` |
+| Surface | `#161b22` |
+| Primary (amber) | `#f0a030` |
+| Text | `#e6edf3` |
+| Body font | Space Grotesk |
+| Mono font | Departure Mono |
 
 ## Commands
 
-### search
-
-Search flights between two airports.
-
-```bash
-flt search <FROM> <TO> <DATE> [RETURN_DATE]
-```
-
-| Flag | Description |
-|------|-------------|
-| `--seat` | `economy` / `premium-economy` / `business` / `first` |
-| `--pax` | Passengers: `1ad`, `2ad1ch`, `1ad1in` |
-| `--currency` | Currency code (default: `EUR`) |
-| `--direct` | Direct flights only |
-| `--max-stops` | Max stops: `0`, `1`, `2` |
-| `--carrier` | Filter by airline name substring |
-| `--dep-after` / `--dep-before` | Departure time window (`HH:MM`) |
-| `--arr-after` / `--arr-before` | Arrival time window (`HH:MM`) |
-| `--max-dur` | Max flight duration in minutes |
-| `--date-end` | Flexible departure end date (searches each day in range) |
-| `--return-date-end` | Flexible return end date |
-| `--sort` | `price` / `dur` / `stops` / `dep` (default: `price`) |
-| `--fmt` | `table` / `jsonl` / `tsv` / `brief` (default: `table`) |
-| `--fields` | Comma-separated field list |
-| `--view` | Field preset: `min` / `std` / `full` |
-| `--limit` | Max results (default: `100`) |
-| `--refresh` | Skip cache, force fresh fetch |
-
-### matrix
-
-Compare cheapest fares across a date range.
-
-```bash
-# one-way
-flt matrix <FROM> <TO> <DATE_START> <DATE_END>
-
-# round trip
-flt matrix <FROM> <TO> <DEP_START> <DEP_END> <RET_START> <RET_END>
-```
-
-Supports `--seat`, `--pax`, `--max-stops`, `--max-dur`, `--currency`, `--fmt` (`table` / `tsv` / `jsonl`). Max 21 date combinations per run.
-
-### inspect
-
-Show full details for a flight offer.
-
-```bash
-flt inspect <ID>
-flt O1                                       # latest search
-flt inspect AMS-NRT@20260408#A1B2C3:O1       # cross-search ref
-```
-
-`--fmt json` (default) or `--fmt table` for key-value layout. Shows legs, layovers, aircraft, and booking URL.
-
-### itinerary
-
-Combine cached offers into a multi-leg itinerary.
-
-```bash
-flt itinerary <REF:ID> [REF:ID...] [--title "..."] [--note "..."]
-```
-
-Validates connection times and warns about tight or long layovers. Shows per-leg breakdown with total price and door-to-door travel time.
-
-### airports
-
-Look up airport codes by city, name, or IATA code.
-
-```bash
-flt airports <QUERY>
-flt tokyo                    # smart routing shortcut
-```
-
-`--limit` controls max results (default: `20`).
-
-### takeout
-
-Export session results and itineraries to a markdown file.
-
-```bash
-flt takeout [--title "..."] [-o path] [--itin "Title" REF:ID REF:ID --note "..."]
-```
-
-Only includes searches from the current session (see `session start`). Default output: `~/Desktop/flights-<date>-<time>.md`.
-
-### session
-
-Manage session boundaries for scoped exports.
-
-```bash
-flt session start            # mark start of a new session
-```
-
-Takeout only includes searches made after the latest `session start`.
-
-### config
-
-Persist CLI defaults so you don't repeat flags.
-
-```bash
-flt config                   # list all
-flt config currency USD      # set default
-flt config currency          # read value
-flt config currency --unset  # remove
-```
-
-Valid keys: `currency`, `fmt`, `seat`, `pax`, `limit`, `marker`, `trs`.
-
-### prime
-
-Print the agent guide — a structured prompt that teaches AI coding agents how to use flt.
-
-```bash
-flt prime
-```
-
-## Session & caching
-
-- Each search is cached by its full query shape (route, date, cabin, pax, stops, currency).
-- Cache entries are valid for 6 hours. Use `--refresh` to bypass.
-- Every search gets a ref like `AMS-NRT@20260408#A1B2C3`. Reference offers across searches with `REF:ID` notation.
-- `flt session start` scopes takeout exports to the current session.
-
-## Web UI
-
-SvelteKit app deployed on Cloudflare Pages with search form, flight cards, route maps, and price grid. See the [agent session viewer](https://doublej.github.io/flt/agent-session.html) for a visual walkthrough of a multi-leg search session.
-
-```bash
-just dev      # start dev server
-just build    # production build
-just preview  # preview build
-```
+| Command | Description |
+|---------|-------------|
+| `just dev` | Start dev server |
+| `just build` | Production build |
+| `just preview` | Preview production build |
+| `just check` | Lint + typecheck + test |
+| `just typecheck` | TypeScript checking only |
+| `just test` | Run tests |
+| `just lint-fix` | Auto-fix lint issues |
+| `just sync` | Sync SvelteKit types |
 
 ## Stack
 
-TypeScript, SvelteKit, Vite, Cloudflare Pages, Bun, Biome, Vitest
-
-## Quality
-
-```bash
-just check    # loc-check + lint + typecheck + test
-```
+SvelteKit 2, Svelte 5, Vite 5, TypeScript, Biome, Vitest, Leaflet, Cloudflare Pages

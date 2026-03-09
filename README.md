@@ -1,44 +1,49 @@
 # flights
 
-Flight search engine with CLI, TUI, and web interfaces. Scrapes Google Flights, compares results, and generates booking links with affiliate revenue.
-
-## Structure
-
-```
-packages/core/     @flights/core — flight search engine (pure TS, zero deps)
-apps/web/          SvelteKit UI (Cloudflare Pages)
-apps/cli/          flt CLI (citty, bun-only)
-apps/tui/          Sabre-style TUI (raw terminal)
-docs/              docs site
-```
+Flight search engine with CLI, TUI, and web interfaces. Scrapes Google Flights and compares results.
 
 ## Quick start
 
 ```bash
 bun install
-just dev        # web dev server
-just flt search AMS NRT 2026-04-10   # CLI
-just tui        # Sabre-style terminal
+just dev                              # web dev server
+just flt search AMS NRT 2026-04-10    # CLI search
+just tui                              # Sabre-style terminal
 ```
 
-## Affiliate revenue (Travelpayouts)
+## Apps
 
-This project integrates with [Travelpayouts](https://app.travelpayouts.com/dashboard/505891) to earn commissions on flight bookings made through generated links.
+| App | Description | Docs |
+|-----|-------------|------|
+| [Web UI](apps/web/) | SvelteKit search UI on Cloudflare Pages — streaming results, price grid, filter panel, itinerary builder, route maps | [apps/web/README.md](apps/web/README.md) |
+| [CLI](apps/cli/) | `flt` command-line tool (citty) — search, matrix, inspect, itinerary, takeout export | [apps/cli/README.md](apps/cli/README.md) |
+| [TUI](apps/tui/) | Sabre/GDS-style green-on-black fullscreen terminal — keyboard-driven with CRT aesthetics | [apps/tui/README.md](apps/tui/README.md) |
 
-### How it works
+## Packages
 
-1. **Search** — users find flights via the CLI, TUI, or web UI
-2. **Booking links** — results include affiliate deep links to partner booking sites (currently [Aviasales](https://www.aviasales.com))
-3. **Revenue** — when a user clicks an affiliate link and completes a booking, a commission is earned through the Travelpayouts network
+| Package | Description |
+|---------|-------------|
+| [`@flights/core`](packages/core/) | Flight search engine — pure TypeScript, zero npm dependencies |
+| [`@flights/partner`](packages/partner/) | Travelpayouts partner API client |
 
-### Setup
+## Structure
 
-Configure your Travelpayouts credentials:
-
-```bash
-flt config marker 709151      # your Travelpayouts marker ID
-flt config trs 505891         # your project/tracking ID
+```
+packages/core/       @flights/core — search engine, scraper, types, booking
+packages/partner/    @flights/partner — Travelpayouts API
+apps/web/            SvelteKit UI (Cloudflare Pages)
+apps/cli/            flt CLI (citty, bun-only)
+apps/tui/            Sabre-style TUI (terminal-kit)
+docs/                marketing landing page
 ```
 
-These are stored in `~/.config/flt/config.json` and used automatically when generating booking links.
+## Commands
 
+| Command | Description |
+|---------|-------------|
+| `just install` | Install all workspace deps |
+| `just dev` | Start web dev server |
+| `just build` | Production build |
+| `just check` | Lint + typecheck + test |
+| `just flt <cmd>` | Flight search CLI |
+| `just tui` | Sabre-style terminal UI |
