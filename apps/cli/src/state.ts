@@ -1,5 +1,6 @@
 export {
   CACHE_TTL_MS,
+  addFavorite,
   buildCacheKey,
   buildCacheQuery,
   buildSearchRef,
@@ -9,6 +10,7 @@ export {
   describeSearchRequest,
   ensureActiveSession,
   getActiveSession,
+  getFavorites,
   getSessionById,
   isFresh,
   isSessionNameTaken,
@@ -19,6 +21,8 @@ export {
   loadSessionScopedSearches,
   loadSessionSearches,
   rememberSearch,
+  removeFavorite,
+  reopenSession,
   resolveOffer,
   saveCachedSearch,
   saveSession,

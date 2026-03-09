@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import type { Flight } from './types'
 import type { SearchQuery } from './search'
 import type { CacheQuery, Offer, SearchEntry, Session, SessionSearch, SessionState } from './offer'
 
@@ -62,6 +63,30 @@ async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
   const temp = `${path}.${process.pid}.${Date.now()}.tmp`
   await writeFile(temp, JSON.stringify(value, null, 2), 'utf-8')
   await rename(temp, path)
+}
+
+/** Stable hash derived from flight legs + departure date — survives re-filtering/sorting. */
+export function flightHash(flight: Flight): string {
+  const key = flight.legs
+    .map((l) => `${l.flight_number}:${l.departure_airport}${l.arrival_airport}:${l.departure_time}`)
+    .join('|')
+  return createHash('sha1').update(`${flight.departure_date}:${key}`).digest('hex')
+}
+
+/** Assign stable F-hash IDs, extending on collision. */
+export function assignFlightIds(flights: Omit<Offer, 'id'>[]): Offer[] {
+  const seen = new Set<string>()
+  return flights.map((flight) => {
+    const hash = flightHash(flight as Flight)
+    let len = 4
+    let id = `F${hash.slice(0, len)}`
+    while (seen.has(id) && len < hash.length) {
+      len++
+      id = `F${hash.slice(0, len)}`
+    }
+    seen.add(id)
+    return { ...flight, id }
+  })
 }
 
 async function loadCacheFile(cacheKey: string): Promise<CacheFile | null> {
@@ -273,7 +298,7 @@ export async function saveCachedSearch(
   const entry: SearchEntry = {
     cacheKey,
     expiresAt: timestamp + CACHE_TTL_MS,
-    offers: offers.map((offer, i) => ({ ...offer, id: `O${i + 1}` })),
+    offers: assignFlightIds(offers),
     params,
     query: buildConcreteQuery(params),
     ref: buildSearchRef(params),
@@ -422,6 +447,19 @@ export function closeActiveSession(session: SessionState): Session | null {
   return active
 }
 
+export function reopenSession(session: SessionState, id?: string): Session | null {
+  if (session.activeSessionId) return null
+  const target = id
+    ? session.sessions.find((s) => s.id === id && s.closedAt != null)
+    : session.sessions
+        .filter((s) => s.closedAt != null)
+        .sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0))[0]
+  if (!target) return null
+  target.closedAt = undefined
+  session.activeSessionId = target.id
+  return target
+}
+
 export function ensureActiveSession(
   session: SessionState,
   routeHint?: string,
@@ -444,21 +482,60 @@ export async function throttle(): Promise<void> {
   lastRequestTime = Date.now()
 }
 
-/** Look up an offer by "REF:ID" or plain "O1" (latest search only). */
+/** Look up an offer by "REF:ID" or plain ID (latest search only). */
 export async function resolveOffer(session: SessionState, ref: string): Promise<Offer | null> {
   if (ref.includes(':')) {
     const [searchRef, id] = ref.split(':')
     const entry = await loadSearchByRef(session, searchRef)
-    return entry?.offers.find((offer) => offer.id === id.toUpperCase()) ?? null
+    return entry?.offers.find((offer) => offer.id.toUpperCase() === id.toUpperCase()) ?? null
   }
-  return session.latest?.offers.find((offer) => offer.id === ref.toUpperCase()) ?? null
+  return session.latest?.offers.find((offer) => offer.id.toUpperCase() === ref.toUpperCase()) ?? null
+}
+
+/** Add an offer to the active session's favorites. Returns false if already favorited or no active session. */
+export function addFavorite(session: SessionState, offer: Offer): boolean {
+  const active = getActiveSession(session)
+  if (!active) return false
+  if (!active.favorites) active.favorites = []
+  if (active.favorites.some((f) => f.id === offer.id)) return false
+  active.favorites.push(offer)
+  return true
+}
+
+/** Remove an offer from the active session's favorites by ID. */
+export function removeFavorite(session: SessionState, offerId: string): boolean {
+  const active = getActiveSession(session)
+  if (!active?.favorites) return false
+  const idx = active.favorites.findIndex((f) => f.id.toUpperCase() === offerId.toUpperCase())
+  if (idx === -1) return false
+  active.favorites.splice(idx, 1)
+  return true
+}
+
+/** Get favorites for the active session (or a specific session by ID). */
+export function getFavorites(session: SessionState, sessionId?: string): Offer[] {
+  const id = sessionId ?? session.activeSessionId
+  const s = id ? session.sessions.find((sess) => sess.id === id) : undefined
+  return s?.favorites ?? []
 }
 
 /** List all available offer refs across stored searches. */
-export function listAvailableRefs(session: SessionState): string[] {
+export async function listAvailableRefs(session: SessionState): Promise<string[]> {
   const refs: string[] = []
   for (const [ref, search] of Object.entries(session.searches)) {
-    for (let i = 1; i <= search.offerCount; i++) refs.push(`${ref}:O${i}`)
+    if (search.cacheKey) {
+      const entry = await loadCacheFile(search.cacheKey)
+      if (entry) {
+        for (const offer of entry.offers) refs.push(`${ref}:${offer.id}`)
+        continue
+      }
+    }
+    if (search.offers) {
+      for (const offer of search.offers) refs.push(`${ref}:${offer.id}`)
+      continue
+    }
+    // Fallback: can't determine IDs without offer data
+    for (let i = 0; i < search.offerCount; i++) refs.push(`${ref}:?`)
   }
   return refs
 }

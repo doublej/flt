@@ -5,6 +5,7 @@ import {
   getActiveSession,
   isSessionNameTaken,
   loadSession,
+  reopenSession,
   saveSession,
   startSession,
 } from '../state'
@@ -68,6 +69,37 @@ export const sessionCommand = defineCommand({
           searches: s.searchRefs.length,
         }))
         console.log(JSON.stringify({ sessions }))
+      },
+    }),
+    reopen: defineCommand({
+      meta: { name: 'reopen', description: 'Re-open a closed session (default: most recent)' },
+      args: {
+        id: { type: 'positional', description: 'Session ID to reopen', required: false },
+      },
+      async run({ args }) {
+        const state = (await loadSession()) ?? createEmptySession()
+        if (getActiveSession(state)) {
+          console.log(
+            JSON.stringify({ err: 'ACTIVE_SESSION', hint: 'Close the active session first.' }),
+          )
+          return
+        }
+        const reopened = reopenSession(state, args.id || undefined)
+        if (!reopened) {
+          console.log(
+            JSON.stringify({ err: 'NOT_FOUND', hint: 'No closed session found to reopen.' }),
+          )
+          return
+        }
+        await saveSession(state)
+        console.log(
+          JSON.stringify({
+            ok: true,
+            id: reopened.id,
+            name: reopened.name,
+            searches: reopened.searchRefs.length,
+          }),
+        )
       },
     }),
     rename: defineCommand({

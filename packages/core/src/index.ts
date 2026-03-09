@@ -82,6 +82,8 @@ export {
 // State / cache / session
 export {
   CACHE_TTL_MS,
+  addFavorite,
+  assignFlightIds,
   buildCacheKey,
   buildCacheQuery,
   buildSearchRef,
@@ -90,7 +92,9 @@ export {
   createEmptySession,
   describeSearchRequest,
   ensureActiveSession,
+  flightHash,
   getActiveSession,
+  getFavorites,
   getSessionById,
   isFresh,
   isSessionNameTaken,
@@ -101,6 +105,8 @@ export {
   loadSessionScopedSearches,
   loadSessionSearches,
   rememberSearch,
+  removeFavorite,
+  reopenSession,
   resolveOffer,
   saveCachedSearch,
   saveSession,
@@ -128,6 +134,19 @@ export {
   formatItinerary,
   formatSearchSection,
 } from './takeout'
+
+// Connection map (multi-stop route finder)
+export {
+  type ConnectionLeg,
+  type ConnectionMapOptions,
+  type ConnectionRoute,
+  findConnectionRoutes,
+  formatRoute,
+  summarizeRoute,
+} from './connections'
+
+// Coordinates & distance
+export { AIRPORT_COORDS, haversineKm } from './coords'
 
 // Date range / matrix helpers
 export {

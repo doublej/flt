@@ -119,7 +119,7 @@ export const takeoutCommand = defineCommand({
       closeActiveSession(session)
       await saveSession(session)
       console.error(
-        `[session] Closed "${active.name}" (${active.id}). Next time use \`--keep-session\` to keep it open.`,
+        `[session] Closed "${active.name}" (${active.id}). Use \`flt session reopen\` to re-open, or \`--keep-session\` next time.`,
       )
     }
   },
