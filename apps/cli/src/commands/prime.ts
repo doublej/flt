@@ -65,13 +65,14 @@ FAVORITES (session-scoped, survive cache expiry):
   flt fav <ID>  |  flt unfav <ID>  |  flt favs [--fmt table] [--view full]
 
 CONNECTIONS (local route graph, no Google):
-  cd apps/cli && bun -e "import { findConnectionRoutes, summarizeRoute } from '@flights/core'; findConnectionRoutes('AMS', 'SYD', { minStops: 5, maxStops: 8, exclude: ['DXB','DOH'] }).forEach(r => console.log(summarizeRoute(r)))"
-  Options: minStops (5), maxStops (10), maxResults (50), maxDetour (3.0|null), via: string[], exclude: string[]
+  flt connections <FROM> <TO> [OPTIONS]
+  Options: --min-stops 5  --max-stops 10  --max-results 50  --max-detour 3.0|none
+    --via "IST,BKK"  --exclude "DXB,DOH"
 </commands>
 
 <workflow>
 1. Resolve ambiguous airports: \`flt airports <query>\`, pick IATA codes.
-2. For multi-stop (5+): run \`findConnectionRoutes\` first to discover viable paths.
+2. For multi-stop (5+): run \`flt connections\` first to discover viable paths.
 3. Strategy: flexible dates → \`flt matrix\` (small range). Fixed dates → \`flt search\`.
 4. Filter after first fetch — prefer refining one search over running many.
 5. Inspect/fav only shortlisted IDs. Use \`REF:ID\` for anything not from the latest search.
