@@ -105,15 +105,6 @@ export const takeoutCommand = defineCommand({
 
     await writeFile(outPath, md, 'utf-8')
 
-    const active = getActiveSession(session)
-    if (active && !args['keep-session']) {
-      closeActiveSession(session)
-      await saveSession(session)
-      console.error(
-        `[session] Closed "${active.name}" (${active.id}) after takeout. Use \`--keep-session\` to keep it open, or \`flt session start\` to begin a new one.`,
-      )
-    }
-
     console.log(
       JSON.stringify({
         ok: true,
@@ -122,5 +113,14 @@ export const takeoutCommand = defineCommand({
         itineraries: itineraries.length,
       }),
     )
+
+    const active = getActiveSession(session)
+    if (active && !args['keep-session']) {
+      closeActiveSession(session)
+      await saveSession(session)
+      console.error(
+        `[session] Closed "${active.name}" (${active.id}). Next time use \`--keep-session\` to keep it open.`,
+      )
+    }
   },
 })
