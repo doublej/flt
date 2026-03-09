@@ -326,7 +326,13 @@ export async function loadSessionScopedSearches(
   sessionId?: string,
 ): Promise<Array<[string, SearchEntry]>> {
   const id = sessionId ?? session.activeSessionId
-  const s = id ? session.sessions.find((sess) => sess.id === id) : undefined
+  let s = id ? session.sessions.find((sess) => sess.id === id) : undefined
+  if (!s) {
+    // Fall back to most recently closed session
+    s = session.sessions
+      .filter((sess) => sess.closedAt != null)
+      .sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0))[0]
+  }
   if (!s) return loadSessionSearches(session)
   const refSet = new Set(s.searchRefs)
   const all = await loadSessionSearches(session)
