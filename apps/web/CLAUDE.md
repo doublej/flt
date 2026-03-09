@@ -36,8 +36,10 @@ src/
 │   ├── components/       # UI components (SearchForm, FlightCard, FlightMap, PriceGrid, etc.)
 │   ├── data/             # static data (airports.ts)
 │   ├── server/           # server-only code (session.ts)
-│   ├── utils/            # utility modules (dates.ts re-export, geo.ts, markdown.ts, sort.ts)
+│   ├── utils/            # utility modules (booking.ts, dates.ts, geo.ts, markdown.ts, sort.ts)
 │   ├── api.ts            # API client
+│   ├── itinerary-store.ts # client-side itinerary storage
+│   ├── preferences.ts    # user preferences
 │   ├── types.ts          # re-exports from @flights/core
 │   └── recent-searches.ts
 ├── hooks.server.ts       # server hooks

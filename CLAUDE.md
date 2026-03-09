@@ -6,9 +6,10 @@ Bun workspace monorepo: `@flights/core` engine + SvelteKit web UI + `flt` CLI + 
 
 ```
 packages/core/     # @flights/core — flight search engine (pure TS, zero deps)
+packages/partner/  # @flights/partner — Travelpayouts partner API client
 apps/web/          # SvelteKit UI (Cloudflare Pages)
 apps/cli/          # flt CLI (citty, bun-only)
-apps/tui/          # Sabre-style TUI (raw terminal)
+apps/tui/          # Sabre-style TUI (terminal-kit)
 docs/              # docs site
 ```
 
