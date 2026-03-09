@@ -124,6 +124,7 @@ PHASE 5 — DELIVER
 - Present the output path and a summary of what was exported.
 
 RULES:
+- ALWAYS complete through Phase 4 (COMPOSE). When the user has confirmed favorites for every leg, immediately proceed to build the itinerary — do not stop and wait for a separate instruction to compose.
 - Never compose an itinerary from offers the user hasn't reviewed.
 - Never run takeout without a previewed itinerary (Phase 4).
 - If the user asks to skip phases, acknowledge the skip explicitly and note what was skipped.
