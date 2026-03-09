@@ -50,6 +50,7 @@ export interface Session {
   startedAt: number
   closedAt?: number
   searchRefs: string[]
+  favorites?: Offer[]
 }
 
 export interface SessionState {

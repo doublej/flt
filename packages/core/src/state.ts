@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { Flight } from './types'
 import type { SearchQuery } from './search'
@@ -313,6 +313,11 @@ export async function saveCachedSearch(
   return entry
 }
 
+/** Remove all cached data and session state. */
+export async function nukeCache(): Promise<void> {
+  await rm(SESSION_DIR, { recursive: true, force: true })
+}
+
 function materializeSearch(ref: string, search: SessionSearch): SearchEntry | null {
   if (!search.offers) return null
   return {
@@ -492,14 +497,18 @@ export async function resolveOffer(session: SessionState, ref: string): Promise<
   return session.latest?.offers.find((offer) => offer.id.toUpperCase() === ref.toUpperCase()) ?? null
 }
 
-/** Add an offer to the active session's favorites. Returns false if already favorited or no active session. */
-export function addFavorite(session: SessionState, offer: Offer): boolean {
+/** Add an offer to the active session's favorites. */
+export function addFavorite(
+  session: SessionState,
+  offer: Offer,
+): 'ok' | 'no_session' | 'duplicate' {
   const active = getActiveSession(session)
-  if (!active) return false
+  if (!active) return 'no_session'
   if (!active.favorites) active.favorites = []
-  if (active.favorites.some((f) => f.id === offer.id)) return false
+  if (active.favorites.some((f) => f.id.toUpperCase() === offer.id.toUpperCase()))
+    return 'duplicate'
   active.favorites.push(offer)
-  return true
+  return 'ok'
 }
 
 /** Remove an offer from the active session's favorites by ID. */
@@ -521,21 +530,15 @@ export function getFavorites(session: SessionState, sessionId?: string): Offer[]
 
 /** List all available offer refs across stored searches. */
 export async function listAvailableRefs(session: SessionState): Promise<string[]> {
-  const refs: string[] = []
-  for (const [ref, search] of Object.entries(session.searches)) {
-    if (search.cacheKey) {
-      const entry = await loadCacheFile(search.cacheKey)
-      if (entry) {
-        for (const offer of entry.offers) refs.push(`${ref}:${offer.id}`)
-        continue
+  const entries = await Promise.all(
+    Object.entries(session.searches).map(async ([ref, search]) => {
+      if (search.cacheKey) {
+        const entry = await loadCacheFile(search.cacheKey)
+        if (entry) return entry.offers.map((o) => `${ref}:${o.id}`)
       }
-    }
-    if (search.offers) {
-      for (const offer of search.offers) refs.push(`${ref}:${offer.id}`)
-      continue
-    }
-    // Fallback: can't determine IDs without offer data
-    for (let i = 0; i < search.offerCount; i++) refs.push(`${ref}:?`)
-  }
-  return refs
+      if (search.offers) return search.offers.map((o) => `${ref}:${o.id}`)
+      return []
+    }),
+  )
+  return entries.flat()
 }

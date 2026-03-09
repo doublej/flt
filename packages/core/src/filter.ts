@@ -36,10 +36,13 @@ export function applyFilters(offers: Offer[], opts: FilterOpts): Offer[] {
     if (opts.direct && o.stops > 0) return false
     if (opts.maxStops != null && o.stops > opts.maxStops) return false
     if (opts.carrier) {
-      const c = opts.carrier.toLowerCase()
-      const nameMatch = o.name.toLowerCase().includes(c)
-      const codeMatch =
-        c.length === 2 && o.legs.some((l) => l.flight_number.toLowerCase().startsWith(c))
+      const carriers = opts.carrier.split(',').map((s) => s.trim().toLowerCase())
+      const nameMatch = carriers.some(
+        (c) => o.name.toLowerCase() === c || o.name.toLowerCase().includes(c),
+      )
+      const codeMatch = carriers.some(
+        (c) => c.length === 2 && o.legs.some((l) => l.flight_number.toLowerCase().startsWith(c)),
+      )
       if (!nameMatch && !codeMatch) return false
     }
     if (opts.excludeCarrier) {

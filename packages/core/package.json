@@ -12,6 +12,7 @@
     "./takeout": "./src/takeout.ts",
     "./airports": "./src/airports.ts",
     "./search": "./src/search.ts",
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./coords": "./src/coords.ts"
   }
 }

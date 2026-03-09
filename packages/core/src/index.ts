@@ -99,6 +99,7 @@ export {
   isFresh,
   isSessionNameTaken,
   listAvailableRefs,
+  nukeCache,
   loadCachedSearch,
   loadSearchByRef,
   loadSession,
@@ -135,9 +136,16 @@ export {
   formatSearchSection,
 } from './takeout'
 
+// Route graph (actual airline connections)
+export {
+  type RouteGraph,
+  buildRouteGraph,
+  routeAirports,
+  directConnections,
+} from './routes'
+
 // Connection map (multi-stop route finder)
 export {
-  type ConnectionLeg,
   type ConnectionMapOptions,
   type ConnectionRoute,
   findConnectionRoutes,
@@ -145,8 +153,8 @@ export {
   summarizeRoute,
 } from './connections'
 
-// Coordinates & distance
-export { AIRPORT_COORDS, haversineKm } from './coords'
+// Coordinates, distance & great-circle
+export { AIRPORT_COORDS, getCoords, greatCirclePoints, haversineKm } from './coords'
 
 // Date range / matrix helpers
 export {
