@@ -11,7 +11,6 @@ function parseTime(hhmm: string): string {
 }
 
 function reFilter(filtered: import('@flights/core').Offer[], term: Terminal, state: AppState) {
-  filtered = filtered.map((o, i) => ({ ...o, id: `O${i + 1}` }))
   state.flights = filtered
   renderCurrent(term, state)
   const note = filtered.length < state.rawFlights.length
@@ -81,7 +80,6 @@ export function handleSort(cmd: string, term: Terminal, state: AppState): boolea
   const key = sortMap[cmd]
   if (!key) return false
   state.flights = sortOffers(state.flights, key)
-  state.flights = state.flights.map((o, i) => ({ ...o, id: `O${i + 1}` }))
   renderCurrent(term, state)
   term.setStatus(`${state.flights.length} OFFERS (SORTED BY ${cmd.slice(1) === 'P' ? 'PRICE' : cmd.slice(1) === 'D' ? 'DURATION' : cmd.slice(1) === 'X' ? 'STOPS' : 'DEPARTURE'})`)
   return true

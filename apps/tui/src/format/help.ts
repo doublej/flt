@@ -84,8 +84,8 @@ const HELP_MATRIX = [
 
 const HELP_ITINERARY = [
   `  ${M.G}ITINERARY${M.g}`,
-  `  IT O1 O3                  FROM CURRENT SEARCH`,
-  `  IT REF1:O1 REF2:O2        FROM CROSS-SEARCH REFS`,
+  `  IT Fa3b7 Fc1d2             FROM CURRENT SEARCH`,
+  `  IT REF:Fa3b7 REF:Fc1d2    FROM CROSS-SEARCH REFS`,
   '',
 ]
 

@@ -174,8 +174,6 @@ function finishSearch(
   if (opts.sort) filtered = sortOffers(filtered, opts.sort)
   const limit = opts.limit ?? 100
   filtered = filtered.slice(0, limit)
-  filtered = filtered.map((o, i) => ({ ...o, id: `O${i + 1}` }))
-
   state.flights = filtered
 
   setLatestSearch(state.session, filtered, `${q.from_airport} ${q.to_airport} ${q.date}`, state.lastRef ? [state.lastRef] : [])

@@ -10,7 +10,7 @@ export async function doItinerary(argsStr: string, term: Terminal, state: AppSta
   for (const ref of refs) {
     const offer = await resolveOffer(state.session, ref)
     if (!offer) {
-      const available = listAvailableRefs(state.session)
+      const available = await listAvailableRefs(state.session)
       const hint = available.length > 0 ? available.slice(0, 5).join(' ') : 'NONE'
       term.setStatus(`OFFER ${ref} NOT FOUND - AVAILABLE: ${hint}`)
       return
