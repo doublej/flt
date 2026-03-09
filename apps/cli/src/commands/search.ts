@@ -1,4 +1,4 @@
-import { type SearchQuery, type SeatType, buildDatePairs, searchSingle } from '@flights/core'
+import { type SearchQuery, type SeatType, buildDatePairs, mergeExclusions, searchSingle } from '@flights/core'
 import { defineCommand } from 'citty'
 import { loadConfig, withDefaults } from '../config'
 import { applyFilters, sortOffers } from '../filter'
@@ -50,6 +50,10 @@ export const searchCommand = defineCommand({
     'exclude-hub': {
       type: 'string',
       description: 'Exclude layover airports (comma-separated IATA codes)',
+    },
+    'exclude-region': {
+      type: 'string',
+      description: 'Exclude hub regions: gulf, russia, belarus (comma-separated, mixable with IATA codes)',
     },
     refresh: { type: 'boolean', description: 'Force fresh fetch (skip cache)', default: false },
   },
@@ -139,10 +143,11 @@ export const searchCommand = defineCommand({
     }
 
     const rawCount = allFlights.length
+    const excludeHub = mergeExclusions(args['exclude-hub'], args['exclude-region'])
     const hasFilter = !!(
       args.carrier ||
       args['exclude-carrier'] ||
-      args['exclude-hub'] ||
+      excludeHub ||
       args.direct ||
       args['dep-after'] ||
       args['dep-before'] ||
@@ -160,7 +165,7 @@ export const searchCommand = defineCommand({
       direct: args.direct,
       carrier: args.carrier,
       excludeCarrier: args['exclude-carrier'],
-      excludeHub: args['exclude-hub'],
+      excludeHub,
     })
     if (hasFilter && offers.length === 0) {
       console.log(

@@ -1,5 +1,5 @@
 import { defineCommand } from 'citty'
-import { findConnectionRoutes, summarizeRoute } from '@flights/core'
+import { findConnectionRoutes, mergeExclusions, summarizeRoute } from '@flights/core'
 
 export const connectionsCommand = defineCommand({
   meta: { name: 'connections', description: 'Find multi-stop routes through real airline connections' },
@@ -12,15 +12,20 @@ export const connectionsCommand = defineCommand({
     'max-detour': { type: 'string', description: 'Max detour ratio or "none" for unlimited (default: 3.0)' },
     via: { type: 'string', description: 'Required waypoints in order, comma-separated' },
     exclude: { type: 'string', description: 'Airports to exclude, comma-separated' },
+    'exclude-region': {
+      type: 'string',
+      description: 'Exclude hub regions: gulf, russia, belarus (comma-separated, mixable with IATA codes)',
+    },
   },
   async run({ args }) {
+    const excludeCodes = mergeExclusions(args.exclude, args['exclude-region'])
     const routes = findConnectionRoutes(args.from, args.to, {
       minStops: args['min-stops'] ? Number(args['min-stops']) : undefined,
       maxStops: args['max-stops'] ? Number(args['max-stops']) : undefined,
       maxResults: args['max-results'] ? Number(args['max-results']) : undefined,
       maxDetour: args['max-detour'] === 'none' ? null : args['max-detour'] ? Number(args['max-detour']) : undefined,
       via: args.via?.split(',').map((s) => s.trim()),
-      exclude: args.exclude?.split(',').map((s) => s.trim()),
+      exclude: excludeCodes?.split(','),
     })
 
     if (routes.length === 0) {
