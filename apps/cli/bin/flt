@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
-SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-cd "$SCRIPT_DIR/.." || exit 1
-exec bun run src/index.ts "$@"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")" && pwd)"
+CLI_DIR="$SCRIPT_DIR/.."
+
+# Prefer bundle (built by `bun run prepare`), fall back to source for local dev
+if [ -f "$CLI_DIR/dist/flt.js" ]; then
+  exec bun "$CLI_DIR/dist/flt.js" "$@"
+else
+  cd "$CLI_DIR" || exit 1
+  exec bun run src/index.ts "$@"
+fi
