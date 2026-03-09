@@ -98,6 +98,8 @@ export async function doSearch(sm: RegExpMatchArray, term: Terminal, state: AppS
       max_stops: opts.maxStops ?? undefined,
     }
 
+    ensureActiveSession(state.session, `${from}-${to}`)
+
     // Check cache first (unless /R refresh)
     if (!opts.refresh) {
       term.setLoadingProgress(0.3)
@@ -163,9 +165,6 @@ function finishSearch(
 ) {
   state.rawFlights = offers
   state.lastQuery = q
-
-  const route = `${q.from_airport}-${q.to_airport}`
-  ensureActiveSession(state.session, route)
 
   let filtered = applyFilters(offers, {
     ...opts.filters,
