@@ -153,6 +153,9 @@ export {
   summarizeRoute,
 } from './connections'
 
+// Regions (hub groups for --exclude-region)
+export { resolveRegions, mergeExclusions, listRegions } from './regions'
+
 // Coordinates, distance & great-circle
 export { AIRPORT_COORDS, getCoords, greatCirclePoints, haversineKm } from './coords'
 
