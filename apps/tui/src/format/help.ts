@@ -3,6 +3,7 @@ import { M } from '../terminal'
 const HELP_DISPLAY = [
   `  ${M.G}DISPLAY${M.g}`,
   `  *N                        SHOW DETAIL FOR OFFER N`,
+  `  *Fa3b7                    SHOW DETAIL BY FLIGHT ID`,
   `  MD / MU                   SCROLL DOWN / UP`,
   `  MT / MB                   SCROLL TO TOP / BOTTOM`,
   '',
@@ -17,6 +18,9 @@ const HELP_DISPLAY = [
   `  H/FILTER                  FILTER/SORT COMMANDS`,
   `  H/SESSION                 SESSION COMMANDS`,
   `  H/MATRIX                  MATRIX COMMANDS`,
+  `  H/FAVORITES               FAVORITES COMMANDS`,
+  `  H/CONNECTIONS             CONNECTION ROUTE FINDER`,
+  `  H/COMPARE                 MULTI-ROUTE COMPARISON`,
   `  /SO                       SIGN OFF (EXIT)`,
   '',
   `${M.d}  CLASS: Y=ECONOMY  W=PREMIUM-ECO  C=BUSINESS  F=FIRST`,
@@ -41,6 +45,8 @@ const HELP_SEARCH = [
   `  /SP /SD /SS /ST           SORT: PRICE/DUR/STOPS/DEP`,
   `  /L20                      LIMIT RESULTS`,
   `  /R                        FORCE REFRESH (SKIP CACHE)`,
+  `  /EHDOH                    EXCLUDE HUB AIRPORT`,
+  `  /ERGULF                   EXCLUDE REGION (GULF/MIDDLEEAST/RUSSIA)`,
   '',
 ]
 
@@ -69,8 +75,11 @@ const HELP_SESSION = [
   `  SS/                       SHOW SESSION STATUS`,
   `  SS/START [NAME]           START NEW SESSION`,
   `  SS/CLOSE                  CLOSE ACTIVE SESSION`,
+  `  SS/REOPEN [ID]            REOPEN LAST CLOSED SESSION`,
   `  SS/LIST                   LIST ALL SESSIONS`,
+  `  SS/REFS                   LIST SEARCH REFS IN SESSION`,
   `  SS/RENAME NAME            RENAME ACTIVE SESSION`,
+  `  SS/NUKE                   DELETE ALL CACHE + SESSIONS`,
   '',
 ]
 
@@ -105,6 +114,34 @@ const HELP_CONFIG = [
   '',
 ]
 
+const HELP_FAVORITES = [
+  `  ${M.G}FAVORITES${M.g}`,
+  `  FV 3                      STAR OFFER #3`,
+  `  FV Fa3b7                  STAR BY FLIGHT ID`,
+  `  UV 3                      UNSTAR OFFER #3`,
+  `  UV Fa3b7                  UNSTAR BY FLIGHT ID`,
+  `  FV/                       LIST ALL FAVORITES`,
+  '',
+]
+
+const HELP_CONNECTIONS = [
+  `  ${M.G}CONNECTIONS${M.g}`,
+  `  CN AMS MNL                FIND CONNECTION ROUTES`,
+  `  CN AMS MNL /V IST         VIA WAYPOINT`,
+  `  CN AMS MNL /E DOH         EXCLUDE AIRPORT`,
+  `  CN AMS MNL /ER GULF       EXCLUDE REGION`,
+  '',
+]
+
+const HELP_COMPARE = [
+  `  ${M.G}COMPARE${M.g}`,
+  `  CM AMS,BKK NRT 10MAR      COMPARE ROUTES ON DATE`,
+  `  CM AMS NRT,HND 10MAR      MULTIPLE DESTINATIONS`,
+  `  CM AMS,BKK NRT 10MAR/C    WITH CABIN CLASS`,
+  `  CM AMS,BKK NRT 10MAR/$USD WITH CURRENCY`,
+  '',
+]
+
 const HELP_SECTIONS: Record<string, string[]> = {
   SEARCH: HELP_SEARCH,
   FILTER: HELP_FILTER,
@@ -113,6 +150,9 @@ const HELP_SECTIONS: Record<string, string[]> = {
   ITINERARY: HELP_ITINERARY,
   TAKEOUT: HELP_TAKEOUT,
   CONFIG: HELP_CONFIG,
+  FAVORITES: HELP_FAVORITES,
+  CONNECTIONS: HELP_CONNECTIONS,
+  COMPARE: HELP_COMPARE,
 }
 
 export function help(section?: string): string[] {
@@ -132,5 +172,8 @@ export function help(section?: string): string[] {
     ...HELP_ITINERARY,
     ...HELP_TAKEOUT,
     ...HELP_CONFIG,
+    ...HELP_FAVORITES,
+    ...HELP_CONNECTIONS,
+    ...HELP_COMPARE,
   ]
 }

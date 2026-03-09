@@ -1,6 +1,7 @@
 import { isValidKey, saveConfig } from '@flights/core'
 import type { Terminal } from '../terminal'
 import { M } from '../terminal'
+import { contextHelp } from '../format/utils'
 import type { AppState } from './shared'
 
 export async function handleConfig(cmd: string, _raw: string, term: Terminal, state: AppState) {
@@ -10,13 +11,14 @@ export async function handleConfig(cmd: string, _raw: string, term: Terminal, st
   if (!sub) {
     const entries = Object.entries(state.config).filter(([, v]) => v != null)
     if (!entries.length) {
-      term.setContent(['', `${M.G} ** CONFIG **${M.g}`, '', `  ${M.y}NO CONFIG SET${M.g}`, `${M.d}  USE CF/KEY=VALUE TO SET DEFAULTS${M.g}`, ''])
+      term.setContent(['', `${M.G} ** CONFIG **${M.g}`, '', `  ${M.y}NO CONFIG SET${M.g}`, `${M.d}  USE CF/KEY=VALUE TO SET DEFAULTS${M.g}`, '', ...contextHelp('config')])
       term.setStatus('CONFIG EMPTY')
       return
     }
     const lines = ['', `${M.G} ** CONFIG **${M.g}`, '']
     for (const [k, v] of entries) lines.push(`  ${M.G}${k.toUpperCase()}${M.g}  =  ${v}`)
     lines.push('')
+    lines.push(...contextHelp('config'))
     term.setContent(lines)
     term.setStatus(`${entries.length} KEY${entries.length !== 1 ? 'S' : ''} SET`)
     return

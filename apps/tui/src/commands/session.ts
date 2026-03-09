@@ -1,12 +1,15 @@
 import {
   closeActiveSession,
+  createEmptySession,
   getActiveSession,
   isSessionNameTaken,
+  nukeCache,
+  reopenSession,
   saveSession,
   startSession,
 } from '@flights/core'
 import type { Terminal } from '../terminal'
-import { sessionStatus, sessionList } from '../format'
+import { sessionStatus, sessionList, sessionRefs } from '../format'
 import type { AppState } from './shared'
 
 export function updateHeaderSession(term: Terminal, state: AppState) {
@@ -47,6 +50,40 @@ export async function handleSession(cmd: string, raw: string, term: Terminal, st
     await saveSession(state.session)
     updateHeaderSession(term, state)
     term.setStatus(`SESSION CLOSED: ${closed.name.toUpperCase()}`)
+    return
+  }
+
+  if (sub.startsWith('REOPEN')) {
+    const id = sub.slice(6).trim().toLowerCase() || undefined
+    const reopened = reopenSession(state.session, id)
+    if (!reopened) {
+      term.setStatus(state.session.activeSessionId ? 'CLOSE ACTIVE SESSION FIRST' : 'NO CLOSED SESSION TO REOPEN')
+      return
+    }
+    await saveSession(state.session)
+    updateHeaderSession(term, state)
+    term.setStatus(`SESSION REOPENED: ${reopened.name.toUpperCase()}`)
+    return
+  }
+
+  if (sub === 'REFS') {
+    const active = getActiveSession(state.session)
+    if (!active) { term.setStatus('NO ACTIVE SESSION'); return }
+    term.setContent(sessionRefs(active.searchRefs, state.session.searches))
+    term.setStatus(`${active.searchRefs.length} SEARCH REF${active.searchRefs.length !== 1 ? 'S' : ''}`)
+    return
+  }
+
+  if (sub === 'NUKE') {
+    await nukeCache()
+    state.session = createEmptySession()
+    state.flights = []
+    state.rawFlights = []
+    state.lastQuery = null
+    state.lastRef = null
+    updateHeaderSession(term, state)
+    await term.showSplash()
+    term.setStatus('ALL CACHE AND SESSIONS DELETED')
     return
   }
 

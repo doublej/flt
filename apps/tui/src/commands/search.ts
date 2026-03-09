@@ -6,6 +6,7 @@ import {
   ensureActiveSession,
   isValidAirport,
   loadCachedSearch,
+  mergeExclusions,
   pickCheapest,
   rememberSearch,
   saveCachedSearch,
@@ -19,6 +20,7 @@ import type { Terminal } from '../terminal'
 import { M } from '../terminal'
 import { avail } from '../format'
 import { parseSearchOptions } from '../parse'
+import { contextHelp } from '../format/utils'
 import type { AppState } from './shared'
 import { flags } from './shared'
 
@@ -166,10 +168,12 @@ function finishSearch(
   state.rawFlights = offers
   state.lastQuery = q
 
+  const excludeHub = mergeExclusions(opts.excludeHub ?? undefined, opts.excludeRegion ?? undefined)
   let filtered = applyFilters(offers, {
     ...opts.filters,
     maxStops: opts.maxStops ?? undefined,
     carrier: opts.carrier ?? undefined,
+    excludeHub,
   })
   if (opts.sort) filtered = sortOffers(filtered, opts.sort)
   const limit = opts.limit ?? 100
@@ -191,7 +195,7 @@ function finishSearch(
   term.stopSpinner()
 }
 
-async function fetchAndCache(
+export async function fetchAndCache(
   dep: string, ret: string | null, q: SearchQuery, state: AppState,
 ): Promise<Offer[]> {
   const cached = await loadCachedSearch(q, dep, ret)
@@ -295,10 +299,16 @@ export async function doMatrix(dm: RegExpMatchArray, term: Terminal, state: AppS
   }
 }
 
+const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const
+
+function dayOfWeek(iso: string): string {
+  return DAYS[new Date(iso + 'T12:00:00').getDay()]
+}
+
 function matrixOneWay(cells: CellResult[], from: string, to: string): string[] {
   const lines = ['', `${M.G} ** DATE MATRIX **  ${from}-${to}  ONE-WAY${M.g}`, '']
-  lines.push(`${M.d}  DATE          PRICE       CARRIER      STOPS      DUR${M.g}`)
-  lines.push(`${M.d}  ──────────    ──────      ─────────    ──────     ──────${M.g}`)
+  lines.push(`${M.d}  DATE     DAY   PRICE       CARRIER      STOPS      DUR${M.g}`)
+  lines.push(`${M.d}  ──────── ───   ──────      ─────────    ──────     ──────${M.g}`)
 
   let minPrice = Infinity
   for (const c of cells) {
@@ -309,16 +319,18 @@ function matrixOneWay(cells: CellResult[], from: string, to: string): string[] {
   }
 
   for (const c of cells) {
+    const day = dayOfWeek(c.dep)
     const price = c.cheapest.padEnd(10)
     const carrier = c.carrier.slice(0, 12).padEnd(12)
     const stops = c.stops < 0 ? '-'.padEnd(10) : (c.stops === 0 ? 'NONSTOP' : `${c.stops} STOP${c.stops > 1 ? 'S' : ''}`).padEnd(10)
     const dur = c.duration.toUpperCase()
     const isCheapest = c.cheapest !== '-' && parseFloat(c.cheapest.replace(/[^0-9.]/g, '')) === minPrice
     const priceColor = isCheapest ? M.Y : M.y
-    lines.push(`  ${c.dep}    ${priceColor}${price}${M.g}  ${carrier}  ${stops}  ${dur}`)
+    lines.push(`  ${c.dep} ${day}   ${priceColor}${price}${M.g}  ${carrier}  ${stops}  ${dur}`)
   }
   lines.push('')
   lines.push(`${M.d}  ${M.Y}●${M.d} CHEAPEST${M.g}`)
+  lines.push(...contextHelp('matrix', { FROM: from, TO: to }))
   lines.push('')
   return lines
 }
@@ -336,21 +348,25 @@ function matrixGrid(depDates: string[], retDates: string[], cells: CellResult[],
     }
   }
 
-  const retLabels = retDates.map(r => r.slice(5))
-  lines.push(`${M.d}  ${'OUT\\BACK'.padEnd(12)}${retLabels.map(r => r.padEnd(10)).join('')}${M.g}`)
+  const retLabels = retDates.map(r => {
+    const day = dayOfWeek(r)
+    return `${day} ${r.slice(5)}`
+  })
+  lines.push(`${M.d}  ${'OUT\\BACK'.padEnd(12)}${retLabels.map(r => r.padEnd(12)).join('')}${M.g}`)
 
   for (const d of depDates) {
-    let row = `  ${d}  `
+    let row = `  ${dayOfWeek(d)} ${d}  `
     for (const r of retDates) {
       const val = grid.get(`${d}|${r}`) ?? '-'
       const isCheapest = val !== '-' && parseFloat(val.replace(/[^0-9.]/g, '')) === minPrice
-      row += isCheapest ? `${M.Y}${val.padEnd(10)}${M.g}` : `${M.y}${val.padEnd(10)}${M.g}`
+      row += isCheapest ? `${M.Y}${val.padEnd(12)}${M.g}` : `${M.y}${val.padEnd(12)}${M.g}`
     }
     lines.push(row)
   }
 
   lines.push('')
   lines.push(`${M.d}  ${M.Y}●${M.d} CHEAPEST${M.g}`)
+  lines.push(...contextHelp('matrix', { FROM: from, TO: to }))
   lines.push('')
   return lines
 }

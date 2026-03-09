@@ -1,6 +1,30 @@
 import type { Flight } from '@flights/core'
 import { M } from '../terminal'
 
+const HINTS: Record<string, string> = {
+  avail: '*N DETAIL  FV N STAR  QD DIRECT  SP SORT  MD/MU SCROLL',
+  detail: 'IT {id} ITINERARY  FV {id} STAR  H/ HELP',
+  filter: 'QC CLEAR  {count} OF {total} FILTERED',
+  session: 'SS/START  SS/REOPEN  SS/REFS  SS/LIST',
+  matrix: '1{FROM}{TO}{DATE} SEARCH DATE  H/ HELP',
+  itinerary: 'TO TAKEOUT  FV {id} STAR  H/ HELP',
+  favs: 'UV {id} UNSTAR  *{id} DETAIL  IT {id} ITINERARY',
+  connections: '1{FROM}{VIA}{DATE} SEARCH ROUTE  H/ HELP',
+  compare: '*{id} DETAIL  1{ROUTE}{DATE} SEARCH',
+  config: 'CF/KEY=VALUE SET  CF/KEY= UNSET  H/ HELP',
+  takeout: 'SS/ SESSION  H/ HELP',
+}
+
+export function contextHelp(ctx: string, meta?: Record<string, string>): string[] {
+  let hint = HINTS[ctx]
+  if (!hint) return []
+  if (meta) {
+    for (const [k, v] of Object.entries(meta)) hint = hint.replaceAll(`{${k}}`, v)
+  }
+  hint = hint.replace(/\s*\{[^}]+\}/g, '')
+  return [`${M.d}  ${hint}${M.g}`]
+}
+
 export function to24h(t: string): string {
   if (t === '??:??' || !t) return '----'
   const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)

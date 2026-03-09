@@ -9,9 +9,11 @@ export interface SearchOptions {
   sort: SortKey | null
   limit: number | null
   refresh: boolean
+  excludeHub: string | null
+  excludeRegion: string | null
 }
 
-const OPT_RE = /\/(DA|DB|AA|AB|DM|SP|SD|SS|ST|[$A-Z])([0-9A-Z]*)/g
+const OPT_RE = /\/(DA|DB|AA|AB|DM|EH|ER|SP|SD|SS|ST|[$A-Z])([0-9A-Z]*)/g
 
 function parseTime(hhmm: string): string {
   const h = hhmm.slice(0, 2)
@@ -29,6 +31,8 @@ export function parseSearchOptions(optStr: string): SearchOptions {
     sort: null,
     limit: null,
     refresh: false,
+    excludeHub: null,
+    excludeRegion: null,
   }
 
   for (const m of optStr.matchAll(OPT_RE)) {
@@ -44,6 +48,8 @@ export function parseSearchOptions(optStr: string): SearchOptions {
     if (key === 'AA' && val) { opts.filters.arrAfter = parseTime(val); continue }
     if (key === 'AB' && val) { opts.filters.arrBefore = parseTime(val); continue }
     if (key === 'DM' && val) { opts.filters.maxDur = parseInt(val); continue }
+    if (key === 'EH' && val) { opts.excludeHub = val; continue }
+    if (key === 'ER' && val) { opts.excludeRegion = val; continue }
     if (key === 'SP') { opts.sort = 'price'; continue }
     if (key === 'SD') { opts.sort = 'dur'; continue }
     if (key === 'SS') { opts.sort = 'stops'; continue }
