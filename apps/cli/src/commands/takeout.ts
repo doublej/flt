@@ -4,6 +4,7 @@ import { defineCommand } from 'citty'
 import { type AffiliateConfig, type Itinerary, buildMarkdown } from '@flights/core'
 import { loadConfig } from '../config'
 import { formatError } from '../format'
+import { generatePdf } from '../pdf'
 import {
   closeActiveSession,
   getActiveSession,
@@ -47,15 +48,20 @@ function parseItineraryArgs(raw: string[]): Itinerary[] {
 export const takeoutCommand = defineCommand({
   meta: {
     name: 'takeout',
-    description: 'Export all search results and itineraries to a markdown file',
+    description: 'Export search results and itineraries to markdown or PDF',
   },
   args: {
     output: {
       type: 'string',
       alias: 'o',
-      description: 'Output file path (default: ~/Desktop/flights-<date>.md)',
+      description: 'Output file path (default: ~/Desktop/flights-<date>.<ext>)',
     },
     title: { type: 'string', description: 'Document title' },
+    pdf: {
+      type: 'boolean',
+      description: 'Export as PDF instead of markdown',
+      default: false,
+    },
     'keep-session': {
       type: 'boolean',
       description: 'Keep session open after export (default: closes it)',
@@ -96,14 +102,20 @@ export const takeoutCommand = defineCommand({
     const config = await loadConfig()
     const affiliate: AffiliateConfig | null =
       config.marker && config.trs ? { marker: config.marker, trs: config.trs } : null
-    const md = buildMarkdown(searches, itineraries, { affiliate, title: args.title })
     const now = new Date()
     const date = now.toISOString().slice(0, 10)
     const time = now.toTimeString().slice(0, 5).replace(':', '')
-    const defaultPath = join(process.env.HOME ?? '.', 'Desktop', `flights-${date}-${time}.md`)
+    const ext = args.pdf ? 'pdf' : 'md'
+    const defaultPath = join(process.env.HOME ?? '.', 'Desktop', `flights-${date}-${time}.${ext}`)
     const outPath = args.output ?? defaultPath
 
-    await writeFile(outPath, md, 'utf-8')
+    if (args.pdf) {
+      const buf = await generatePdf({ searches, itineraries, affiliate, title: args.title })
+      await writeFile(outPath, buf)
+    } else {
+      const md = buildMarkdown(searches, itineraries, { affiliate, title: args.title })
+      await writeFile(outPath, md, 'utf-8')
+    }
 
     console.log(
       JSON.stringify({

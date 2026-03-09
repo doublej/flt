@@ -28,6 +28,8 @@
   },
   "dependencies": {
     "@flights/core": "workspace:*",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
     "leaflet": "^1.9.4"
   }
 }

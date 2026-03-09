@@ -1,9 +1,13 @@
 <script lang="ts">
 import type { Offer } from '$lib/types'
 import { offerBookingUrls } from '$lib/utils/booking'
-import { PROGRAM_LABELS, type BookingFilters, type ProgramName } from '@flights/core/booking'
+import { type BookingFilters, PROGRAM_LABELS, type ProgramName } from '@flights/core/booking'
 
-const { offer, size = 'normal', filters }: { offer: Offer; size?: 'normal' | 'small'; filters?: BookingFilters } = $props()
+const {
+  offer,
+  size = 'normal',
+  filters,
+}: { offer: Offer; size?: 'normal' | 'small'; filters?: BookingFilters } = $props()
 
 const urls = $derived(offerBookingUrls(offer, filters))
 </script>

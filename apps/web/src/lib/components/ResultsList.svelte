@@ -1,8 +1,9 @@
 <script lang="ts">
 import type { Offer, SearchResult } from '$lib/types'
-import type { BookingFilters } from '@flights/core/booking'
 import { buildTakeout, resultToMarkdown } from '$lib/utils/markdown'
+import { generatePdf } from '$lib/utils/pdf'
 import { type SortKey, parseDuration, parsePrice, parseTime, sortFlights } from '$lib/utils/sort'
+import type { BookingFilters } from '@flights/core/booking'
 import FilterPanel from './FilterPanel.svelte'
 import FlightCard from './FlightCard.svelte'
 import PriceGrid from './PriceGrid.svelte'
@@ -12,7 +13,8 @@ const {
   offers,
   onaddleg,
   filters,
-}: { result: SearchResult; offers: Offer[]; onaddleg?: () => void; filters?: BookingFilters } = $props()
+}: { result: SearchResult; offers: Offer[]; onaddleg?: () => void; filters?: BookingFilters } =
+  $props()
 
 let sortKey: SortKey = $state('best')
 let selectedCombo: { dep: string; ret: string | null } | null = $state(null)
@@ -84,6 +86,7 @@ const priceInfo = $derived(priceLabels[result.current_price])
 
 let aiMenuEl: HTMLDetailsElement | undefined
 let copied = $state(false)
+let pdfLoading = $state(false)
 
 function getMarkdown() {
   return resultToMarkdown(result, filteredOffers, hasMultipleDates)
@@ -120,6 +123,16 @@ function exportTakeout() {
   a.download = `flights-${ts}.md`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+async function exportPdf() {
+  if (aiMenuEl) aiMenuEl.open = false
+  pdfLoading = true
+  try {
+    await generatePdf({ offers: filteredOffers, filters })
+  } finally {
+    pdfLoading = false
+  }
 }
 </script>
 
@@ -169,6 +182,9 @@ function exportTakeout() {
             <button type="button" onclick={copyAsMarkdown}>Copy as markdown</button>
             <button type="button" onclick={saveAsMarkdown}>Save as markdown</button>
             <button type="button" onclick={exportTakeout}>Export takeout</button>
+            <button type="button" onclick={exportPdf} disabled={pdfLoading}>
+              {pdfLoading ? 'Generating…' : 'Export PDF'}
+            </button>
           </div>
         </details>
         <div class="sort">

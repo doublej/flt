@@ -84,9 +84,8 @@ export function buildTakeout(offers: Offer[], filters?: BookingFilters): string 
     ref: 'web',
   }
 
-  return buildMarkdown(
-    offers.length > 0 ? [['Latest search', searchEntry]] : [],
-    itineraries,
-    { affiliate: AFFILIATE, filters },
-  )
+  return buildMarkdown(offers.length > 0 ? [['Latest search', searchEntry]] : [], itineraries, {
+    affiliate: AFFILIATE,
+    filters,
+  })
 }

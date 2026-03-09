@@ -1,8 +1,8 @@
 <script lang="ts">
 import { addLeg, createItinerary, getActive } from '$lib/itinerary-store'
 import type { Offer } from '$lib/types'
-import type { BookingFilters } from '@flights/core/booking'
 import { formatDateShort } from '$lib/utils/dates'
+import type { BookingFilters } from '@flights/core/booking'
 import FlightDetail from './FlightDetail.svelte'
 import FlightPath from './FlightPath.svelte'
 
