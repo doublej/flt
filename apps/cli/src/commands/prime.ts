@@ -38,14 +38,21 @@ SEARCH:
   Shortcuts: \`flt AMS NRT 2026-04-10\` | RT: \`flt AMS NRT 2026-04-10 2026-04-18\`
   Options: --seat economy|premium-economy|business|first  --pax 1ad|2ad1ch|1ad1in
     --max-stops 0|1|2  --currency EUR|USD|...  --direct  --limit <N>
-    --carrier "<sub>"  --exclude-carrier "X,Y"  --exclude-hub "DXB,DOH"
+    --carrier "<sub>"  --exclude-carrier "X,Y"  --exclude-hub "DXB,DOH"  --exclude-region "gulf,russia"
     --dep-after/before HH:MM  --arr-after/before HH:MM  --max-dur <min>
     --sort price|dur|stops|dep  --fmt jsonl|tsv|table|brief  --view min|std|full  --fields <csv>
 
 MATRIX:
   One-way: flt matrix <FROM> <TO> <START> <END>
   Round-trip: flt matrix <FROM> <TO> <DEP_START> <DEP_END> <RET_START> <RET_END>
-  Same filter options as search. Default output: table; \`--fmt jsonl\` for parsing.
+  Same filter options as search. One-way supports \`--sort price\` and \`--limit N\`.
+  Default output: table; \`--fmt jsonl\` for parsing.
+
+COMPARE (multi-origin or multi-destination cheapest comparison):
+  flt compare KUL,BKK,MNL AMS 2026-03-22          # cheapest from each origin
+  flt compare CEB KUL,BKK,ICN 2026-03-19           # cheapest to each destination
+  Only one side can be comma-separated. Same filter options as search.
+  Output: table sorted by cheapest price, showing best offer per route.
 
 INSPECT:
   flt inspect <ID>  |  flt Fa3b7  |  flt inspect IAO-MNL@20260318#A1B2C3:Fa3b7
@@ -67,17 +74,23 @@ FAVORITES (session-scoped, survive cache expiry):
 CONNECTIONS (local route graph, no Google):
   flt connections <FROM> <TO> [OPTIONS]
   Options: --min-stops 5  --max-stops 10  --max-results 50  --max-detour 3.0|none
-    --via "IST,BKK"  --exclude "DXB,DOH"
+    --via "IST,BKK"  --exclude "DXB,DOH"  --exclude-region "gulf,russia"
+
+REGIONS (--exclude-region shorthand, mixable with IATA codes):
+  gulf: DXB, DOH, AUH, BAH, MCT, KWI
+  russia: SVO, DME, LED, VKO
+  belarus: MSQ
 </commands>
 
 <workflow>
 1. Resolve ambiguous airports: \`flt airports <query>\`, pick IATA codes.
 2. For multi-stop (5+): run \`flt connections\` first to discover viable paths.
-3. Strategy: flexible dates → \`flt matrix\` (small range). Fixed dates → \`flt search\`.
-4. Filter after first fetch — prefer refining one search over running many.
-5. Inspect/fav only shortlisted IDs. Use \`REF:ID\` for anything not from the latest search.
-6. Multi-leg: search each leg separately → compose with \`flt itinerary\`. Min connection: 2h domestic, 3h international.
-7. Finish: \`flt takeout\` with \`--itin\` flags for recommended options. Mention auto-close to user.
+3. Compare transit hubs: \`flt compare KUL,BKK,IST AMS 2026-03-22\` — ranks cheapest per route in one call.
+4. Strategy: flexible dates → \`flt matrix\` (small range). Fixed dates → \`flt search\`.
+5. Filter after first fetch — prefer refining one search over running many.
+6. Fav promising offers early with \`flt fav <ID>\` — they survive cache expiry. Use \`flt favs\` to review shortlist.
+7. Multi-leg: search each leg separately → compose with \`flt itinerary\`. Min connection: 2h domestic, 3h international.
+8. Finish: \`flt takeout\` with \`--itin\` flags for recommended options. Mention auto-close to user.
 </workflow>
 
 <errors>
