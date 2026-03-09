@@ -2,6 +2,7 @@
 import { base } from '$app/paths'
 import { obliterate } from 'orphan-obliterator'
 import { onMount } from 'svelte'
+import Terminal from '$lib/components/Terminal.svelte'
 
 type Mode = 'run' | 'install' | 'agent'
 let mode = $state<Mode>('agent')
@@ -79,40 +80,40 @@ function copyCommand() {
 
 const features = [
   {
-    icon: '~',
-    title: 'Smart Routing',
+    icon: '⇄',
+    title: 'Multi-Origin Compare',
     description:
-      'Type naturally. flt ams finds airports, flt AMS NRT 2026-04-10 searches flights, flt O1 inspects a result. No subcommands to memorize.',
+      'Search KUL, BKK, and MNL to Amsterdam in one command. Compare across origins without juggling tabs or repeating searches.',
   },
   {
-    icon: '$',
-    title: 'Price Matrix',
+    icon: '◇',
+    title: 'Route Intelligence',
     description:
-      'Compare fares across date ranges in a single view. Spot the cheapest travel windows instantly with the matrix command.',
+      'Offline route graph with 67k+ edges. Discover bridge hubs, force waypoints, and map connections between any two airports.',
   },
   {
-    icon: '>',
+    icon: '★',
     title: 'Session Memory',
     description:
-      'Searches persist by route tag. Reference any result later with TAG:ID notation — no re-searching required.',
+      'Searches persist by route tag. Favorite any result for a full snapshot that survives cache expiry — compare options hours later.',
   },
   {
-    icon: '#',
-    title: 'Multiple Formats',
+    icon: '▸',
+    title: 'Power Filters',
     description:
-      'Output as JSONL for pipelines, TSV for spreadsheets, tables for quick reads, or brief summaries for client emails.',
+      'Composable filters: exclude regions, enforce departure windows, cap duration, avoid hubs. Set defaults once via config.',
   },
   {
-    icon: '@',
-    title: 'Itinerary Builder',
+    icon: '▪',
+    title: 'Three Interfaces',
     description:
-      'Combine multiple flight segments into complete itineraries. Export as structured data ready for booking systems.',
+      'Same engine powers a modern CLI, a retro Sabre-style TUI with green-on-black GDS commands, and a SvelteKit web app.',
   },
   {
-    icon: '*',
-    title: 'Built for Agents',
+    icon: '⚡',
+    title: 'Agent-Native',
     description:
-      'Designed from the ground up by coding agents. Every command, flag, and output format optimized for the travel professional workflow.',
+      'flt prime outputs a structured briefing. Stable SHA-1 flight IDs, JSONL output, structured error codes, and phased workflows.',
   },
 ]
 
@@ -123,9 +124,19 @@ const commands = [
     description: 'Search flights between any two airports on a given date',
   },
   {
+    name: 'compare',
+    syntax: 'flt compare KUL,BKK,MNL AMS 2026-03-22',
+    description: 'Multi-origin or multi-destination search in one command',
+  },
+  {
     name: 'matrix',
     syntax: 'flt matrix AMS NRT --from 2026-04-01 --to 2026-04-14',
     description: 'Price comparison grid across a date range',
+  },
+  {
+    name: 'connections',
+    syntax: 'flt connections AMS SYD --max-stops 2',
+    description: 'Discover hub airports and routing options between cities',
   },
   {
     name: 'inspect',
@@ -199,13 +210,7 @@ const commands = [
           <button class="nav-arrow" disabled={step === steps.length - 1} onclick={() => step++}>&rarr;</button>
         </div>
       </div>
-      <div class="terminal">
-          <div class="terminal-header">
-            <span class="dot red"></span>
-            <span class="dot yellow"></span>
-            <span class="dot green"></span>
-          </div>
-          <div class="terminal-body">
+      <Terminal>
           {#if step === 0}
             <div class="line"><span class="prompt">$</span> flt matrix AMS NRT 2026-04-07 2026-04-12</div>
             <div class="line output"></div>
@@ -272,8 +277,7 @@ const commands = [
             <div class="line output">{' "searches":4,'}</div>
             <div class="line output">{' "itineraries":1}'}</div>
           {/if}
-        </div>
-      </div>
+      </Terminal>
     </div>
   </section>
 
@@ -290,6 +294,9 @@ const commands = [
           </div>
         {/each}
       </div>
+      <div class="features-cta">
+        <a href="{base}/features" class="features-link">See all features &rarr;</a>
+      </div>
     </div>
   </section>
 
@@ -297,7 +304,7 @@ const commands = [
   <section class="commands">
     <div class="container">
       <h2>Command Reference</h2>
-      <p class="section-subtitle">Seven commands. Zero learning curve.</p>
+      <p class="section-subtitle">Core commands. Zero learning curve.</p>
       <div class="command-list">
         {#each commands as cmd, i}
           <div class="command-item" style="animation-delay: {i * 100}ms">
@@ -550,41 +557,6 @@ const commands = [
     opacity: 0;
   }
 
-  .terminal {
-    background: var(--bg-code);
-    border-radius: 10px;
-    overflow: hidden;
-    max-width: 680px;
-    margin: 0 auto;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-    position: relative;
-  }
-
-  .terminal-header {
-    background: var(--bg-code-header);
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-  }
-
-  .dot.red { background: #e06058; }
-  .dot.yellow { background: #dba730; }
-  .dot.green { background: #5cb870; }
-
-  .terminal-title {
-    color: #999;
-    font-size: 0.8rem;
-    font-family: 'DM Mono', monospace;
-    margin-left: 8px;
-  }
-
   .demo-header {
     max-width: 680px;
     margin: 0 auto 16px;
@@ -653,14 +625,6 @@ const commands = [
   .best-price {
     text-decoration: underline;
     text-underline-offset: 2px;
-  }
-
-  .terminal-body {
-    padding: 20px 24px;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.85rem;
-    line-height: 1.7;
-    color: #bbb;
   }
 
   .line {
@@ -747,6 +711,23 @@ const commands = [
     font-size: 0.95rem;
     color: var(--text-secondary);
     line-height: 1.5;
+  }
+
+  .features-cta {
+    text-align: center;
+    margin-top: 32px;
+  }
+
+  .features-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: opacity 0.15s;
+  }
+
+  .features-link:hover {
+    opacity: 0.8;
   }
 
   /* Commands */
@@ -992,11 +973,6 @@ const commands = [
 
     .format-grid {
       grid-template-columns: 1fr;
-    }
-
-    .terminal-body {
-      font-size: 0.75rem;
-      padding: 16px;
     }
 
     .command-header {
