@@ -1,5 +1,6 @@
 import { defineCommand, runCommand, runMain, showUsage } from 'citty'
 import { airportsCommand } from './commands/airports'
+import { compareCommand } from './commands/compare'
 import { configCommand } from './commands/config'
 import { connectionsCommand } from './commands/connections'
 import { favCommand, favsCommand, unfavCommand } from './commands/fav'
@@ -16,6 +17,7 @@ const SUB_COMMANDS = {
   inspect: inspectCommand,
   itinerary: itineraryCommand,
   matrix: matrixCommand,
+  compare: compareCommand,
   airports: airportsCommand,
   prime: primeCommand,
   takeout: takeoutCommand,
