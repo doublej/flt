@@ -1,6 +1,6 @@
 import { listItineraries } from '$lib/itinerary-store'
 import type { Flight, FlightLayover, FlightLeg, Offer, SearchResult } from '$lib/types'
-import type { AffiliateConfig } from '@flights/core/booking'
+import type { AffiliateConfig, BookingFilters } from '@flights/core/booking'
 import { formatDateShort } from '@flights/core/dates'
 import { type Itinerary, buildMarkdown } from '@flights/core/takeout'
 
@@ -70,10 +70,11 @@ export function resultToMarkdown(
 
 const AFFILIATE: AffiliateConfig = { marker: '709151', trs: '505891' }
 
-export function buildTakeout(offers: Offer[]): string {
+export function buildTakeout(offers: Offer[], filters?: BookingFilters): string {
   const itineraries: Itinerary[] = listItineraries().map((it) => ({
     title: it.name,
     legs: it.legs,
+    filters,
   }))
 
   const searchEntry = {
@@ -86,6 +87,6 @@ export function buildTakeout(offers: Offer[]): string {
   return buildMarkdown(
     offers.length > 0 ? [['Latest search', searchEntry]] : [],
     itineraries,
-    AFFILIATE,
+    { affiliate: AFFILIATE, filters },
   )
 }

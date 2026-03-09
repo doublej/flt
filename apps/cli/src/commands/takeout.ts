@@ -7,6 +7,7 @@ import { formatError } from '../format'
 import {
   closeActiveSession,
   getActiveSession,
+  loadSearchByRef,
   loadSession,
   loadSessionScopedSearches,
   resolveOffer,
@@ -84,14 +85,18 @@ export const takeoutCommand = defineCommand({
         }
         legs.push(offer)
       }
-      itineraries.push({ title: def.title, note: def.note, legs })
+      // Derive booking filters from the first ref's search entry
+      const firstRef = (def.legs as unknown as string[])[0]
+      const searchRef = firstRef?.includes(':') ? firstRef.split(':')[0] : undefined
+      const refEntry = searchRef ? await loadSearchByRef(session, searchRef) : null
+      itineraries.push({ title: def.title, note: def.note, legs, filters: refEntry?.params })
     }
 
     const searches = await loadSessionScopedSearches(session)
     const config = await loadConfig()
     const affiliate: AffiliateConfig | null =
       config.marker && config.trs ? { marker: config.marker, trs: config.trs } : null
-    const md = buildMarkdown(searches, itineraries, affiliate, args.title)
+    const md = buildMarkdown(searches, itineraries, { affiliate, title: args.title })
     const now = new Date()
     const date = now.toISOString().slice(0, 10)
     const time = now.toTimeString().slice(0, 5).replace(':', '')

@@ -19,7 +19,7 @@ export async function doTakeout(cmd: string, raw: string, term: Terminal, state:
     state.config.marker && state.config.trs
       ? { marker: state.config.marker, trs: state.config.trs }
       : null
-  const md = buildMarkdown(searches, [], affiliate, title)
+  const md = buildMarkdown(searches, [], { affiliate, title })
 
   const now = new Date()
   const date = now.toISOString().slice(0, 10)

@@ -1,6 +1,6 @@
 import type { Offer, SearchEntry } from './offer'
 import { parsePrice } from './filter'
-import { type AffiliateConfig, type BookingFilters, PROGRAM_LABELS, buildBookingUrls, resolveIata } from './booking'
+import { type AffiliateConfig, type BookingFilters, PROGRAM_LABELS, buildBookingUrls, resolveIata, toBookingFilters } from './booking'
 
 export interface Itinerary {
   title: string
@@ -105,7 +105,7 @@ export function formatItinerary(itin: Itinerary, affiliate: AffiliateConfig | nu
   return lines.join('\n')
 }
 
-export function formatSearchSection(tag: string, entry: SearchEntry, affiliate: AffiliateConfig | null): string {
+export function formatSearchSection(tag: string, entry: SearchEntry, affiliate: AffiliateConfig | null, filters?: BookingFilters): string {
   const lines: string[] = []
   lines.push(`### ${tag}`)
   lines.push('')
@@ -123,7 +123,7 @@ export function formatSearchSection(tag: string, entry: SearchEntry, affiliate: 
 
   const cheapest = entry.offers[0]
   if (cheapest) {
-    const bookLinks = offerBookingLinks(cheapest, affiliate, entry.params)
+    const bookLinks = offerBookingLinks(cheapest, affiliate, filters ?? (entry.params ? toBookingFilters(entry.params) : undefined))
     if (bookLinks.length) {
       lines.push('')
       lines.push('**Book this route:**')
@@ -133,14 +133,19 @@ export function formatSearchSection(tag: string, entry: SearchEntry, affiliate: 
   return lines.join('\n')
 }
 
+export interface BuildMarkdownOpts {
+  affiliate: AffiliateConfig | null
+  title?: string
+  filters?: BookingFilters
+}
+
 export function buildMarkdown(
   searches: Array<[string, SearchEntry]>,
   itineraries: Itinerary[],
-  affiliate: AffiliateConfig | null,
-  title?: string,
+  opts: BuildMarkdownOpts,
 ): string {
   const sections: string[] = []
-  const heading = title ?? 'Flight Search Results'
+  const heading = opts.title ?? 'Flight Search Results'
   const date = new Date().toISOString().slice(0, 10)
 
   sections.push(`# ${heading}`)
@@ -148,13 +153,13 @@ export function buildMarkdown(
 
   if (itineraries.length > 0) {
     sections.push('\n## Recommended Options\n')
-    for (const itin of itineraries) sections.push(formatItinerary(itin, affiliate))
+    for (const itin of itineraries) sections.push(formatItinerary(itin, opts.affiliate))
   }
 
   if (searches.length > 0) {
     sections.push('\n## All Searches\n')
     for (const [tag, entry] of searches) {
-      sections.push(formatSearchSection(tag, entry, affiliate))
+      sections.push(formatSearchSection(tag, entry, opts.affiliate, opts.filters))
       sections.push('')
     }
   }

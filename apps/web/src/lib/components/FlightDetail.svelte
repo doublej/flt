@@ -1,9 +1,10 @@
 <script lang="ts">
 import type { Offer } from '$lib/types'
+import type { BookingFilters } from '@flights/core/booking'
 import BookingLinks from './BookingLinks.svelte'
 import FlightMap from './FlightMap.svelte'
 
-const { offer }: { offer: Offer } = $props()
+const { offer, filters }: { offer: Offer; filters?: BookingFilters } = $props()
 
 const logoUrl = (code: string) => `https://www.gstatic.com/flights/airline_logos/70px/${code}.png`
 
@@ -56,7 +57,7 @@ function fmtDuration(minutes: number): string {
 
   <div class="booking-section">
     <span class="booking-label">Book this flight</span>
-    <BookingLinks {offer} />
+    <BookingLinks {offer} {filters} />
   </div>
 </div>
 

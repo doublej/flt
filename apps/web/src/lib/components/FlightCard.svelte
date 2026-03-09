@@ -1,6 +1,7 @@
 <script lang="ts">
 import { addLeg, createItinerary, getActive } from '$lib/itinerary-store'
 import type { Offer } from '$lib/types'
+import type { BookingFilters } from '@flights/core/booking'
 import { formatDateShort } from '$lib/utils/dates'
 import FlightDetail from './FlightDetail.svelte'
 import FlightPath from './FlightPath.svelte'
@@ -9,7 +10,8 @@ const {
   offer,
   showDate = false,
   onaddleg,
-}: { offer: Offer; showDate?: boolean; onaddleg?: () => void } = $props()
+  filters,
+}: { offer: Offer; showDate?: boolean; onaddleg?: () => void; filters?: BookingFilters } = $props()
 
 let expanded = $state(false)
 
@@ -101,7 +103,7 @@ function hideBrokenImg(e: Event) {
   </div>
 
   {#if expanded}
-    <FlightDetail {offer} />
+    <FlightDetail {offer} {filters} />
   {/if}
 </div>
 

@@ -9,6 +9,7 @@ import ResultsList from '$lib/components/ResultsList.svelte'
 import SearchForm from '$lib/components/SearchForm.svelte'
 import type { RecentSearch } from '$lib/recent-searches'
 import type { Flight, Offer, SearchParams, SearchResult } from '$lib/types'
+import { toBookingFilters } from '@flights/core/booking'
 
 let result = $state<SearchResult | null>(null)
 let offers = $state<Offer[]>([])
@@ -17,6 +18,9 @@ let error = $state('')
 let searchMessage = $state('')
 let completionMessage = $state('')
 let abortStream: (() => void) | null = $state(null)
+let lastParams = $state<SearchParams | null>(null)
+
+const bookingFilters = $derived(lastParams ? toBookingFilters(lastParams) : undefined)
 
 let searchForm: ReturnType<typeof SearchForm> | undefined
 let recentSearches: ReturnType<typeof RecentSearches> | undefined
@@ -31,6 +35,7 @@ function isMultiDate(params: SearchParams): boolean {
 }
 
 async function handleSearch(params: SearchParams) {
+  lastParams = params
   abortStream?.()
   abortStream = null
   loading = true
@@ -140,7 +145,7 @@ async function handleSearchWithReset(params: SearchParams) {
 {/if}
 
 {#if result && offers.length > 0}
-  <ResultsList {result} {offers} onaddleg={() => itineraryPanel?.refresh()} />
+  <ResultsList {result} {offers} onaddleg={() => itineraryPanel?.refresh()} filters={bookingFilters} />
 {/if}
 
 <ItineraryPanel bind:this={itineraryPanel} />

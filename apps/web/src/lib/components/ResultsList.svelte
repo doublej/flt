@@ -1,5 +1,6 @@
 <script lang="ts">
 import type { Offer, SearchResult } from '$lib/types'
+import type { BookingFilters } from '@flights/core/booking'
 import { buildTakeout, resultToMarkdown } from '$lib/utils/markdown'
 import { type SortKey, parseDuration, parsePrice, parseTime, sortFlights } from '$lib/utils/sort'
 import FilterPanel from './FilterPanel.svelte'
@@ -10,7 +11,8 @@ const {
   result,
   offers,
   onaddleg,
-}: { result: SearchResult; offers: Offer[]; onaddleg?: () => void } = $props()
+  filters,
+}: { result: SearchResult; offers: Offer[]; onaddleg?: () => void; filters?: BookingFilters } = $props()
 
 let sortKey: SortKey = $state('best')
 let selectedCombo: { dep: string; ret: string | null } | null = $state(null)
@@ -111,7 +113,7 @@ function exportTakeout() {
   if (aiMenuEl) aiMenuEl.open = false
   const now = new Date()
   const ts = `${now.toISOString().slice(0, 10)}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
-  const blob = new Blob([buildTakeout(filteredOffers)], { type: 'text/markdown' })
+  const blob = new Blob([buildTakeout(filteredOffers, filters)], { type: 'text/markdown' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -189,7 +191,7 @@ function exportTakeout() {
 
     <div class="list">
       {#each filteredOffers as offer}
-        <FlightCard {offer} showDate={hasMultipleDates} {onaddleg} />
+        <FlightCard {offer} showDate={hasMultipleDates} {onaddleg} {filters} />
       {/each}
     </div>
     <a href={result.google_flights_url} target="_blank" rel="noopener noreferrer" class="source-link">

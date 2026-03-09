@@ -44,6 +44,7 @@ export {
   buildBookingUrl,
   buildBookingUrls,
   resolveIata,
+  toBookingFilters,
   PROGRAM_LABELS,
   PROGRAM_NAMES,
 } from './booking'
@@ -120,6 +121,7 @@ export {
 
 // Takeout / markdown export
 export {
+  type BuildMarkdownOpts,
   type Itinerary,
   buildMarkdown,
   formatBooking,

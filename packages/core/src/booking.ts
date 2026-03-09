@@ -122,3 +122,14 @@ export const PROGRAM_NAMES = Object.keys(PROGRAMS) as ProgramName[]
 export const PROGRAM_LABELS: Record<ProgramName, string> = Object.fromEntries(
   PROGRAM_NAMES.map((k) => [k, PROGRAMS[k].label]),
 ) as Record<ProgramName, string>
+
+/** Pick only the booking-relevant fields from a broader params object. */
+export function toBookingFilters(source: BookingFilters): BookingFilters {
+  return {
+    adults: source.adults,
+    children: source.children,
+    infants_in_seat: source.infants_in_seat,
+    infants_on_lap: source.infants_on_lap,
+    seat: source.seat,
+  }
+}
