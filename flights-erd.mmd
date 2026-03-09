@@ -1,0 +1,101 @@
+erDiagram
+    SearchParams {
+        string from_airport "IATA code"
+        string to_airport "IATA code"
+        string date "YYYY-MM-DD"
+        string return_date "optional"
+        string date_end "range end"
+        string return_date_end "range end"
+        int adults "default 1"
+        int children "default 0"
+        int infants_in_seat "default 0"
+        int infants_on_lap "default 0"
+        string seat "economy|premium|biz|first"
+        int max_stops "filter"
+        string currency "EUR, USD, etc"
+    }
+
+    Airport {
+        string code PK "IATA code"
+        string name
+        string city
+        string country
+    }
+
+    Flight {
+        boolean is_best
+        string name "airline names"
+        string departure "HH:MM"
+        string arrival "HH:MM"
+        string arrival_time_ahead "+1, +2"
+        string duration "2h 45m"
+        int stops
+        string delay "nullable"
+        string price "with currency"
+        string departure_date "YYYY-MM-DD"
+        string return_date "nullable"
+        string[] countries
+    }
+
+    FlightLeg {
+        string airline "IATA code"
+        string airline_name
+        string flight_number
+        string aircraft
+        string departure_airport "IATA"
+        string arrival_airport "IATA"
+        string departure_time "HH:MM"
+        string arrival_time "HH:MM"
+        int duration "minutes"
+        string operator "optional"
+        string seat_pitch "optional"
+    }
+
+    FlightLayover {
+        string airport "IATA code"
+        string airport_name
+        int duration "minutes"
+    }
+
+    SearchResult {
+        string dep_date
+        string ret_date "nullable"
+        string url "Google Flights URL"
+        string error "http|no_script|no_data|no_flights"
+    }
+
+    Offer {
+        string id PK "O1, O2, etc"
+        string url "Google Flights URL"
+    }
+
+    SearchEntry {
+        string tag PK "IAO-MNL@0318"
+        string query
+        int timestamp
+    }
+
+    SessionState {
+        string query "latest search"
+        int timestamp
+    }
+
+    ProtobufQuery {
+        string tfs_param "base64 encoded"
+        int seat_enum "1-4"
+        int trip_enum "1-3"
+    }
+
+    SearchParams ||--o{ Airport : "from/to"
+    SearchParams ||--|| ProtobufQuery : "encodes to"
+    ProtobufQuery ||--|| SearchResult : "fetches"
+    SearchResult ||--|{ Flight : "contains"
+    Flight ||--|{ FlightLeg : "has segments"
+    Flight ||--o{ FlightLayover : "has layovers"
+    FlightLeg }o--|| Airport : "departs from"
+    FlightLeg }o--|| Airport : "arrives at"
+    FlightLayover }o--|| Airport : "stops at"
+    Offer ||--|| Flight : "extends"
+    SearchEntry ||--|{ Offer : "contains"
+    SessionState ||--o{ SearchEntry : "tracks by tag"
+    SessionState ||--o{ Offer : "latest offers"

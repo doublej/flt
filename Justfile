@@ -2,8 +2,6 @@ set shell := ["zsh", "-eu", "-o", "pipefail", "-c"]
 
 default:
     @just --list
-    @echo ''
-    @echo "branch: $(git branch --show-current 2>/dev/null || echo 'n/a')"
 
 [group('setup')]
 install:
@@ -11,69 +9,39 @@ install:
 
 [group('develop')]
 dev:
-    bun run dev
-
-# CF Workers local dev (requires build first): simulates production environment
-[group('develop')]
-wrangler-dev: build
-    bunx wrangler pages dev --binding PASSWORD=test --binding SESSION_SECRET=$(openssl rand -hex 32)
-
-[group('develop')]
-preview:
-    bun run preview
-
-[group('develop')]
-sync:
-    bunx svelte-kit sync
-
-[group('quality')]
-lint:
-    bun run lint
-
-[group('quality')]
-lint-fix:
-    bun run lint:fix
-
-[group('quality')]
-typecheck:
-    bun run check
-
-[group('quality')]
-test:
-    bun run test
-
-[group('quality')]
-loc-check:
-    #!/usr/bin/env zsh
-    setopt null_glob
-    err=0
-    for f in src/**/*.ts src/**/*.svelte; do
-        lines=$(wc -l < "$f")
-        if (( lines > 400 )); then echo "error: $f ($lines lines, max 400)"; err=1
-        elif (( lines > 300 )); then echo "warn: $f ($lines lines, target ≤300)"; fi
-    done
-    exit $err
-
-[group('quality')]
-check:
-    @echo '→ Checking file lengths...'
-    just loc-check
-    @echo '→ Running lint...'
-    just lint
-    @echo '→ Running typecheck...'
-    just typecheck
-    @echo '→ Running tests...'
-    just test
+    cd apps/web && bun run dev
 
 [group('build')]
 build:
-    bun run build
+    cd apps/web && bun run build
+
+[group('quality')]
+check:
+    cd apps/web && just check
+
+[group('quality')]
+typecheck:
+    cd apps/web && just typecheck
+
+[group('quality')]
+lint:
+    cd apps/web && just lint
+
+[group('quality')]
+lint-fix:
+    cd apps/web && just lint-fix
+
+[group('quality')]
+test:
+    cd apps/web && bun run test
+    cd apps/cli && bun run test
 
 # Flight search CLI
 [group('cli')]
 flt *args:
-    bun run src/cli/index.ts {{args}}
+    cd apps/cli && bun run src/index.ts {{args}}
 
-[group('cleanup')]
-clean:
-    rm -rf .svelte-kit/ build/ node_modules/.cache/
+# Sabre-style TUI
+[group('cli')]
+tui:
+    cd apps/tui && bun run src/index.ts

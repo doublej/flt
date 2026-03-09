@@ -8,12 +8,9 @@ Thumbs.db
 node_modules/
 .svelte-kit/
 build/
-
-api/.venv/
-api/__pycache__/
-api/routes/__pycache__/
 .beads/dolt/
 .beads/dolt-*
 .beads
 .wrangler
 .session-search
+local/

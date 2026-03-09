@@ -1,0 +1,173 @@
+#compdef flt
+
+# Zsh completion for flt — flight search CLI
+# Source: eval "$(cat apps/cli/completions/_flt)" or add to fpath
+
+local -a subcommands
+subcommands=(
+  'search:Search flights'
+  'inspect:Show details of a flight offer by ID'
+  'matrix:Date-flex price grid'
+  'airports:Search airports by name, city, or IATA code'
+  'itinerary:Compose a multi-leg itinerary from cached offers'
+  'takeout:Export search results to markdown'
+  'session:Manage search sessions'
+  'config:Get/set CLI defaults'
+  'prime:Print agent how-to guide'
+)
+
+local -a seat_values
+seat_values=(economy premium-economy business first)
+
+local -a fmt_values
+fmt_values=(table tsv jsonl brief)
+
+local -a sort_values
+sort_values=(price dur stops dep)
+
+local -a view_values
+view_values=(min std full)
+
+local -a session_subcommands
+session_subcommands=(
+  'start:Start a new named search session'
+  'close:Close the active session'
+  'list:List all sessions'
+  'rename:Rename a session'
+)
+
+local -a config_keys
+config_keys=(currency fmt seat pax limit)
+
+_flt_search() {
+  _arguments -s \
+    '1:origin airport (IATA):' \
+    '2:destination airport (IATA):' \
+    '3:departure date (YYYY-MM-DD):' \
+    '4::return date (YYYY-MM-DD):' \
+    '--seat[Cabin class]:class:('"${seat_values[*]}"')' \
+    '--pax[Passengers: 1ad, 2ad1ch, etc.]:pax:' \
+    '--max-stops[Max stops]:stops:(0 1 2)' \
+    '--currency[Currency code]:currency:(EUR USD GBP JPY AUD CAD CHF)' \
+    '--fmt[Output format]:format:('"${fmt_values[*]}"')' \
+    '--fields[Comma-separated fields]:fields:' \
+    '--view[Field preset]:view:('"${view_values[*]}"')' \
+    '--sort[Sort by]:sort:('"${sort_values[*]}"')' \
+    '--limit[Max results]:limit:' \
+    '--dep-after[Depart after HH\:MM]:time:' \
+    '--dep-before[Depart before HH\:MM]:time:' \
+    '--arr-after[Arrive after HH\:MM]:time:' \
+    '--arr-before[Arrive before HH\:MM]:time:' \
+    '--max-dur[Max duration in minutes]:minutes:' \
+    '--direct[Direct flights only]' \
+    '--carrier[Filter by airline]:carrier:' \
+    '--refresh[Force fresh fetch (skip cache)]' \
+    '--date-end[Flexible departure end date]:date:' \
+    '--return-date-end[Flexible return end date]:date:'
+}
+
+_flt_inspect() {
+  _arguments -s \
+    '1:offer ID (e.g. O1):' \
+    '--fmt[Output format]:format:(json table)'
+}
+
+_flt_matrix() {
+  _arguments -s \
+    '1:origin airport (IATA):' \
+    '2:destination airport (IATA):' \
+    '3:start date (YYYY-MM-DD):' \
+    '4:end date (YYYY-MM-DD):' \
+    '5::return start date (YYYY-MM-DD):' \
+    '6::return end date (YYYY-MM-DD):' \
+    '--seat[Cabin class]:class:('"${seat_values[*]}"')' \
+    '--pax[Passengers]:pax:' \
+    '--max-stops[Max stops]:stops:(0 1 2)' \
+    '--max-dur[Max duration in minutes]:minutes:' \
+    '--currency[Currency code]:currency:(EUR USD GBP JPY AUD CAD CHF)' \
+    '--fmt[Output format]:format:(table tsv jsonl)'
+}
+
+_flt_airports() {
+  _arguments -s \
+    '1:search query (city, name, or IATA):' \
+    '--limit[Max results]:limit:'
+}
+
+_flt_itinerary() {
+  _arguments -s \
+    '*:offer ref (REF\:ID):' \
+    '--title[Itinerary title]:title:' \
+    '--note[Note]:note:'
+}
+
+_flt_takeout() {
+  _arguments -s \
+    '(-o --output)'{-o,--output}'[Output file path]:file:_files' \
+    '--title[Document title]:title:' \
+    '--keep-session[Keep session open after export]'
+}
+
+_flt_session() {
+  local curcontext="$curcontext" state
+  _arguments -s \
+    '1:session command:->subcmd' \
+    '*::arg:->args'
+
+  case $state in
+    subcmd)
+      _describe 'session command' session_subcommands
+      ;;
+    args)
+      case ${words[1]} in
+        start)
+          _arguments '1::session name:'
+          ;;
+        rename)
+          _arguments \
+            '1:new name:' \
+            '--id[Session ID]:id:'
+          ;;
+        close|list)
+          # no args
+          ;;
+      esac
+      ;;
+  esac
+}
+
+_flt_config() {
+  _arguments -s \
+    '1::config key:('"${config_keys[*]}"')' \
+    '2::value:' \
+    '--unset[Remove a key]'
+}
+
+_flt() {
+  local curcontext="$curcontext" state
+
+  _arguments -C \
+    '1:command:->command' \
+    '*::arg:->args'
+
+  case $state in
+    command)
+      _describe 'flt command' subcommands
+      ;;
+    args)
+      case ${words[1]} in
+        search)    _flt_search ;;
+        inspect)   _flt_inspect ;;
+        matrix)    _flt_matrix ;;
+        airports)  _flt_airports ;;
+        itinerary) _flt_itinerary ;;
+        takeout)   _flt_takeout ;;
+        session)   _flt_session ;;
+        config)    _flt_config ;;
+        prime)     ;; # no args
+      esac
+      ;;
+  esac
+}
+
+_flt "$@"

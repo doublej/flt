@@ -1,0 +1,16 @@
+{
+  "name": "@flights/tui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "flights-tui": "./bin/tui"
+  },
+  "dependencies": {
+    "@flights/core": "workspace:*",
+    "terminal-kit": "^3.1.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

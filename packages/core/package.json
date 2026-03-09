@@ -1,0 +1,17 @@
+{
+  "name": "@flights/core",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./booking": "./src/booking.ts",
+    "./dates": "./src/dates.ts",
+    "./filter": "./src/filter.ts",
+    "./itinerary": "./src/itinerary.ts",
+    "./offer": "./src/offer.ts",
+    "./takeout": "./src/takeout.ts",
+    "./airports": "./src/airports.ts",
+    "./search": "./src/search.ts",
+    "./types": "./src/types.ts"
+  }
+}

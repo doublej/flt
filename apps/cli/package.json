@@ -1,0 +1,19 @@
+{
+  "name": "@flights/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "flt": "./bin/flt"
+  },
+  "dependencies": {
+    "@flights/core": "workspace:*",
+    "citty": "^0.2.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  },
+  "scripts": {
+    "test": "vitest"
+  }
+}

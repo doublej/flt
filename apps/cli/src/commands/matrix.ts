@@ -1,0 +1,186 @@
+import { type SearchQuery, type SeatType, searchSingle } from '@flights/core'
+import { type CellResult, dateRange, pickCheapest } from '@flights/core'
+import { defineCommand } from 'citty'
+import { loadConfig, withDefaults } from '../config'
+import { formatError } from '../format'
+import {
+  clearLatestSearch,
+  createEmptySession,
+  ensureActiveSession,
+  loadCachedSearch,
+  loadSession,
+  rememberSearch,
+  saveCachedSearch,
+  saveSession,
+  throttle,
+} from '../state'
+import type { Offer, SessionState } from '../types'
+import { normalizeDate, parsePax, validateAirport } from '../validate'
+
+async function fetchAndCache(
+  dep: string,
+  ret: string | null,
+  query: SearchQuery,
+  session: SessionState,
+): Promise<Offer[]> {
+  const cached = await loadCachedSearch(query, dep, ret)
+  if (cached) {
+    rememberSearch(session, cached)
+    return cached.offers
+  }
+
+  await throttle()
+  const result = await searchSingle(dep, ret, query)
+  const entry = await saveCachedSearch(
+    query,
+    dep,
+    ret,
+    result.flights.map((f) => ({ ...f, url: result.url })),
+  )
+  rememberSearch(session, entry)
+  return entry.offers
+}
+
+function printOneWay(cells: CellResult[], fmt: string): void {
+  if (fmt === 'jsonl') {
+    for (const c of cells)
+      console.log(
+        JSON.stringify({
+          date: c.dep,
+          cheapest: c.cheapest,
+          carrier: c.carrier,
+          stops: c.stops,
+          duration: c.duration,
+        }),
+      )
+    return
+  }
+  if (fmt === 'tsv') {
+    console.log('date\tcheapest\tcarrier\tstops\tduration')
+    for (const c of cells)
+      console.log(`${c.dep}\t${c.cheapest}\t${c.carrier}\t${c.stops}\t${c.duration}`)
+    return
+  }
+  const rows = cells.map((c) => [c.dep, c.cheapest, c.carrier, String(c.stops), c.duration])
+  const headers = ['date', 'cheapest', 'carrier', 'stops', 'duration']
+  const widths = headers.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)))
+  console.log(headers.map((h, i) => h.padEnd(widths[i])).join('  '))
+  for (const r of rows) console.log(r.map((v, i) => v.padEnd(widths[i])).join('  '))
+}
+
+function printGrid(depDates: string[], retDates: string[], cells: CellResult[], fmt: string): void {
+  if (fmt === 'jsonl') {
+    for (const c of cells)
+      console.log(JSON.stringify({ dep: c.dep, ret: c.ret, cheapest: c.cheapest }))
+    return
+  }
+  const grid = new Map<string, string>()
+  for (const c of cells) grid.set(`${c.dep}|${c.ret}`, c.cheapest)
+
+  const retLabels = retDates.map((r) => r.slice(5))
+  const header = `${'out\\back'.padEnd(12)}${retLabels.map((r) => r.padEnd(8)).join('')}`
+  console.log(header)
+  for (const d of depDates) {
+    const vals = retDates.map((r) => (grid.get(`${d}|${r}`) ?? '-').padEnd(8))
+    console.log(`${d.padEnd(12)}${vals.join('')}`)
+  }
+}
+
+const EMPTY_CELL: CellResult = {
+  dep: '',
+  ret: null,
+  cheapest: '-',
+  carrier: '-',
+  stops: -1,
+  duration: '-',
+}
+
+export const matrixCommand = defineCommand({
+  meta: { name: 'matrix', description: 'Date-flex price grid' },
+  args: {
+    from: { type: 'positional', description: 'Origin airport (IATA)', required: true },
+    to: { type: 'positional', description: 'Destination airport (IATA)', required: true },
+    dateStart: { type: 'positional', description: 'Start date (YYYY-MM-DD)', required: true },
+    dateEnd: { type: 'positional', description: 'End date (YYYY-MM-DD)', required: true },
+    returnStart: { type: 'positional', description: 'Return start date', required: false },
+    returnEnd: { type: 'positional', description: 'Return end date', required: false },
+    seat: { type: 'string', default: 'economy' },
+    pax: { type: 'string', default: '1ad' },
+    'max-stops': { type: 'string' },
+    'max-dur': { type: 'string', description: 'Max duration in minutes (filters before cheapest)' },
+    currency: { type: 'string', default: 'EUR' },
+    fmt: { type: 'string', description: 'Output format: table|tsv|jsonl', default: 'table' },
+  },
+  async run({ args: rawArgs }) {
+    const config = await loadConfig()
+    const args = withDefaults(rawArgs, config, ['currency', 'fmt', 'seat', 'pax'])
+
+    validateAirport(args.from.toUpperCase(), 'Origin')
+    validateAirport(args.to.toUpperCase(), 'Destination')
+    const dateStart = normalizeDate(args.dateStart, 'Start date')
+    const dateEnd = normalizeDate(args.dateEnd, 'End date')
+    const returnStart = args.returnStart
+      ? normalizeDate(args.returnStart, 'Return start')
+      : undefined
+    const returnEnd = args.returnEnd ? normalizeDate(args.returnEnd, 'Return end') : undefined
+
+    const pax = parsePax(args.pax)
+    const maxStops = args['max-stops'] != null ? Number.parseInt(args['max-stops']) : undefined
+    const maxDur = args['max-dur'] != null ? Number.parseInt(args['max-dur']) : undefined
+    const query: SearchQuery = {
+      from_airport: args.from.toUpperCase(),
+      to_airport: args.to.toUpperCase(),
+      date: dateStart,
+      ...pax,
+      seat: args.seat as SeatType,
+      max_stops: maxStops,
+      currency: args.currency,
+    }
+
+    const session: SessionState = (await loadSession()) ?? createEmptySession()
+    const route = `${query.from_airport} → ${query.to_airport}`
+    const { session_: activeSession, autoStarted } = ensureActiveSession(session, route)
+    if (autoStarted) {
+      console.error(
+        `[session] Auto-started "${activeSession.name}" (${activeSession.id}). Use \`flt session start "name"\` to name sessions, or \`flt session close\` to end one.`,
+      )
+    }
+
+    const depDates = dateRange(dateStart, dateEnd)
+    const retDates = returnStart && returnEnd ? dateRange(returnStart, returnEnd) : null
+
+    if (!retDates) {
+      const cells: CellResult[] = []
+      for (const d of depDates) {
+        const offers = await fetchAndCache(d, null, query, session)
+        cells.push(pickCheapest(offers, maxDur) ?? { ...EMPTY_CELL, dep: d })
+      }
+      clearLatestSearch(session)
+      await saveSession(session)
+      printOneWay(cells, args.fmt)
+      return
+    }
+
+    const pairs: Array<[string, string]> = []
+    for (const d of depDates) {
+      for (const r of retDates) {
+        if (r >= d) pairs.push([d, r])
+      }
+    }
+    if (pairs.length > 21) {
+      console.log(
+        formatError('TOO_MANY', `${pairs.length} combinations exceed max 21. Narrow dates.`),
+      )
+      return
+    }
+
+    const cells: CellResult[] = []
+    for (const [d, r] of pairs) {
+      const offers = await fetchAndCache(d, r, query, session)
+      cells.push(pickCheapest(offers, maxDur) ?? { ...EMPTY_CELL, dep: d, ret: r })
+    }
+    clearLatestSearch(session)
+    await saveSession(session)
+    printGrid(depDates, retDates, cells, args.fmt)
+  },
+})
