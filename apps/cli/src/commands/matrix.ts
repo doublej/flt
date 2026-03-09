@@ -1,7 +1,7 @@
-import { type SearchQuery, type SeatType, searchSingle } from '@flights/core'
+import { type SearchQuery, type SeatType, mergeExclusions, parseFlexDate, searchSingle } from '@flights/core'
 import { type CellResult, dateRange, pickCheapest } from '@flights/core'
 import { defineCommand } from 'citty'
-import { applyFilters } from '../filter'
+import { applyFilters, parsePrice } from '../filter'
 import { loadConfig, withDefaults } from '../config'
 import { formatError } from '../format'
 import {
@@ -16,7 +16,7 @@ import {
   setLatestSearch,
   throttle,
 } from '../state'
-import type { Offer, SessionState } from '../types'
+import type { Offer, SessionState, SortKey } from '../types'
 import { normalizeDate, parsePax, validateAirport } from '../validate'
 
 async function fetchAndCache(
@@ -119,22 +119,34 @@ export const matrixCommand = defineCommand({
       type: 'string',
       description: 'Exclude layover airports (comma-separated IATA codes)',
     },
+    'exclude-region': {
+      type: 'string',
+      description: 'Exclude hub regions: gulf, russia, belarus (comma-separated, mixable with IATA codes)',
+    },
     direct: { type: 'boolean', description: 'Direct flights only', default: false },
     currency: { type: 'string', default: 'EUR' },
     fmt: { type: 'string', description: 'Output format: table|tsv|jsonl', default: 'table' },
+    sort: { type: 'string', description: 'Sort one-way results by: price|dep (default: dep)', default: 'dep' },
+    limit: { type: 'string', description: 'Max rows for one-way results', default: '50' },
   },
   async run({ args: rawArgs }) {
     const config = await loadConfig()
-    const args = withDefaults(rawArgs, config, ['currency', 'fmt', 'seat', 'pax'])
+    const args = withDefaults(rawArgs, config, ['currency', 'fmt', 'seat', 'pax', 'limit'])
 
     validateAirport(args.from.toUpperCase(), 'Origin')
     validateAirport(args.to.toUpperCase(), 'Destination')
     const dateStart = normalizeDate(args.dateStart, 'Start date')
     const dateEnd = normalizeDate(args.dateEnd, 'End date')
-    const returnStart = args.returnStart
-      ? normalizeDate(args.returnStart, 'Return start')
-      : undefined
-    const returnEnd = args.returnEnd ? normalizeDate(args.returnEnd, 'Return end') : undefined
+    // Guard: citty may bleed flag values (e.g. --sort price) into optional positionals.
+    // Probe with parseFlexDate first — if it's not a date, treat as one-way.
+    const returnStart =
+      args.returnStart && parseFlexDate(args.returnStart)
+        ? normalizeDate(args.returnStart, 'Return start')
+        : undefined
+    const returnEnd =
+      args.returnEnd && parseFlexDate(args.returnEnd)
+        ? normalizeDate(args.returnEnd, 'Return end')
+        : undefined
 
     const pax = parsePax(args.pax)
     const maxStops = args['max-stops'] != null ? Number.parseInt(args['max-stops']) : undefined
@@ -158,13 +170,14 @@ export const matrixCommand = defineCommand({
       )
     }
 
+    const excludeHub = mergeExclusions(args['exclude-hub'], args['exclude-region'])
     const filterOpts = {
       maxDur,
       maxStops,
       direct: args.direct,
       carrier: args.carrier,
       excludeCarrier: args['exclude-carrier'],
-      excludeHub: args['exclude-hub'],
+      excludeHub,
     }
     const hasFilter = !!(args.carrier || args['exclude-carrier'] || args['exclude-hub'] || args.direct)
     const filterOffers = (offers: Offer[]) =>
@@ -187,6 +200,10 @@ export const matrixCommand = defineCommand({
       }
       setLatestSearch(session, allOffers, describeSearchRequest(query), allRefs)
       await saveSession(session)
+      const sortKey = (args.sort as SortKey) ?? 'dep'
+      if (sortKey === 'price') cells.sort((a, b) => parsePrice(a.cheapest) - parsePrice(b.cheapest))
+      const limit = Number.parseInt(args.limit)
+      if (limit > 0 && cells.length > limit) cells.splice(limit)
       printOneWay(cells, args.fmt)
       return
     }
