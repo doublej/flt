@@ -1,28 +1,3 @@
 #!/usr/bin/env bash
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")" && pwd)"
-CLI_DIR="$SCRIPT_DIR/.."
-ROOT_DIR="$CLI_DIR/../.."
-BUNDLE="$CLI_DIR/dist/flt.js"
-
-# Detect workspace context (dev) vs standalone install (bunx)
-# In bunx, the repo is cloned but node_modules/citty won't exist
-IS_WORKSPACE=false
-[ -d "$ROOT_DIR/node_modules/citty" ] && IS_WORKSPACE=true
-
-if [ -f "$BUNDLE" ]; then
-  # Auto-rebuild only in workspace dev context
-  if [ "$IS_WORKSPACE" = true ]; then
-    stale=$(find "$CLI_DIR/src" "$ROOT_DIR/packages/core/src" -name '*.ts' -newer "$BUNDLE" -print -quit 2>/dev/null)
-    if [ -n "$stale" ]; then
-      echo "[flt] Source changed, rebuilding..." >&2
-      (cd "$CLI_DIR" && bun run build) >&2
-    fi
-  fi
-  exec bun "$BUNDLE" "$@"
-elif [ "$IS_WORKSPACE" = true ]; then
-  cd "$CLI_DIR" || exit 1
-  exec bun run src/index.ts "$@"
-else
-  echo "error: pre-built bundle not found. Run 'bun run build' in the cli package first." >&2
-  exit 1
-fi
+exec bun "$SCRIPT_DIR/../dist/flt.js" "$@"
