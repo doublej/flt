@@ -1,14 +1,13 @@
 import { terminal as term } from 'terminal-kit'
 
 const BOOT_LINES = [
-  'FLIGHTS/RES GLOBAL DISTRIBUTION SYSTEM',
-  'V0.1.0  (C) 2025 ALL RIGHTS RESERVED',
+  'FLIGHTS/RES  RESERVATION SYSTEM',
+  'V0.1.0',
   '',
-  'INITIALIZING TERMINAL...',
   'LOADING AIRPORT DATABASE... 654 KB',
-  'SESSION MANAGER... OK',
-  'CONNECTING GDS NETWORK...',
-  'SYSTEM READY',
+  'FARE CACHE............ OK',
+  'SESSION MANAGER....... OK',
+  'TERMINAL READY',
 ]
 
 /**
@@ -69,14 +68,68 @@ function selectPlane(termWidth: number): { lines: string[]; width: number } {
 
 const TITLE = [
   'F L I G H T S  /  R E S',
-  '── GLOBAL DISTRIBUTION SYSTEM ──',
+  '── RESERVATION SYSTEM ──',
   'V0.1.0',
 ]
 
-/** Animated boot sequence — typewriter lines then logo reveal */
+/** CRT power-on flicker — brief white flash then phosphor glow */
+async function crtPowerOn(w: number, h: number): Promise<void> {
+  // Flash white line across center (CRT warming up)
+  const midY = Math.floor(h / 2)
+  term.moveTo(1, midY)
+  term('\x1b[0;47;97m') // bright white on white bg
+  term.noFormat('─'.repeat(w))
+  await sleep(60)
+
+  // Expand to 3 lines
+  for (const dy of [-1, 1]) {
+    term.moveTo(1, midY + dy)
+    term('\x1b[0;40;92m')
+    term.noFormat('░'.repeat(w))
+  }
+  await sleep(40)
+
+  // Expand further with dimmer phosphor
+  for (const dy of [-2, 2]) {
+    const row = midY + dy
+    if (row < 1 || row > h) continue
+    term.moveTo(1, row)
+    term('\x1b[0;40;32m')
+    term.noFormat('░'.repeat(w))
+  }
+  await sleep(50)
+
+  // Quick clear — phosphor fade
+  for (let row = 1; row <= h; row++) {
+    term.moveTo(1, row)
+    term('\x1b[0;40;30m')
+    term.eraseLine()
+  }
+  await sleep(80)
+
+  // Faint scanline sweep (top to bottom, fast)
+  for (let row = 1; row <= Math.min(h, 8); row++) {
+    term.moveTo(1, row)
+    term('\x1b[0;2;40;32m')
+    term.noFormat('▁'.repeat(Math.floor(w * (row / 8))))
+    await sleep(15)
+  }
+  // Clear the scanlines
+  for (let row = 1; row <= Math.min(h, 8); row++) {
+    term.moveTo(1, row)
+    term('\x1b[0;40;30m')
+    term.eraseLine()
+  }
+  await sleep(40)
+}
+
+/** Animated boot sequence — CRT power-on, typewriter lines, then logo reveal */
 export async function bootAnimation(w: number, h: number): Promise<void> {
   const vH = h - 3
   const baseY = 2 // content starts at row 2
+
+  // Phase 0: CRT power-on flicker
+  await crtPowerOn(w, h)
 
   // Phase 1: typewriter boot log
   for (let i = 0; i < BOOT_LINES.length; i++) {
@@ -268,6 +321,88 @@ export class LoadingAnimation {
     term('\x1b[0;40;93m') // bright yellow
     term.noFormat(` ${pct}`)
   }
+}
+
+/** Sign-off animation — CRT power-down effect */
+export async function signOffAnimation(w: number, h: number): Promise<void> {
+  // Collapse content to center line
+  const midY = Math.floor(h / 2)
+
+  // Phase 1: rapid scanline collapse — clear from edges toward center
+  const half = Math.ceil(h / 2)
+  for (let d = half; d >= 0; d--) {
+    const top = midY - d
+    const bot = midY + d
+    if (top >= 1 && top !== midY) {
+      term.moveTo(1, top)
+      term('\x1b[0;40;30m')
+      term.eraseLine()
+    }
+    if (bot <= h && bot !== midY && bot !== top) {
+      term.moveTo(1, bot)
+      term('\x1b[0;40;30m')
+      term.eraseLine()
+    }
+    await sleep(12)
+  }
+
+  // Phase 2: bright center line
+  term.moveTo(1, midY)
+  term('\x1b[0;40;92m')
+  term.noFormat('─'.repeat(w))
+  await sleep(100)
+
+  // Phase 3: shrink center line
+  for (let i = 0; i < Math.ceil(w / 2); i += 2) {
+    const left = i
+    const right = w - i
+    if (left >= right) break
+    term.moveTo(1, midY)
+    term('\x1b[0;40;30m')
+    term.eraseLine()
+    term.moveTo(left + 1, midY)
+    term('\x1b[0;40;92m')
+    term.noFormat('─'.repeat(Math.max(0, right - left)))
+    await sleep(8)
+  }
+
+  // Phase 4: dot fade
+  const cx = Math.floor(w / 2) + 1
+  term.moveTo(1, midY)
+  term('\x1b[0;40;30m')
+  term.eraseLine()
+  term.moveTo(cx, midY)
+  term('\x1b[0;40;92m')
+  term.noFormat('●')
+  await sleep(200)
+  term.moveTo(cx, midY)
+  term('\x1b[0;2;40;32m')
+  term.noFormat('·')
+  await sleep(150)
+  term.moveTo(cx, midY)
+  term('\x1b[0;40;30m')
+  term.noFormat(' ')
+  await sleep(100)
+}
+
+/** Row cascade — reveal content lines one-by-one with stagger delay */
+export function rowCascade(
+  drawRow: (row: number) => void,
+  startRow: number,
+  count: number,
+): Promise<void> {
+  return new Promise((resolve) => {
+    let i = 0
+    const step = () => {
+      if (i >= count) { resolve(); return }
+      drawRow(startRow + i)
+      i++
+      // Fast start, slight deceleration
+      const delay = i < 3 ? 8 : i < 8 ? 12 : 18
+      setTimeout(step, delay)
+    }
+    step()
+  })
 }
 
 function easeOut(t: number): number {

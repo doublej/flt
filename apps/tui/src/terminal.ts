@@ -1,5 +1,5 @@
 import { terminal as term } from 'terminal-kit'
-import { bootAnimation, LoadingAnimation, scanlineTransition } from './animate'
+import { bootAnimation, LoadingAnimation, scanlineTransition, signOffAnimation, rowCascade } from './animate'
 
 /** Style markers for format strings — control chars parsed by drawLine() */
 export const M = {
@@ -33,6 +33,9 @@ export class Terminal {
   private spinner = -1
   private spinTimer: ReturnType<typeof setInterval> | null = null
   private loader: LoadingAnimation | null = null
+  private idleTimer: ReturnType<typeof setInterval> | null = null
+  private idlePlane = -1  // -1 = not animating, 0..w = x position
+  private idleFrame: ReturnType<typeof setTimeout> | null = null
   private onCmd: (cmd: string) => void
 
   constructor(onCmd: (cmd: string) => void) {
@@ -50,10 +53,14 @@ export class Terminal {
     term.on('key', (name: unknown) => this.key(name as string))
     term.on('resize', () => this.render())
     this.render()
+    this.startIdle()
   }
 
-  stop() {
+  async stop() {
+    this.stopIdle()
     this.stopSpinner()
+    term.hideCursor()
+    await signOffAnimation(this.w, this.h)
     term.grabInput(false)
     term.hideCursor(false)
     term.fullscreen(false)
@@ -94,7 +101,7 @@ export class Terminal {
     ]
     const text: [number, string, (t: typeof term) => typeof term][] = [
       [2, 'F L I G H T S / R E S', (t) => t.bgBlack.brightGreen],
-      [3, 'GLOBAL DISTRIBUTION SYSTEM', (t) => t.bgBlack.green],
+      [3, 'RESERVATION SYSTEM', (t) => t.bgBlack.green],
       [4, 'V0.1.0', (t) => t.bgBlack.green],
       [6, 'ENTER COMMAND OR H/ FOR HELP', (t) => t.bgBlack.green],
     ]
@@ -147,12 +154,70 @@ export class Terminal {
     if (this.loader) { this.loader.stop(); this.loader = null }
   }
 
-  /** Set content with a brief scanline wipe transition */
+  private startIdle() {
+    this.idleTimer = setInterval(() => this.flyPlane(), 30_000 + Math.random() * 30_000)
+  }
+
+  private stopIdle() {
+    if (this.idleTimer) { clearInterval(this.idleTimer); this.idleTimer = null }
+    if (this.idleFrame) { clearTimeout(this.idleFrame); this.idleFrame = null }
+    this.idlePlane = -1
+  }
+
+  private flyPlane() {
+    if (this.idlePlane >= 0) return // already animating
+    this.idlePlane = 0
+    this.stepPlane()
+  }
+
+  private stepPlane() {
+    const row = this.h - 1 // separator bar
+    const x = this.idlePlane + 1
+
+    // Erase previous position
+    if (x > 1) {
+      term.moveTo(x - 1, row)
+      term('\x1b[0;40;32m')
+      term.noFormat('─')
+    }
+
+    if (x > this.w) {
+      this.idlePlane = -1
+      this.renderChrome() // redraw separator cleanly
+      return
+    }
+
+    // Draw plane character
+    term.moveTo(x, row)
+    term('\x1b[0;40;92m')
+    term.noFormat('✈')
+
+    this.idlePlane++
+    this.idleFrame = setTimeout(() => this.stepPlane(), 25)
+  }
+
+  /** Set content with row cascade animation */
   setContentAnimated(l: string[]) {
     this.stopLoading()
     this.lines = l
     this.scroll = 0
-    scanlineTransition(() => this.render(), this.vH)
+
+    // Quick scanline wipe, then cascade rows in one-by-one
+    const visCount = Math.min(l.length, this.vH)
+    scanlineTransition(() => {
+      // Render header/status immediately
+      this.renderChrome()
+      // Cascade visible content rows
+      rowCascade(
+        (row) => this.drawLine(row, l[row - 2] ?? ''),
+        2,
+        visCount,
+      ).then(() => {
+        // Fill remaining empty rows
+        for (let i = visCount; i < this.vH; i++)
+          this.drawLine(2 + i, '')
+      })
+    }, this.vH)
   }
 
   scrollDown() {
@@ -168,17 +233,25 @@ export class Terminal {
     this.render()
   }
 
+  /** Inject a key event (for demo mode) */
+  injectKey(name: string) { this.key(name) }
+
   render() {
-    // Header bar
-    term.moveTo(1, 1)
-    term.styleReset()
-    term.bgGreen.black.eraseLine()
-    term.bgGreen.black(this.hdr())
+    this.renderChrome()
 
     // Content area
     const vis = this.lines.slice(this.scroll, this.scroll + this.vH)
     for (let i = 0; i < this.vH; i++)
       this.drawLine(2 + i, vis[i] ?? '')
+  }
+
+  /** Render header, status bar, and input line (no content) */
+  private renderChrome() {
+    // Header bar
+    term.moveTo(1, 1)
+    term.styleReset()
+    term.bgGreen.black.eraseLine()
+    term.bgGreen.black(this.hdr())
 
     // Separator with status + MORE
     term.moveTo(1, this.h - 1)
