@@ -1,7 +1,7 @@
 import { findConnectionRoutes, findBridgeHubs, resolveRegions, airportCity, isValidAirport } from '@flights/core'
 import type { Terminal } from '../terminal'
 import { M } from '../terminal'
-import { contextHelp } from '../format/utils'
+import { contextHelp, col, rCol, div } from '../format/utils'
 import type { AppState } from './shared'
 
 export function handleConnections(argsStr: string, term: Terminal, _state: AppState) {
@@ -57,17 +57,19 @@ export function handleConnections(argsStr: string, term: Terminal, _state: AppSt
     return
   }
 
+  const W = { ln: 3, path: 35, stops: 10, dist: 12, detour: 6 }
+
   const lines = ['', `${M.G} ** CONNECTION ROUTES **  ${from} → ${to}${M.g}`, '']
-  lines.push(`${M.d}   #  ROUTE                              STOPS      DISTANCE     DETOUR${M.g}`)
-  lines.push(`${M.d}  ──  ─────────────────────────────────   ─────      ────────     ──────${M.g}`)
+  lines.push(`${M.d}  ${rCol('#', W.ln)}  ${col('ROUTE', W.path)}  ${col('STOPS', W.stops)}  ${col('DISTANCE', W.dist)}  ${col('DETOUR', W.detour)}${M.g}`)
+  lines.push(`${M.d}  ${div(W.ln)}  ${div(W.path)}  ${div(W.stops)}  ${div(W.dist)}  ${div(W.detour)}${M.g}`)
 
   for (let r = 0; r < routes.length; r++) {
     const route = routes[r]
-    const ln = String(r + 1).padStart(3)
-    const path = route.path.join(' → ').padEnd(35)
-    const stops = `${route.stopCount} STOP${route.stopCount !== 1 ? 'S' : ''}`.padEnd(10)
-    const dist = route.totalKm ? `${route.totalKm.toLocaleString()} km`.padEnd(12) : '---'.padEnd(12)
-    const detour = route.detourRatio ? `${route.detourRatio}x` : '---'
+    const ln = rCol(String(r + 1), W.ln)
+    const path = col(route.path.join(' → '), W.path)
+    const stops = col(`${route.stopCount} STOP${route.stopCount !== 1 ? 'S' : ''}`, W.stops)
+    const dist = col(route.totalKm ? `${route.totalKm.toLocaleString()} km` : '---', W.dist)
+    const detour = rCol(route.detourRatio ? `${route.detourRatio}x` : '---', W.detour)
     lines.push(`  ${M.G}${ln}${M.g}  ${path}  ${stops}  ${dist}  ${detour}`)
   }
 

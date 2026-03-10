@@ -3,20 +3,20 @@ import { bootAnimation, LoadingAnimation, scanlineTransition, signOffAnimation, 
 
 /** Style markers for format strings — control chars parsed by drawLine() */
 export const M = {
-  g: '\x01',  // green (base)
-  G: '\x02',  // bright green
-  y: '\x03',  // yellow
-  Y: '\x04',  // bright yellow
-  d: '\x05',  // dim green
+  g: '\x01',  // blue (base)
+  G: '\x02',  // bright blue
+  y: '\x03',  // cyan (accent)
+  Y: '\x04',  // bright cyan
+  d: '\x05',  // dim blue
 } as const
 
-/** ANSI sequences for each marker — always include bgBlack to prevent bleed */
+/** ANSI sequences for each marker — always include bg dark grey to prevent bleed */
 const STYLE: Record<number, string> = {
-  0x01: '\x1b[0;40;32m',
-  0x02: '\x1b[0;40;92m',
-  0x03: '\x1b[0;40;33m',
-  0x04: '\x1b[0;40;93m',
-  0x05: '\x1b[0;2;40;32m',
+  0x01: '\x1b[0;40;34m',
+  0x02: '\x1b[0;40;94m',
+  0x03: '\x1b[0;40;36m',
+  0x04: '\x1b[0;40;96m',
+  0x05: '\x1b[0;2;40;34m',
 }
 
 const MARKER_RE = /([\x01-\x05])/
@@ -100,10 +100,10 @@ export class Terminal {
       '╚' + '═'.repeat(W - 2) + '╝',
     ]
     const text: [number, string, (t: typeof term) => typeof term][] = [
-      [2, 'F L I G H T S / R E S', (t) => t.bgBlack.brightGreen],
-      [3, 'RESERVATION SYSTEM', (t) => t.bgBlack.green],
-      [4, 'V0.1.0', (t) => t.bgBlack.green],
-      [6, 'ENTER COMMAND OR H/ FOR HELP', (t) => t.bgBlack.green],
+      [2, 'F L T', (t) => t.bgBlack.brightBlue],
+      [3, 'RESERVATION SYSTEM', (t) => t.bgBlack.blue],
+      [4, 'V0.1.0', (t) => t.bgBlack.blue],
+      [6, 'ENTER COMMAND OR H/ FOR HELP', (t) => t.bgBlack.blue],
     ]
 
     const x = Math.max(1, Math.floor((this.w - W) / 2) + 1)
@@ -111,16 +111,16 @@ export class Terminal {
 
     for (let i = 0; i < rows.length; i++) {
       term.moveTo(x, y + i)
-      if (rows[i]) term.bgBlack.dim.green.noFormat(rows[i]!)
+      if (rows[i]) term.bgBlack.dim.blue.noFormat(rows[i]!)
     }
 
     for (const [ri, txt, style] of text) {
       const inner = W - 2
       const padded = txt.padStart(Math.floor((inner + txt.length) / 2)).padEnd(inner)
       term.moveTo(x, y + ri)
-      term.bgBlack.dim.green.noFormat('║')
+      term.bgBlack.dim.blue.noFormat('║')
       style(term).noFormat(padded)
-      term.bgBlack.dim.green.noFormat('║')
+      term.bgBlack.dim.blue.noFormat('║')
     }
   }
 
@@ -177,7 +177,7 @@ export class Terminal {
     // Erase previous position
     if (x > 1) {
       term.moveTo(x - 1, row)
-      term('\x1b[0;40;32m')
+      term('\x1b[0;40;34m')
       term.noFormat('─')
     }
 
@@ -189,7 +189,7 @@ export class Terminal {
 
     // Draw plane character
     term.moveTo(x, row)
-    term('\x1b[0;40;92m')
+    term('\x1b[0;40;94m')
     term.noFormat('✈')
 
     this.idlePlane++
@@ -250,34 +250,34 @@ export class Terminal {
     // Header bar
     term.moveTo(1, 1)
     term.styleReset()
-    term.bgGreen.black.eraseLine()
-    term.bgGreen.black(this.hdr())
+    term.bgBlue.brightWhite.eraseLine()
+    term.bgBlue.brightWhite(this.hdr())
 
     // Separator with status + MORE
     term.moveTo(1, this.h - 1)
     term.styleReset()
-    term.bgBlack.green.eraseLine()
+    term.bgBlack.blue.eraseLine()
     const more = this.scroll + this.vH < this.lines.length
     const st = this.status ? ` ${this.status} ` : ''
     const mr = more ? ' ) MORE ' : ''
     const fill = Math.max(0, this.w - st.length - mr.length - (st ? 1 : 0))
     if (st) {
-      term.bgBlack.dim.green('─')
+      term.bgBlack.dim.blue('─')
       term.styleReset()
-      term.bgBlack.brightGreen(st)
+      term.bgBlack.brightBlue(st)
     }
-    term.bgBlack.dim.green('─'.repeat(fill))
+    term.bgBlack.dim.blue('─'.repeat(fill))
     if (mr) {
       term.styleReset()
-      term.bgBlack.brightYellow(mr)
+      term.bgBlack.brightCyan(mr)
     }
 
     // Input line
     term.moveTo(1, this.h)
     term.styleReset()
-    term.bgBlack.green.eraseLine()
-    term.bgBlack.brightGreen('>')
-    term.bgBlack.green(this.input)
+    term.bgBlack.blue.eraseLine()
+    term.bgBlack.brightBlue('>')
+    term.bgBlack.blue(this.input)
     term.moveTo(2 + this.input.length, this.h)
     term.hideCursor(false)
   }
@@ -285,7 +285,7 @@ export class Terminal {
   /** Draw a format-string line: parse M.* markers → ANSI, rest as text */
   private drawLine(row: number, line: string) {
     term.moveTo(1, row)
-    term('\x1b[0;40;32m') // base: green on black
+    term('\x1b[0;40;34m') // base: blue on grey
     term.eraseLine()
     for (const seg of line.split(MARKER_RE)) {
       if (seg.length === 1 && STYLE[seg.charCodeAt(0)])
@@ -306,7 +306,7 @@ export class Terminal {
     const ctx = this.context ? `  ${spin}${this.context}` : ''
     const right = `${dow} ${d} ${t}`
     const mid = this.sessionName ? this.sessionName.toUpperCase() : 'AREA A'
-    const left = ' FLIGHTS/RES'
+    const left = ' FLT'
     const g1 = Math.max(1, Math.floor((this.w - left.length - mid.length - right.length - ctx.length) / 2))
     const g2 = Math.max(1, this.w - left.length - ctx.length - g1 - mid.length - right.length)
     const text = `${left}${ctx}${' '.repeat(g1)}${mid}${' '.repeat(g2)}${right}`

@@ -9,7 +9,7 @@ import type { Terminal } from '../terminal'
 import { M } from '../terminal'
 import { parseDate, fetchAndCache } from './search'
 import { parseSearchOptions } from '../parse'
-import { contextHelp, durC, stopsLbl } from '../format/utils'
+import { contextHelp, durC, stopsLbl, col, div } from '../format/utils'
 import type { AppState } from './shared'
 import { flags } from './shared'
 
@@ -100,22 +100,24 @@ function compareTable(results: RouteResult[], depDate: string, dateLabel: string
   const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const
   const day = DAYS[d.getDay()]
 
+  const W = { route: 13, price: 11, carrier: 16, stops: 10, dur: 8, id: 5 }
+
   const lines = ['', `${M.G} ** ROUTE COMPARISON **  ${day} ${dateLabel}${M.g}`, '']
-  lines.push(`${M.d}   ROUTE          CHEAPEST     CARRIER          STOPS      DUR       ID${M.g}`)
-  lines.push(`${M.d}   ───────────    ──────────   ──────────────   ────────   ──────    ─────${M.g}`)
+  lines.push(`${M.d}   ${col('ROUTE', W.route)}  ${col('CHEAPEST', W.price)}  ${col('CARRIER', W.carrier)}  ${col('STOPS', W.stops)}  ${col('DUR', W.dur)}  ${col('ID', W.id)}${M.g}`)
+  lines.push(`${M.d}   ${div(W.route)}  ${div(W.price)}  ${div(W.carrier)}  ${div(W.stops)}  ${div(W.dur)}  ${div(W.id)}${M.g}`)
 
   for (const r of results) {
-    const route = `${r.from} → ${r.to}`.padEnd(13)
+    const route = col(`${r.from} → ${r.to}`, W.route)
     if (!r.cheapest) {
       lines.push(`   ${route}  ${M.d}---${M.g}`)
       continue
     }
     const o = r.cheapest
-    const price = o.price.padEnd(11)
-    const carrier = o.name.slice(0, 16).padEnd(16)
-    const stops = stopsLbl(o.stops).padEnd(10)
-    const dur = durC(o.duration).padEnd(8)
-    lines.push(`   ${route}  ${M.y}${price}${M.g}  ${carrier}  ${stops}  ${dur}  ${M.d}${o.id}${M.g}`)
+    const price = col(o.price, W.price)
+    const carrier = col(o.name, W.carrier)
+    const stops = col(stopsLbl(o.stops), W.stops)
+    const dur = col(durC(o.duration), W.dur)
+    lines.push(`   ${route}  ${M.y}${price}${M.g}  ${carrier}  ${stops}  ${dur}  ${M.d}${col(o.id, W.id)}${M.g}`)
   }
 
   lines.push('')

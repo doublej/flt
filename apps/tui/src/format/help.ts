@@ -162,7 +162,7 @@ export function help(section?: string): string[] {
   // Quick reference — navigation first, then features
   return [
     '',
-    `${M.G} ** FLIGHTS/RES COMMAND REFERENCE **${M.g}`,
+    `${M.G} ** FLT COMMAND REFERENCE **${M.g}`,
     '',
     ...HELP_DISPLAY,
     ...HELP_SEARCH,

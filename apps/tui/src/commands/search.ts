@@ -20,7 +20,7 @@ import type { Terminal } from '../terminal'
 import { M } from '../terminal'
 import { avail } from '../format'
 import { parseSearchOptions } from '../parse'
-import { contextHelp } from '../format/utils'
+import { contextHelp, col, div } from '../format/utils'
 import type { AppState } from './shared'
 import { flags } from './shared'
 
@@ -306,9 +306,11 @@ function dayOfWeek(iso: string): string {
 }
 
 function matrixOneWay(cells: CellResult[], from: string, to: string): string[] {
+  const W = { date: 10, day: 3, price: 10, carrier: 12, stops: 10, dur: 6 }
+
   const lines = ['', `${M.G} ** DATE MATRIX **  ${from}-${to}  ONE-WAY${M.g}`, '']
-  lines.push(`${M.d}  DATE     DAY   PRICE       CARRIER      STOPS      DUR${M.g}`)
-  lines.push(`${M.d}  ──────── ───   ──────      ─────────    ──────     ──────${M.g}`)
+  lines.push(`${M.d}  ${col('DATE', W.date)} ${col('DAY', W.day)}   ${col('PRICE', W.price)}  ${col('CARRIER', W.carrier)}  ${col('STOPS', W.stops)}  ${col('DUR', W.dur)}${M.g}`)
+  lines.push(`${M.d}  ${div(W.date)} ${div(W.day)}   ${div(W.price)}  ${div(W.carrier)}  ${div(W.stops)}  ${div(W.dur)}${M.g}`)
 
   let minPrice = Infinity
   for (const c of cells) {
@@ -319,11 +321,11 @@ function matrixOneWay(cells: CellResult[], from: string, to: string): string[] {
   }
 
   for (const c of cells) {
-    const day = dayOfWeek(c.dep)
-    const price = c.cheapest.padEnd(10)
-    const carrier = c.carrier.slice(0, 12).padEnd(12)
-    const stops = c.stops < 0 ? '-'.padEnd(10) : (c.stops === 0 ? 'NONSTOP' : `${c.stops} STOP${c.stops > 1 ? 'S' : ''}`).padEnd(10)
-    const dur = c.duration.toUpperCase()
+    const day = col(dayOfWeek(c.dep), W.day)
+    const price = col(c.cheapest, W.price)
+    const carrier = col(c.carrier, W.carrier)
+    const stops = col(c.stops < 0 ? '-' : (c.stops === 0 ? 'NONSTOP' : `${c.stops} STOP${c.stops > 1 ? 'S' : ''}`), W.stops)
+    const dur = col(c.duration.toUpperCase(), W.dur)
     const isCheapest = c.cheapest !== '-' && parseFloat(c.cheapest.replace(/[^0-9.]/g, '')) === minPrice
     const priceColor = isCheapest ? M.Y : M.y
     lines.push(`  ${c.dep} ${day}   ${priceColor}${price}${M.g}  ${carrier}  ${stops}  ${dur}`)

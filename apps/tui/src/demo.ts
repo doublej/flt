@@ -1,4 +1,6 @@
+import { nukeCache, createEmptySession } from '@flights/core'
 import type { Terminal } from './terminal'
+import type { AppState } from './commands/shared'
 
 interface DemoStep {
   narrate: string
@@ -9,25 +11,25 @@ interface DemoStep {
 
 const STEPS: DemoStep[] = [
   {
-    narrate: 'SHOW HELP — ALL AVAILABLE COMMANDS',
+    narrate: 'QUICK HELP — COMMAND OVERVIEW',
     command: 'H/',
     pause: 3000,
     scrolls: 2,
   },
   {
-    narrate: 'SEARCH AIRPORTS BY CITY NAME',
+    narrate: 'SEARCH AIRPORTS — FIND TOKYO',
     command: 'AN TOKYO',
     pause: 2500,
   },
   {
-    narrate: 'LOOKUP AIRPORT BY IATA CODE',
-    command: 'AN NRT',
+    narrate: 'START A TRIP SESSION',
+    command: 'SS/START MY FLIGHT TO TOKYO',
     pause: 2000,
   },
   {
-    narrate: 'START A NAMED SESSION',
-    command: 'SS/START DEMO',
-    pause: 2000,
+    narrate: 'FIND ROUTING OPTIONS AMS → NRT',
+    command: 'CN AMS NRT',
+    pause: 3000,
   },
   {
     narrate: 'SEARCH AMS → NRT ON 10 MAR',
@@ -36,33 +38,43 @@ const STEPS: DemoStep[] = [
     scrolls: 1,
   },
   {
-    narrate: 'INSPECT OFFER #1',
+    narrate: 'INSPECT TOP RESULT',
     command: '*1',
     pause: 3000,
   },
   {
-    narrate: 'SORT RESULTS BY PRICE',
+    narrate: 'SORT BY PRICE',
     command: 'SP',
     pause: 2000,
   },
   {
-    narrate: 'FILTER — DIRECT FLIGHTS ONLY',
+    narrate: 'DIRECT FLIGHTS ONLY',
     command: 'QD',
     pause: 2500,
   },
   {
-    narrate: 'CLEAR ALL FILTERS',
+    narrate: 'STAR A FAVORITE',
+    command: 'FV 1',
+    pause: 2000,
+  },
+  {
+    narrate: 'CLEAR FILTERS',
     command: 'QC',
     pause: 2000,
   },
   {
-    narrate: 'SEARCH HELP — OPTION SYNTAX',
-    command: 'H/SEARCH',
-    pause: 2500,
+    narrate: 'DATE MATRIX — FIND CHEAPEST DATE',
+    command: 'DMAMSNRT10MAR-14MAR',
+    pause: 4000,
   },
   {
-    narrate: 'FILTER/SORT HELP',
-    command: 'H/FILTER',
+    narrate: 'COMPARE AIRPORTS — NRT VS HND',
+    command: 'CM AMS NRT,HND 10MAR',
+    pause: 4000,
+  },
+  {
+    narrate: 'VIEW STARRED FAVORITES',
+    command: 'FV/',
     pause: 2500,
   },
   {
@@ -81,7 +93,14 @@ const TYPE_DELAY = 60   // ms between characters
 const ENTER_DELAY = 300 // ms pause before pressing enter
 
 /** Run the demo sequence — simulates typing commands */
-export async function runDemo(term: Terminal): Promise<void> {
+export async function runDemo(term: Terminal, state: AppState): Promise<void> {
+  await nukeCache()
+  state.session = createEmptySession()
+  state.flights = []
+  state.rawFlights = []
+  state.lastQuery = null
+  state.lastRef = null
+  term.setSessionName(null)
   await sleep(1500)
 
   for (const step of STEPS) {
@@ -109,7 +128,9 @@ export async function runDemo(term: Terminal): Promise<void> {
     }
   }
 
-  term.setStatus('DEMO COMPLETE — TERMINAL IS YOURS')
+  term.setStatus('DEMO COMPLETE')
+  await sleep(2000)
+  await term.stop()
 }
 
 function sleep(ms: number): Promise<void> {

@@ -1,6 +1,6 @@
 import type { Session, SessionState, SessionSearch } from '@flights/core'
 import { M } from '../terminal'
-import { contextHelp } from './utils'
+import { contextHelp, col, rCol, div } from './utils'
 
 function formatAge(ms: number): string {
   const mins = Math.round(ms / 60_000)
@@ -53,15 +53,17 @@ export function sessionRefs(refs: string[], searches: Record<string, SessionSear
     lines.push('')
     return lines
   }
-  lines.push(`${M.d}   #  REF                            QUERY                              OFFERS${M.g}`)
-  lines.push(`${M.d}  ──  ─────────────────────────────   ──────────────────────────────────  ──────${M.g}`)
+  const W = { ln: 3, ref: 30, query: 34, offers: 6 }
+
+  lines.push(`${M.d}  ${rCol('#', W.ln)}  ${col('REF', W.ref)}  ${col('QUERY', W.query)}  ${col('OFFERS', W.offers)}${M.g}`)
+  lines.push(`${M.d}  ${div(W.ln)}  ${div(W.ref)}  ${div(W.query)}  ${div(W.offers)}${M.g}`)
   for (let i = 0; i < refs.length; i++) {
     const ref = refs[i]
     const search = searches[ref]
-    const ln = String(i + 1).padStart(3)
-    const refStr = ref.padEnd(30)
-    const query = (search?.query ?? '').slice(0, 34).padEnd(34)
-    const count = search?.offerCount ?? 0
+    const ln = rCol(String(i + 1), W.ln)
+    const refStr = col(ref, W.ref)
+    const query = col(search?.query ?? '', W.query)
+    const count = rCol(String(search?.offerCount ?? 0), W.offers)
     lines.push(`  ${M.G}${ln}${M.g}  ${refStr}  ${query}  ${count}`)
   }
   lines.push('')

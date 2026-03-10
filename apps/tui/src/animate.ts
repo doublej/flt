@@ -1,7 +1,7 @@
 import { terminal as term } from 'terminal-kit'
 
 const BOOT_LINES = [
-  'FLIGHTS/RES  RESERVATION SYSTEM',
+  'FLT  RESERVATION SYSTEM',
   'V0.1.0',
   '',
   'LOADING AIRPORT DATABASE... 654 KB',
@@ -67,7 +67,7 @@ function selectPlane(termWidth: number): { lines: string[]; width: number } {
 }
 
 const TITLE = [
-  'F L I G H T S  /  R E S',
+  'F L T',
   '── RESERVATION SYSTEM ──',
   'V0.1.0',
 ]
@@ -84,7 +84,7 @@ async function crtPowerOn(w: number, h: number): Promise<void> {
   // Expand to 3 lines
   for (const dy of [-1, 1]) {
     term.moveTo(1, midY + dy)
-    term('\x1b[0;40;92m')
+    term('\x1b[0;40;94m')
     term.noFormat('░'.repeat(w))
   }
   await sleep(40)
@@ -94,7 +94,7 @@ async function crtPowerOn(w: number, h: number): Promise<void> {
     const row = midY + dy
     if (row < 1 || row > h) continue
     term.moveTo(1, row)
-    term('\x1b[0;40;32m')
+    term('\x1b[0;40;34m')
     term.noFormat('░'.repeat(w))
   }
   await sleep(50)
@@ -110,7 +110,7 @@ async function crtPowerOn(w: number, h: number): Promise<void> {
   // Faint scanline sweep (top to bottom, fast)
   for (let row = 1; row <= Math.min(h, 8); row++) {
     term.moveTo(1, row)
-    term('\x1b[0;2;40;32m')
+    term('\x1b[0;2;40;34m')
     term.noFormat('▁'.repeat(Math.floor(w * (row / 8))))
     await sleep(15)
   }
@@ -138,7 +138,7 @@ export async function bootAnimation(w: number, h: number): Promise<void> {
     if (row > vH) break
 
     term.moveTo(1, row)
-    term('\x1b[0;40;32m')
+    term('\x1b[0;40;34m')
     term.eraseLine()
 
     for (let c = 0; c < line.length; c++) {
@@ -153,7 +153,7 @@ export async function bootAnimation(w: number, h: number): Promise<void> {
   // Phase 2: scanline clear (top to bottom)
   for (let row = baseY; row <= baseY + BOOT_LINES.length; row++) {
     term.moveTo(1, row)
-    term('\x1b[0;40;32m')
+    term('\x1b[0;40;34m')
     term.eraseLine()
     await sleep(30)
   }
@@ -182,7 +182,7 @@ export async function bootAnimation(w: number, h: number): Promise<void> {
     // Draw this scale at interpolated X
     for (let i = 0; i < plane.length; i++) {
       term.moveTo(px, startY + i)
-      term(isLast ? '\x1b[0;40;92m' : '\x1b[0;2;40;32m')
+      term(isLast ? '\x1b[0;40;94m' : '\x1b[0;2;40;34m')
       term.eraseLine()
       term.noFormat(plane[i])
     }
@@ -192,7 +192,7 @@ export async function bootAnimation(w: number, h: number): Promise<void> {
       // Clear before drawing next scale
       for (let i = 0; i < plane.length; i++) {
         term.moveTo(1, startY + i)
-        term('\x1b[0;40;32m')
+        term('\x1b[0;40;34m')
         term.eraseLine()
       }
       await sleep(80)
@@ -205,7 +205,7 @@ export async function bootAnimation(w: number, h: number): Promise<void> {
     const line = TITLE[i]
     const tx = Math.max(1, Math.floor((w - line.length) / 2) + 1)
     term.moveTo(tx, titleY + i)
-    term(i === 0 ? '\x1b[0;40;92m' : '\x1b[0;2;40;32m')
+    term(i === 0 ? '\x1b[0;40;94m' : '\x1b[0;2;40;34m')
     term.noFormat(line)
     await sleep(60)
   }
@@ -215,7 +215,7 @@ export async function bootAnimation(w: number, h: number): Promise<void> {
   const hint = 'ENTER COMMAND OR H/ FOR HELP'
   const hintX = Math.max(1, Math.floor((w - hint.length) / 2) + 1)
   term.moveTo(hintX, hintY)
-  term('\x1b[0;2;40;32m')
+  term('\x1b[0;2;40;34m')
   for (const ch of hint) {
     term.noFormat(ch)
     await sleep(15)
@@ -236,33 +236,31 @@ export function scanlineTransition(
         return
       }
       term.moveTo(1, 2 + row)
-      term('\x1b[0;40;32m')
+      term('\x1b[0;40;34m')
       term.eraseLine()
       row++
-      setTimeout(step, 15)
+      setTimeout(step, 35)
     }
     step()
   })
 }
 
-/** Loading bar animation characters */
-const LOAD_FRAMES = ['▏', '▎', '▍', '▌', '▋', '▊', '▉', '█']
 const LOAD_SPIN = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
 
 export class LoadingAnimation {
   private frame = 0
   private timer: ReturnType<typeof setInterval> | null = null
-  private barWidth = 20
+  private trackWidth = 40
   private progress = 0
   private targetProgress = 0
   private label = ''
   private row: number
   private w: number
-  private pulse = 0
 
   constructor(row: number, w: number) {
     this.row = row
     this.w = w
+    this.trackWidth = Math.min(40, Math.floor(w * 0.6))
   }
 
   start(label: string) {
@@ -270,7 +268,6 @@ export class LoadingAnimation {
     this.progress = 0
     this.targetProgress = 0
     this.frame = 0
-    this.pulse = 0
     this.timer = setInterval(() => this.tick(), 80)
   }
 
@@ -285,7 +282,6 @@ export class LoadingAnimation {
 
   private tick() {
     this.frame = (this.frame + 1) % LOAD_SPIN.length
-    this.pulse = (this.pulse + 1) % 8
 
     // Ease progress toward target
     if (this.targetProgress > this.progress) {
@@ -298,28 +294,25 @@ export class LoadingAnimation {
 
   private draw() {
     const spin = LOAD_SPIN[this.frame]
-    const filled = Math.floor(this.progress * this.barWidth)
-    const partialIdx = Math.floor((this.progress * this.barWidth - filled) * LOAD_FRAMES.length)
-    const partial = filled < this.barWidth ? LOAD_FRAMES[Math.max(0, partialIdx)] : ''
-    const empty = this.barWidth - filled - (partial ? 1 : 0)
+    const pos = Math.floor(this.progress * (this.trackWidth - 1))
+    const left = '─'.repeat(pos)
+    const right = '─'.repeat(Math.max(0, this.trackWidth - pos - 1))
+    const prefix = `${spin} ${this.label}  `
 
-    const bar = '█'.repeat(filled) + partial + '░'.repeat(Math.max(0, empty))
-    const pct = `${Math.floor(this.progress * 100)}%`.padStart(4)
-
-    const x = Math.max(1, Math.floor((this.w - this.barWidth - this.label.length - 12) / 2) + 1)
+    const x = Math.max(1, Math.floor((this.w - prefix.length - this.trackWidth) / 2) + 1)
     term.moveTo(x, this.row)
-    term('\x1b[0;40;32m')
+    term('\x1b[0;40;34m')
     term.eraseLine()
-    term('\x1b[0;40;92m') // bright green
+    term('\x1b[0;40;94m') // bright green
     term.noFormat(`${spin} `)
-    term('\x1b[0;40;32m')
+    term('\x1b[0;40;34m')
     term.noFormat(`${this.label}  `)
-    // Pulsing bar color
-    if (this.pulse < 4) term('\x1b[0;40;92m')
-    else term('\x1b[0;40;32m')
-    term.noFormat(bar)
-    term('\x1b[0;40;93m') // bright yellow
-    term.noFormat(` ${pct}`)
+    term('\x1b[0;40;94m') // bright green — completed track
+    term.noFormat(left)
+    term('\x1b[0;40;97m') // bright white — plane
+    term.noFormat('✈')
+    term('\x1b[0;2;40;34m') // dim green — remaining track
+    term.noFormat(right)
   }
 }
 
@@ -348,7 +341,7 @@ export async function signOffAnimation(w: number, h: number): Promise<void> {
 
   // Phase 2: bright center line
   term.moveTo(1, midY)
-  term('\x1b[0;40;92m')
+  term('\x1b[0;40;94m')
   term.noFormat('─'.repeat(w))
   await sleep(100)
 
@@ -361,7 +354,7 @@ export async function signOffAnimation(w: number, h: number): Promise<void> {
     term('\x1b[0;40;30m')
     term.eraseLine()
     term.moveTo(left + 1, midY)
-    term('\x1b[0;40;92m')
+    term('\x1b[0;40;94m')
     term.noFormat('─'.repeat(Math.max(0, right - left)))
     await sleep(8)
   }
@@ -372,11 +365,11 @@ export async function signOffAnimation(w: number, h: number): Promise<void> {
   term('\x1b[0;40;30m')
   term.eraseLine()
   term.moveTo(cx, midY)
-  term('\x1b[0;40;92m')
+  term('\x1b[0;40;94m')
   term.noFormat('●')
   await sleep(200)
   term.moveTo(cx, midY)
-  term('\x1b[0;2;40;32m')
+  term('\x1b[0;2;40;34m')
   term.noFormat('·')
   await sleep(150)
   term.moveTo(cx, midY)
@@ -398,7 +391,7 @@ export function rowCascade(
       drawRow(startRow + i)
       i++
       // Fast start, slight deceleration
-      const delay = i < 3 ? 8 : i < 8 ? 12 : 18
+      const delay = i < 3 ? 20 : i < 8 ? 30 : 45
       setTimeout(step, delay)
     }
     step()

@@ -1,38 +1,40 @@
 import type { Offer, Airport } from '@flights/core'
 import { M } from '../terminal'
-import { to24h, durC, legDur, acCode, sabreDate, stopsLbl, flightTags, contextHelp } from './utils'
+import { to24h, durC, legDur, acCode, sabreDate, stopsLbl, flightTags, contextHelp, col, rCol, div } from './utils'
 
 export function avail(flights: Offer[], from: string, to: string, date: string): string[] {
+  const W = { ln: 3, id: 5, carrier: 9, dep: 4, arr: 4, ahead: 2, dur: 6, ac: 3, stops: 8, price: 6 }
+
   const lines: string[] = [
     '',
     `${M.G} ** FLIGHT AVAILABILITY **  ${from}-${to}  ${sabreDate(date)}${M.g}`,
     '',
-    `${M.d}   #  ID     CARRIER      DEP   ARR       DUR     AC   STOPS      PRICE     TAGS${M.g}`,
-    `${M.d}  ──  ─────  ─────────    ────  ──────    ──────  ───  ────────   ──────    ────${M.g}`,
+    `${M.d}  ${rCol('#', W.ln)}  ${col('ID', W.id)}  ${col('CARRIER', W.carrier)}    ${col('DEP', W.dep)}  ${col('ARR', W.arr)}${' '.repeat(W.ahead)}    ${col('DUR', W.dur)}  ${col('AC', W.ac)}  ${col('STOPS', W.stops)}   ${col('PRICE', W.price)}     TAGS${M.g}`,
+    `${M.d}  ${div(W.ln)}  ${div(W.id)}  ${div(W.carrier)}    ${div(W.dep)}  ${div(W.arr)}${' '.repeat(W.ahead)}    ${div(W.dur)}  ${div(W.ac)}  ${div(W.stops)}   ${div(W.price)}    ${div(4)}${M.g}`,
   ]
 
   for (let i = 0; i < flights.length; i++) {
     const f = flights[i]
     const leg = f.legs[0]
-    const ln = String(i + 1).padStart(3)
-    const id = f.id.padEnd(5)
+    const ln = rCol(String(i + 1), W.ln)
+    const id = col(f.id, W.id)
     const car = leg
-      ? `${leg.airline} ${leg.flight_number}`.padEnd(9)
-      : f.name.slice(0, 9).padEnd(9)
-    const dep = to24h(f.departure).padEnd(4)
-    const arr = to24h(f.arrival)
+      ? col(`${leg.airline} ${leg.flight_number}`, W.carrier)
+      : col(f.name, W.carrier)
+    const dep = col(to24h(f.departure), W.dep)
+    const arr = col(to24h(f.arrival), W.arr)
     const ahead = f.arrival_time_ahead && f.arrival_time_ahead !== '0'
-      ? `+${f.arrival_time_ahead}`
-      : '  '
-    const dur = durC(f.duration).padEnd(6)
-    const ac = leg ? acCode(leg.aircraft).padEnd(3) : '---'
-    const stops = stopsLbl(f.stops).padEnd(8)
+      ? rCol(`+${f.arrival_time_ahead}`, W.ahead)
+      : ' '.repeat(W.ahead)
+    const dur = col(durC(f.duration), W.dur)
+    const ac = leg ? col(acCode(leg.aircraft), W.ac) : col('---', W.ac)
+    const stops = col(stopsLbl(f.stops), W.stops)
     const tags = flightTags(f)
     const best = f.is_best ? ` ${M.Y}●${M.g}` : ''
 
     lines.push(
       `  ${M.G}${ln}${M.g}  ${M.d}${id}${M.g}  ${car}    ${dep}  ${arr}${ahead}` +
-      `    ${dur}  ${ac}  ${stops}   ${M.y}${f.price}${M.g}` +
+      `    ${dur}  ${ac}  ${stops}   ${M.y}${col(f.price, W.price)}${M.g}` +
       `${tags}${best}`,
     )
 
@@ -102,21 +104,23 @@ export function detail(f: Offer, idx: number, bookingUrl?: string): string[] {
 }
 
 export function favsList(favorites: Offer[]): string[] {
+  const W = { ln: 3, id: 5, route: 13, dep: 9, carrier: 12, stops: 10, price: 6 }
+
   const lines = ['', `${M.G} ** FAVORITES **${M.g}`, '']
-  lines.push(`${M.d}   #  ID     ROUTE          DEP        CARRIER      STOPS      PRICE${M.g}`)
-  lines.push(`${M.d}  ──  ─────  ───────────    ─────────  ─────────    ────────   ──────${M.g}`)
+  lines.push(`${M.d}  ${rCol('#', W.ln)}  ${col('ID', W.id)}  ${col('ROUTE', W.route)}  ${col('DEP', W.dep)}  ${col('CARRIER', W.carrier)}  ${col('STOPS', W.stops)}  ${col('PRICE', W.price)}${M.g}`)
+  lines.push(`${M.d}  ${div(W.ln)}  ${div(W.id)}  ${div(W.route)}  ${div(W.dep)}  ${div(W.carrier)}  ${div(W.stops)}  ${div(W.price)}${M.g}`)
 
   for (let i = 0; i < favorites.length; i++) {
     const f = favorites[i]
-    const ln = String(i + 1).padStart(3)
-    const id = f.id.padEnd(5)
+    const ln = rCol(String(i + 1), W.ln)
+    const id = col(f.id, W.id)
     const from = f.legs[0]?.departure_airport ?? '???'
     const to = f.legs.at(-1)?.arrival_airport ?? '???'
-    const route = `${from}-${to}`.padEnd(13)
-    const dep = sabreDate(f.departure_date).padEnd(9)
-    const carrier = f.name.slice(0, 12).padEnd(12)
-    const stops = stopsLbl(f.stops).padEnd(10)
-    lines.push(`  ${M.G}${ln}${M.g}  ${M.d}${id}${M.g}  ${route}  ${dep}  ${carrier}  ${stops}  ${M.y}${f.price}${M.g}`)
+    const route = col(`${from}-${to}`, W.route)
+    const dep = col(sabreDate(f.departure_date), W.dep)
+    const carrier = col(f.name, W.carrier)
+    const stops = col(stopsLbl(f.stops), W.stops)
+    lines.push(`  ${M.G}${ln}${M.g}  ${M.d}${id}${M.g}  ${route}  ${dep}  ${carrier}  ${stops}  ${M.y}${col(f.price, W.price)}${M.g}`)
   }
 
   lines.push('')

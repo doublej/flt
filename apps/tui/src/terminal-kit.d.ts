@@ -27,11 +27,14 @@ declare module 'terminal-kit' {
     // Foreground colors (chainable + callable)
     green: Terminal
     brightGreen: Terminal
+    blue: Terminal
+    brightBlue: Terminal
     yellow: Terminal
     brightYellow: Terminal
     red: Terminal
     black: Terminal
     white: Terminal
+    brightWhite: Terminal
     cyan: Terminal
     brightCyan: Terminal
 
@@ -39,6 +42,8 @@ declare module 'terminal-kit' {
     bgBlack: Terminal
     bgGreen: Terminal
     bgBrightGreen: Terminal
+    bgBlue: Terminal
+    bgBrightBlack: Terminal
 
     // Attributes
     dim: Terminal

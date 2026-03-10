@@ -3,7 +3,7 @@ import { Terminal } from './terminal'
 import { handleCommand, createState } from './commands'
 
 if (!process.stdin.isTTY) {
-  console.error('FLIGHTS/RES requires a terminal (TTY)')
+  console.error('FLT requires a terminal (TTY)')
   process.exit(1)
 }
 
@@ -24,5 +24,5 @@ await term.showSplash(true)
 
 if (isDemo) {
   const { runDemo } = await import('./demo')
-  await runDemo(term)
+  await runDemo(term, state)
 }

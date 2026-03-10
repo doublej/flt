@@ -1,6 +1,16 @@
 import type { Flight } from '@flights/core'
 import { M } from '../terminal'
 
+export function col(text: string, width: number): string {
+  return text.length > width ? text.slice(0, width) : text.padEnd(width)
+}
+export function rCol(text: string, width: number): string {
+  return text.length > width ? text.slice(0, width) : text.padStart(width)
+}
+export function div(width: number): string {
+  return '─'.repeat(width)
+}
+
 const HINTS: Record<string, string> = {
   avail: '*N DETAIL  FV N STAR  QD DIRECT  SP SORT  MD/MU SCROLL',
   detail: 'IT {id} ITINERARY  FV {id} STAR  H/ HELP',
