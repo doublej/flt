@@ -4,15 +4,24 @@ CLI_DIR="$SCRIPT_DIR/.."
 ROOT_DIR="$CLI_DIR/../.."
 BUNDLE="$CLI_DIR/dist/flt.js"
 
-# Auto-rebuild if bundle is stale (any .ts source newer than bundle)
+# Detect workspace context (dev) vs standalone install (bunx)
+IS_WORKSPACE=false
+[ -f "$ROOT_DIR/bun.lock" ] && [ -d "$ROOT_DIR/packages/core" ] && IS_WORKSPACE=true
+
 if [ -f "$BUNDLE" ]; then
-  stale=$(find "$CLI_DIR/src" "$ROOT_DIR/packages/core/src" -name '*.ts' -newer "$BUNDLE" -print -quit 2>/dev/null)
-  if [ -n "$stale" ]; then
-    echo "[flt] Source changed, rebuilding..." >&2
-    (cd "$CLI_DIR" && bun run build) >&2
+  # Auto-rebuild only in workspace dev context
+  if [ "$IS_WORKSPACE" = true ]; then
+    stale=$(find "$CLI_DIR/src" "$ROOT_DIR/packages/core/src" -name '*.ts' -newer "$BUNDLE" -print -quit 2>/dev/null)
+    if [ -n "$stale" ]; then
+      echo "[flt] Source changed, rebuilding..." >&2
+      (cd "$CLI_DIR" && bun run build) >&2
+    fi
   fi
   exec bun "$BUNDLE" "$@"
-else
+elif [ "$IS_WORKSPACE" = true ]; then
   cd "$CLI_DIR" || exit 1
   exec bun run src/index.ts "$@"
+else
+  echo "error: pre-built bundle not found. Run 'bun run build' in the cli package first." >&2
+  exit 1
 fi
