@@ -5,8 +5,9 @@ ROOT_DIR="$CLI_DIR/../.."
 BUNDLE="$CLI_DIR/dist/flt.js"
 
 # Detect workspace context (dev) vs standalone install (bunx)
+# In bunx, the repo is cloned but node_modules/citty won't exist
 IS_WORKSPACE=false
-[ -f "$ROOT_DIR/bun.lock" ] && [ -d "$ROOT_DIR/packages/core" ] && IS_WORKSPACE=true
+[ -d "$ROOT_DIR/node_modules/citty" ] && IS_WORKSPACE=true
 
 if [ -f "$BUNDLE" ]; then
   # Auto-rebuild only in workspace dev context

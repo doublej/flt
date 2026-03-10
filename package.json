@@ -1,9 +1,7 @@
 {
   "private": true,
   "workspaces": ["packages/*", "apps/*", "docs"],
-  "scripts": {
-    "prepare": "bun build apps/cli/src/index.ts --bundle --outfile apps/cli/dist/flt.js --target bun"
-  },
+  "scripts": {},
   "bin": {
     "flt": "apps/cli/bin/flt"
   }
