@@ -5,6 +5,7 @@
   const links = [
     { href: `${base}/`, label: 'Home' },
     { href: `${base}/features`, label: 'Features' },
+    { href: `${base}/prime`, label: 'Prime' },
     { href: 'https://github.com/doublej/flt', label: 'GitHub', external: true },
   ]
 

@@ -22,8 +22,7 @@
     <div class="container">
       <h1>What makes flt different</h1>
       <p class="subtitle">
-        Power features you won't find on Google Flights or Skyscanner.
-        Built for agents who search hundreds of routes, not tourists booking one trip.
+        Power features you won't find on Google Flights or Skyscanner. Built for agents who search hundreds of routes.
       </p>
     </div>
   </section>
@@ -37,7 +36,7 @@
           <h2>Multi-Origin Compare</h2>
           <p>
             Client flexible on departure city? Search KUL, BKK, and MNL to Amsterdam
-            in one command. No tab juggling — one sorted result set across all origins.
+            in one command. One sorted result set across all origins.
           </p>
         </div>
         <div class="feature-demo">
@@ -63,8 +62,8 @@
           <span class="feature-label">02</span>
           <h2>Route Intelligence</h2>
           <p>
-            An offline route graph with 67,000+ edges. Discover which hubs connect two cities,
-            find bridge airports, and force waypoints — all without an internet connection.
+            An offline route graph with 67,000+ edges. See which hubs connect two cities,
+            find bridge airports, and force waypoints. Works without an internet connection.
           </p>
         </div>
         <div class="feature-demo">
@@ -92,8 +91,8 @@
           <h2>Power Filters</h2>
           <p>
             Composable filters that stack: exclude Gulf carriers, require morning departures,
-            cap duration at 16 hours, avoid specific hubs. Set defaults once via config — they
-            apply to every search automatically.
+            cap duration at 16 hours, avoid specific hubs. Set defaults once via config and they
+            apply to every search.
           </p>
         </div>
         <div class="feature-demo">
@@ -121,8 +120,8 @@
           <span class="feature-label">04</span>
           <h2>Session Favorites</h2>
           <p>
-            Bookmark any result during a session. Favorites store full offer snapshots —
-            they survive cache expiry, so you can compare options hours later without re-searching.
+            Bookmark any result during a session. Favorites store full offer snapshots,
+            so they survive cache expiry. Compare options hours later without re-searching.
           </p>
         </div>
         <div class="feature-demo">
@@ -152,7 +151,7 @@
           <h2>Three Interfaces, One Engine</h2>
           <p>
             Same search engine powers a modern CLI, a retro Sabre-style TUI, and a SvelteKit
-            web app with streaming results and route maps. Pick the interface that fits your workflow.
+            web app with streaming results and route maps.
           </p>
         </div>
         <div class="feature-demo">
@@ -257,9 +256,9 @@
           <span class="feature-label">08</span>
           <h2>Agent-First Design</h2>
           <p>
-            Built for AI coding agents from the ground up. <code>flt prime</code> outputs
-            a structured briefing. JSONL output, stable flight IDs (SHA-1 hashed from legs),
-            structured error codes, and a phased workflow designed for autonomous operation.
+            Built for AI coding agents. <code>flt prime</code> outputs a structured briefing.
+            JSONL output, stable flight IDs (SHA-1 hashed from legs), structured error codes,
+            and a phased workflow for autonomous operation.
           </p>
         </div>
         <div class="feature-demo">
@@ -315,7 +314,7 @@
   <section class="cta">
     <div class="container">
       <h2>Ready to fly?</h2>
-      <p>Install flt and start searching flights from your terminal today.</p>
+      <p>Install flt and start searching flights from your terminal.</p>
       <pre class="cta-install"><code>bun install -g github:doublej/flt</code></pre>
     </div>
   </section>

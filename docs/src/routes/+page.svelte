@@ -83,7 +83,7 @@ const features = [
     icon: '⇄',
     title: 'Multi-Origin Compare',
     description:
-      'Search KUL, BKK, and MNL to Amsterdam in one command. Compare across origins without juggling tabs or repeating searches.',
+      'Search KUL, BKK, and MNL to Amsterdam in one command. One sorted result set, no tab juggling.',
   },
   {
     icon: '◇',
@@ -95,7 +95,7 @@ const features = [
     icon: '★',
     title: 'Session Memory',
     description:
-      'Searches persist by route tag. Favorite any result for a full snapshot that survives cache expiry — compare options hours later.',
+      'Searches persist by route tag. Favorite any result for a full snapshot that survives cache expiry.',
   },
   {
     icon: '▸',
@@ -136,17 +136,17 @@ const commands = [
   {
     name: 'connections',
     syntax: 'flt connections AMS SYD --max-stops 2',
-    description: 'Discover hub airports and routing options between cities',
+    description: 'Find hub airports and routing options between two cities',
   },
   {
     name: 'inspect',
     syntax: 'flt O1',
-    description: 'Deep-dive into a specific search result by its ID',
+    description: 'Show legs, layovers, and aircraft for a specific result',
   },
   {
     name: 'itinerary',
     syntax: 'flt itinerary IAO-MNL@0318:O1 MNL-NRT@0320:O3',
-    description: 'Combine segments into a complete travel plan',
+    description: 'Combine segments into a multi-leg itinerary',
   },
   {
     name: 'airports',
@@ -167,10 +167,10 @@ const commands = [
     <div class="container">
       <div class="badge">Built by coding agents, for travel agents</div>
       <h1>flt</h1>
-      <p class="tagline">The ultimate CLI swiss army knife for finding flights</p>
+      <p class="tagline">Flight search from your terminal</p>
       <p class="description">
-        Search flights, compare prices across dates, build itineraries, and export
-        data — all from your terminal.
+        Search flights, compare prices across dates, build multi-leg itineraries,
+        and export for clients.
       </p>
       <div class="hero-actions">
         <div class="install-box">
@@ -284,7 +284,7 @@ const commands = [
   <!-- Features -->
   <section class="features">
     <div class="container">
-      <h2>Everything you need, nothing you don't</h2>
+      <h2>What it does</h2>
       <div class="grid">
         {#each features as feature, i}
           <div class="feature-card" style="animation-delay: {i * 100}ms">
@@ -304,7 +304,7 @@ const commands = [
   <section class="commands">
     <div class="container">
       <h2>Command Reference</h2>
-      <p class="section-subtitle">Core commands. Zero learning curve.</p>
+      <p class="section-subtitle">The commands you'll actually use.</p>
       <div class="command-list">
         {#each commands as cmd, i}
           <div class="command-item" style="animation-delay: {i * 100}ms">
@@ -322,7 +322,7 @@ const commands = [
   <!-- Getting Started -->
   <section class="getting-started">
     <div class="container">
-      <h2>Get started in 60 seconds</h2>
+      <h2>Get started</h2>
       <div class="steps">
         <div class="step" style="animation-delay: 0ms">
           <div class="step-number">1</div>
@@ -366,7 +366,7 @@ const commands = [
   <!-- Output Formats -->
   <section class="formats">
     <div class="container">
-      <h2>Output that fits your workflow</h2>
+      <h2>Output formats</h2>
       <div class="format-grid">
         <div class="format-card">
           <code class="format-flag">--format jsonl</code>
@@ -392,7 +392,7 @@ const commands = [
   <section class="cta">
     <div class="container">
       <h2>Ready to fly?</h2>
-      <p>Install flt and start searching flights from your terminal today.</p>
+      <p>Install flt and start searching flights from your terminal.</p>
       <pre class="cta-install"><code>bun install -g github:doublej/flt</code></pre>
     </div>
   </section>
