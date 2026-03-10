@@ -1,0 +1,18 @@
+<svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+  <title>Flights Icon</title>
+  <!--
+    Icon variant: heavier proportions for small sizes (favicon, app icon)
+    Center thickness: 225 units (22.5%)
+    Horizontal span: 600 units (more compact)
+  -->
+  <path
+    d="M 200,750
+       C 275,400 400,350 500,350
+       C 600,350 725,400 800,750
+       C 762.5,575 600,575 500,575
+       C 400,575 237.5,575 200,750
+       Z"
+    fill="#000000"
+    transform="rotate(-8, 500, 500)"
+  />
+</svg>

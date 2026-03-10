@@ -1,0 +1,21 @@
+<svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+  <title>Flights Logo</title>
+  <!--
+    Construction: crescent/wing from cubic Bézier arcs
+    Grid: S=1000, m=25, snap=12.5
+    Symmetry: bilateral (D1), rotated −8°
+    Tip angle: ~28°
+    Center thickness: 225 units (22.5%)
+    Tips taper to 0
+  -->
+  <path
+    d="M 150,750
+       C 225,450 400,375 500,375
+       C 600,375 775,450 850,750
+       C 812.5,600 600,600 500,600
+       C 400,600 187.5,600 150,750
+       Z"
+    fill="#000000"
+    transform="rotate(-8, 500, 500)"
+  />
+</svg>
