@@ -43,5 +43,5 @@ flt *args:
 
 # Sabre-style TUI
 [group('cli')]
-tui:
-    cd apps/tui && bun run src/index.ts
+tui *args:
+    cd apps/tui && bun run src/index.ts {{args}}

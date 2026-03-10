@@ -7,6 +7,8 @@ if (!process.stdin.isTTY) {
   process.exit(1)
 }
 
+const isDemo = process.argv.includes('--demo')
+
 const state = await createState()
 const term = new Terminal((cmd) => {
   handleCommand(cmd, term, state).catch((e: unknown) => {
@@ -19,3 +21,8 @@ if (active) term.setSessionName(active.name)
 
 term.start()
 await term.showSplash(true)
+
+if (isDemo) {
+  const { runDemo } = await import('./demo')
+  await runDemo(term)
+}
