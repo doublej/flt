@@ -15,3 +15,6 @@ build/
 .session-search
 local/
 packages/partner/
+docs/.claude/
+session.md
+logo/preview.html
