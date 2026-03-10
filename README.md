@@ -24,13 +24,11 @@ just tui                              # Sabre-style terminal
 | Package | Description |
 |---------|-------------|
 | [`@flights/core`](packages/core/) | Flight search engine — pure TypeScript, zero npm dependencies |
-| [`@flights/partner`](packages/partner/) | Travelpayouts partner API client |
 
 ## Structure
 
 ```
 packages/core/       @flights/core — search engine, scraper, types, booking
-packages/partner/    @flights/partner — Travelpayouts API
 apps/web/            SvelteKit UI (Cloudflare Pages)
 apps/cli/            flt CLI (citty, bun-only)
 apps/tui/            Sabre-style TUI (terminal-kit)

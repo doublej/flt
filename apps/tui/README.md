@@ -162,7 +162,7 @@ The active session name appears in the header bar. Sessions track search history
 | `CF/CURRENCY=USD` | Set a key |
 | `CF/CURRENCY=` | Unset a key |
 
-Valid keys: `CURRENCY`, `FMT`, `SEAT`, `PAX`, `LIMIT`, `MARKER`, `TRS`.
+Valid keys: `CURRENCY`, `FMT`, `SEAT`, `PAX`, `LIMIT`.
 
 ### Takeout (export)
 
@@ -171,7 +171,7 @@ TO                           Export session searches to ~/Desktop
 TO/TITLE My Tokyo Trip       Export with custom title
 ```
 
-Exports a Markdown document with all searches from the active session, including affiliate booking links (if `MARKER` and `TRS` are configured).
+Exports a Markdown document with all searches from the active session.
 
 ### Navigation and system
 

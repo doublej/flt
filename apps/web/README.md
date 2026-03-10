@@ -20,9 +20,9 @@ Or directly: `bun --filter flights-app dev`
 - **Sort** — best, price, duration, stops, departure time, date
 - **Flight cards** — airline logos, times, route path, duration, stops, price; expand for leg-by-leg detail with aircraft info, layover times, and route map
 - **Route map** — Leaflet map with great-circle arcs between waypoints (dark CartoDB tiles, amber markers)
-- **Booking links** — affiliate links (Aviasales via Travelpayouts) and Google Flights fallback per offer
+- **Booking links** — Google Flights links per offer
 - **Itinerary builder** — combine offers into multi-leg trips stored in localStorage; connection time warnings, total price and door-to-door travel time
-- **AI tools** — copy/save results as markdown, export takeout document with affiliate booking links
+- **AI tools** — copy/save results as markdown, export takeout document
 - **Recent searches** — last 5 searches stored in localStorage with one-click re-run
 - **Preferences** — passengers, cabin class, and currency persist across sessions via localStorage
 - **Price trend banner** — shows "prices are low/typical/high right now" when data is available

@@ -153,7 +153,7 @@ flt takeout --itin "Best value" REF:Fa3b7 REF:Fc1d2 --note "4h layover" --itin "
 | `--keep-session` | boolean | `false` | Keep session open after export |
 | `--itin` | repeatable | | Start an itinerary block: `--itin "Title" REF:ID [REF:ID...] [--note "..."]` |
 
-By default, takeout closes the active session. Use `--keep-session` to prevent this. The exported markdown includes all search results and any composed itineraries with affiliate booking links (if configured).
+By default, takeout closes the active session. Use `--keep-session` to prevent this. The exported markdown includes all search results and any composed itineraries.
 
 ### session
 
@@ -271,9 +271,6 @@ flt config currency --unset         # remove
 | `seat` | Default cabin class |
 | `pax` | Default passengers |
 | `limit` | Default result limit |
-| `marker` | Travelpayouts affiliate marker |
-| `trs` | Travelpayouts project/trs ID |
-| `tp_token` | Travelpayouts API token |
 
 Config values serve as defaults; CLI flags always override them.
 
@@ -372,17 +369,6 @@ Sessions group related searches under a name. They are stored in `$TMPDIR/flt/se
 ### Throttling
 
 A built-in 3-second delay is enforced between Google Flights requests. No manual sleeping needed.
-
-## Affiliate config
-
-Configure Travelpayouts affiliate credentials to include booking links in takeout exports:
-
-```bash
-flt config marker 709151
-flt config trs 505891
-```
-
-When both `marker` and `trs` are set, takeout documents include affiliate booking links (via Aviasales) per route alongside Google Flights fallback URLs.
 
 ## Error codes
 
