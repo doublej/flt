@@ -145,8 +145,9 @@ export function decodeLeg(leg: NL): FlightLeg | null {
   const airline_name = (at(leg, 22, 3) as string) ?? ''
   const flight_number = String(at(leg, 22, 1) ?? '')
   const aircraft = (at(leg, 17) as string) ?? ''
+  // leg[3]=departure code, leg[4]=departure name, leg[5]=arrival name, leg[6]=arrival code
   const departure_airport = (at(leg, 3) as string) ?? ''
-  const arrival_airport = (at(leg, 5) as string) ?? ''
+  const arrival_airport = (at(leg, 6) as string) ?? ''
   const departure_time = formatTime(leg[8])
   const arrival_time = formatTime(leg[10])
   const duration = (leg[11] as number) ?? 0
