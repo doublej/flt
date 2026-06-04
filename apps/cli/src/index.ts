@@ -6,6 +6,7 @@ import { connectionsCommand } from './commands/connections'
 import { favCommand, favsCommand, unfavCommand } from './commands/fav'
 import { inspectCommand } from './commands/inspect'
 import { itineraryCommand } from './commands/itinerary'
+import { learnCommand, learningsCommand, voteCommand } from './commands/learn'
 import { matrixCommand } from './commands/matrix'
 import { primeCommand } from './commands/prime'
 import { searchCommand } from './commands/search'
@@ -27,6 +28,9 @@ const SUB_COMMANDS = {
   fav: favCommand,
   unfav: unfavCommand,
   favs: favsCommand,
+  learn: learnCommand,
+  vote: voteCommand,
+  learnings: learningsCommand,
 }
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const FLEX_DATE = /^\d{1,2}\/\d{1,2}\/\d{4}$|^(today|tomorrow|overmorrow)$/i

@@ -1,4 +1,5 @@
 import { defineCommand } from 'citty'
+import { type Learning, learningScore, loadLearnings, topLearnings } from '../learnings'
 import { getActiveSession, loadSession } from '../state'
 import type { Session, SessionState } from '../types'
 
@@ -22,6 +23,13 @@ SESSION:
 - Sessions auto-start on first search (named after route). \`flt takeout\` auto-closes (use \`--keep-session\` to prevent).
 - Start every response with: **session: <name> (<id>)** — or **session: none**.
 </rules>
+
+<learnings-protocol>
+SHARED MEMORY — flt accumulates flight-search strategies that worked, voted on by agents:
+- Apply the top learnings (listed at the end of this guide) when planning searches.
+- After a search or workflow that went well, record the insight: \`flt learn "what worked"\` (e.g. cheaper-ticket or faster-workflow tactics). Keep it one concrete, reusable sentence.
+- Vote on learnings you actually used: \`flt vote <ID> up\` (helped) or \`flt vote <ID> down\` (didn't pan out). Top 10 by score surface here for the next agent.
+</learnings-protocol>
 
 <commands>
 SESSION:
@@ -70,6 +78,11 @@ AIRPORTS:
 
 FAVORITES (session-scoped, survive cache expiry):
   flt fav <ID>  |  flt unfav <ID>  |  flt favs [--fmt table] [--view full]
+
+LEARNINGS (shared agent memory — strategies that worked, persisted globally):
+  flt learn "Tue/Wed departures ~15% cheaper on longhaul"   Record a learning
+  flt vote <ID> up  |  flt vote <ID> down                     Vote on a learning
+  flt learnings [--limit N] [--fmt jsonl]                     List top learnings by score
 
 CONNECTIONS (local route graph, no Google):
   flt connections <FROM> <TO> [OPTIONS]
@@ -143,6 +156,7 @@ NO_RESULTS → relax filters. TOO_MANY → fewer date combos. NO_SESSION → sea
 - Multi-leg: show itineraries with total price + connection notes.
 - Offer next steps only if useful: "I can widen time window / allow 1 stop / extend dates."
 - Use \`--fmt brief\` for readable pulls, \`--fmt tsv\` for compact parsing. Default \`--limit 100\`.
+- AIRPORT LEGEND: The CLI prints an airport code legend above results (e.g. "AMS = Amsterdam, CEB = Cebu"). When presenting results to the user, always include this legend at the top of your message so the user can understand all IATA codes at a glance.
 
 Limitations (mention only when relevant): no fare rules, baggage, seat maps, booking classes, or loyalty info.
 </output>
@@ -187,10 +201,31 @@ function formatSessionInfo(state: SessionState | null): string {
   return lines.join('\n')
 }
 
+function formatLearnings(learnings: Learning[]): string {
+  const lines = ['<learnings>']
+  if (learnings.length === 0) {
+    lines.push('No learnings yet. Record strategies that work with `flt learn "..."`.')
+    lines.push('</learnings>')
+    return lines.join('\n')
+  }
+
+  const top = topLearnings(learnings, 10)
+  lines.push(`Top ${top.length} learnings (shared across agents — apply, then vote):`)
+  for (const l of top) {
+    const score = learningScore(l)
+    const sign = score > 0 ? `+${score}` : `${score}`
+    lines.push(`  [${l.id}] ${sign}  ${l.text}`)
+  }
+  lines.push('')
+  lines.push('Add yours: `flt learn "..."` · vote: `flt vote <ID> up|down`')
+  lines.push('</learnings>')
+  return lines.join('\n')
+}
+
 export const primeCommand = defineCommand({
   meta: { name: 'prime', description: 'Print agent how-to guide for flt' },
   async run() {
-    const session = await loadSession()
-    console.log(PRIMER + '\n\n' + formatSessionInfo(session))
+    const [session, learnings] = await Promise.all([loadSession(), loadLearnings()])
+    console.log(`${PRIMER}\n\n${formatSessionInfo(session)}\n\n${formatLearnings(learnings)}`)
   },
 })
