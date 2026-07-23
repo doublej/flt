@@ -25,6 +25,10 @@ just tui                              # Sabre-style terminal
 |---------|-------------|
 | [`@flights/core`](packages/core/) | Flight search engine — pure TypeScript, zero npm dependencies |
 
+## MCP server
+
+A Python FastMCP server (separate repo, unpublished) mirrors the flt CLI so agents can use it as tools: `search`, `compare`, `airports`, `connections`, `learn`, `vote`, and `learnings`. It runs on live Google Flights data and shares the learnings store at `~/.config/flt/learnings.json`, so notes written through the CLI or the MCP server show up in both.
+
 ## Structure
 
 ```
