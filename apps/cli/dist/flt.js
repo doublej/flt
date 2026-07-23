@@ -39103,10 +39103,10 @@ function at(data, ...path) {
   return cur;
 }
 function formatTime(t) {
-  if (!Array.isArray(t) || t.length < 2)
+  if (!Array.isArray(t) || t.length === 0)
     return "??:??";
-  const h = t[0];
-  const m = t[1];
+  const h = t[0] ?? 0;
+  const m = t[1] ?? 0;
   if (typeof h !== "number" || typeof m !== "number")
     return "??:??";
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
@@ -39180,12 +39180,17 @@ function decodeItinerary(el, is_best) {
     const firstLeg = legs[0];
     const lastLeg = legs[legs.length - 1];
     let departure = formatTime(depTime) !== "??:??" ? formatTime(depTime) : firstLeg?.departure_time ?? "??:??";
-    const arrival = formatTime(arrTime) !== "??:??" ? formatTime(arrTime) : lastLeg?.arrival_time ?? "??:??";
+    let arrival = formatTime(arrTime) !== "??:??" ? formatTime(arrTime) : lastLeg?.arrival_time ?? "??:??";
     if (departure === "??:??" && arrival !== "??:??" && travelTime > 0) {
       const [ah, am] = arrival.split(":").map(Number);
       const total = ah * 60 + am - travelTime;
       const norm = (total % 1440 + 1440) % 1440;
       departure = `${String(Math.floor(norm / 60)).padStart(2, "0")}:${String(norm % 60).padStart(2, "0")}`;
+    }
+    if (arrival === "??:??" && departure !== "??:??" && travelTime > 0) {
+      const [dh, dm] = departure.split(":").map(Number);
+      const norm = (dh * 60 + dm + travelTime) % 1440;
+      arrival = `${String(Math.floor(norm / 60)).padStart(2, "0")}:${String(norm % 60).padStart(2, "0")}`;
     }
     return {
       is_best,
@@ -39313,6 +39318,10 @@ function buildGoogleFlightsUrl(b64, currency) {
 // ../../packages/core/src/search.ts
 var MAX_RANGE_DAYS = 7;
 var MAX_TOTAL_SEARCHES = 21;
+var LONG_RT_STAY_DAYS = 32;
+function rtStayDays(depDate, retDate) {
+  return Math.round((new Date(retDate).getTime() - new Date(depDate).getTime()) / 86400000);
+}
 function dateRange(start, end) {
   const s = new Date(start);
   const e = new Date(end);
@@ -50066,6 +50075,8 @@ async function loadCachedSearch(q, depDate, retDate, opts = {}) {
     return null;
   if (!opts.allowStale && !isFresh(entry))
     return null;
+  if (entry.offers.length === 0)
+    return null;
   return entry;
 }
 async function saveCachedSearch(q, depDate, retDate, offers) {
@@ -57834,6 +57845,11 @@ var compareCommand = defineCommand({
       required: true
     },
     date: { type: "positional", description: "Departure date (YYYY-MM-DD)", required: true },
+    returnDate: {
+      type: "positional",
+      description: "Return date (YYYY-MM-DD) for round-trip compare",
+      required: false
+    },
     seat: { type: "string", default: "economy" },
     pax: { type: "string", default: "1ad" },
     "max-stops": { type: "string" },
@@ -57857,6 +57873,7 @@ var compareCommand = defineCommand({
       return;
     }
     const date = normalizeDate(args.date, "Departure date");
+    const returnDate = args.returnDate ? normalizeDate(args.returnDate, "Return date") : null;
     const pairs = origins.flatMap((o) => dests.map((d) => [o, d]));
     for (const [o, d] of pairs) {
       validateAirport(o, "Origin");
@@ -57874,7 +57891,8 @@ var compareCommand = defineCommand({
       excludeHub
     };
     const session = await loadSession() ?? createEmptySession();
-    const label = origins.length > 1 ? `${origins.join("/")} \u2192 ${dests[0]}` : `${origins[0]} \u2192 ${dests.join("/")}`;
+    const routeLabel = origins.length > 1 ? `${origins.join("/")} \u2192 ${dests[0]}` : `${origins[0]} \u2192 ${dests.join("/")}`;
+    const label = returnDate ? `${routeLabel} return ${returnDate}` : routeLabel;
     const { autoStarted } = ensureActiveSession(session, label);
     if (autoStarted)
       console.error(`[session] Auto-started "${label}".`);
@@ -57886,12 +57904,13 @@ var compareCommand = defineCommand({
         from_airport: from,
         to_airport: to,
         date,
+        return_date: returnDate ?? undefined,
         ...pax,
         seat: args.seat,
         max_stops: maxStops,
         currency: args.currency
       };
-      const cached = args.refresh ? null : await loadCachedSearch(query, date, null);
+      const cached = args.refresh ? null : await loadCachedSearch(query, date, returnDate);
       let offers;
       let ref = "";
       if (cached) {
@@ -57900,7 +57919,7 @@ var compareCommand = defineCommand({
         ref = cached.ref;
       } else {
         await throttle();
-        const res = await searchSingle(date, null, query);
+        const res = await searchSingle(date, returnDate, query);
         if (!res.flights.length) {
           rows.push({
             route: `${from} \u2192 ${to}`,
@@ -57912,7 +57931,7 @@ var compareCommand = defineCommand({
           });
           continue;
         }
-        const entry = await saveCachedSearch(query, date, null, res.flights.map((f) => ({ ...f, url: res.url })));
+        const entry = await saveCachedSearch(query, date, returnDate, res.flights.map((f) => ({ ...f, url: res.url })));
         rememberSearch(session, entry);
         offers = entry.offers;
         ref = entry.ref;
@@ -57951,6 +57970,10 @@ var compareCommand = defineCommand({
       console.log(`  ${formatLegend(codes)}
 `);
     printRows(rows, args.fmt);
+    if (returnDate && rtStayDays(date, returnDate) > LONG_RT_STAY_DAYS && rows.some((r) => r.cheapest === "-")) {
+      console.log(`
+  note: stays over ~${LONG_RT_STAY_DAYS} days often return no round-trip fares (Google max-stay); try two one-way compares.`);
+    }
     if (allRefs.length)
       console.log(`
   refs: ${allRefs.join(", ")}`);
@@ -58457,6 +58480,9 @@ async function fetchAndCache(dep, ret, query, session) {
   }
   await throttle();
   const result = await searchSingle(dep, ret, query);
+  if (result.error || result.flights.length === 0) {
+    return { offers: [], ref: "", err: result.error ?? "no_flights" };
+  }
   const entry = await saveCachedSearch(query, dep, ret, result.flights.map((f) => ({ ...f, url: result.url })));
   rememberSearch(session, entry);
   return { offers: entry.offers, ref: entry.ref };
@@ -58469,7 +58495,8 @@ function printOneWay(cells, fmt) {
         cheapest: c.cheapest,
         carrier: c.carrier,
         stops: c.stops,
-        duration: c.duration
+        duration: c.duration,
+        ...c.err ? { err: c.err } : {}
       }));
     return;
   }
@@ -58489,7 +58516,12 @@ function printOneWay(cells, fmt) {
 function printGrid(depDates, retDates, cells, fmt) {
   if (fmt === "jsonl") {
     for (const c of cells)
-      console.log(JSON.stringify({ dep: c.dep, ret: c.ret, cheapest: c.cheapest }));
+      console.log(JSON.stringify({
+        dep: c.dep,
+        ret: c.ret,
+        cheapest: c.cheapest,
+        ...c.err ? { err: c.err } : {}
+      }));
     return;
   }
   const grid = new Map;
@@ -58588,12 +58620,13 @@ var matrixCommand = defineCommand({
     if (!retDates) {
       const cells2 = [];
       for (const d of depDates) {
-        const { offers, ref } = await fetchAndCache(d, null, query, session);
+        const { offers, ref, err } = await fetchAndCache(d, null, query, session);
         const filtered = filterOffers(offers);
         allOffers.push(...filtered);
         if (ref)
           allRefs.push(ref);
-        cells2.push(pickCheapest(filtered, maxDur) ?? { ...EMPTY_CELL, dep: d });
+        const cell = pickCheapest(filtered, maxDur);
+        cells2.push(cell ?? { ...EMPTY_CELL, dep: d, err: err ?? "filtered" });
       }
       setLatestSearch(session, allOffers, describeSearchRequest(query), allRefs);
       await saveSession(session);
@@ -58623,12 +58656,13 @@ var matrixCommand = defineCommand({
     }
     const cells = [];
     for (const [d, r] of pairs) {
-      const { offers, ref } = await fetchAndCache(d, r, query, session);
+      const { offers, ref, err } = await fetchAndCache(d, r, query, session);
       const filtered = filterOffers(offers);
       allOffers.push(...filtered);
       if (ref)
         allRefs.push(ref);
-      cells.push(pickCheapest(filtered, maxDur) ?? { ...EMPTY_CELL, dep: d, ret: r });
+      const cell = pickCheapest(filtered, maxDur);
+      cells.push(cell ?? { ...EMPTY_CELL, dep: d, ret: r, err: err ?? "filtered" });
     }
     setLatestSearch(session, allOffers, describeSearchRequest(query), allRefs);
     await saveSession(session);
@@ -58637,6 +58671,9 @@ var matrixCommand = defineCommand({
       console.log(`  ${formatLegend(codes)}
 `);
     printGrid(depDates, retDates, cells, args.fmt);
+    if (cells.some((c) => c.err === "no_flights" && c.ret && rtStayDays(c.dep, c.ret) > LONG_RT_STAY_DAYS)) {
+      console.error(`note: stays over ~${LONG_RT_STAY_DAYS} days often return no round-trip fares (Google max-stay); try two one-way matrices.`);
+    }
   }
 });
 
@@ -58695,8 +58732,9 @@ MATRIX:
   Default output: table; \`--fmt jsonl\` for parsing.
 
 COMPARE (multi-origin or multi-destination cheapest comparison):
-  flt compare KUL,BKK,MNL AMS 2026-03-22          # cheapest from each origin
+  flt compare KUL,BKK,MNL AMS 2026-03-22           # cheapest from each origin
   flt compare CEB KUL,BKK,ICN 2026-03-19           # cheapest to each destination
+  flt compare AMS NRT,HND 2026-08-05 2026-08-26    # round-trip prices (4th arg = return date)
   Only one side can be comma-separated. Same filter options as search.
   Output: table sorted by cheapest price, showing best offer per route.
 
@@ -58708,8 +58746,9 @@ ITINERARY:
   flt itinerary <REF:ID> [REF:ID...] [--title "..."] [--note "..."]
 
 TAKEOUT:
-  flt takeout [--itin "Label" REF:ID REF:ID --note "..."] [--title "..."] [-o path]
+  flt takeout [--itin "Label" REF:ID REF:ID --note "..."] [--title "..."] [-o path] [--refs REF1,REF2]
   Default output: ~/Desktop/flights-<date>.md. Includes itineraries (if --itin) + top 10 per route.
+  Empty searches are skipped automatically; --refs limits the report to selected searches (client-ready exports).
 
 AIRPORTS:
   flt airports <QUERY>  |  flt tokyo
@@ -58785,6 +58824,7 @@ RULES:
 <errors>
 JSON format: {"err":"CODE","hint":"..."}.
 NO_RESULTS \u2192 relax filters. TOO_MANY \u2192 fewer date combos. NO_SESSION \u2192 search first. BLOCKED \u2192 stop, sleep 60, retry smaller.
+KNOWN LIMIT: round trips with stays over ~32 days often return NO_RESULTS (Google fare max-stay, route-dependent) \u2192 search each direction as a one-way instead.
 </errors>
 
 <output>
@@ -58965,6 +59005,9 @@ var searchCommand = defineCommand({
         no_data: "Page loaded but flight data was missing. Google may have changed the page structure.",
         no_flights: "No flights found for this route/date. Try different dates or fewer stops."
       };
+      if (returnDate && (err === "no_flights" || err === undefined) && rtStayDays(date, returnDate) > LONG_RT_STAY_DAYS) {
+        hints.no_flights = `Round trips with stays over ~${LONG_RT_STAY_DAYS} days often return nothing (fare max-stay limits). Search each direction as a one-way: \`flt search ${query.from_airport} ${query.to_airport} ${date}\` + \`flt search ${query.to_airport} ${query.from_airport} ${returnDate}\`.`;
+      }
       const code = err === "http" || err === "no_script" ? "BLOCKED" : (err ?? "NO_RESULTS").toUpperCase();
       console.log(formatError(code, hints[err ?? "no_flights"] ?? hints.no_flights, results[0]?.url));
       return;
@@ -61441,6 +61484,10 @@ var takeoutCommand = defineCommand({
       description: "Output file path (default: ~/Desktop/flights-<date>.<ext>)"
     },
     title: { type: "string", description: "Document title" },
+    refs: {
+      type: "string",
+      description: "Only include these search refs, comma-separated (default: all non-empty)"
+    },
     pdf: {
       type: "boolean",
       description: "Export as PDF instead of markdown",
@@ -61476,7 +61523,20 @@ var takeoutCommand = defineCommand({
       const refEntry = searchRef ? await loadSearchByRef(session, searchRef) : null;
       itineraries.push({ title: def.title, note: def.note, legs, filters: refEntry?.params });
     }
-    const searches = await loadSessionScopedSearches(session);
+    let searches = await loadSessionScopedSearches(session);
+    const skippedEmpty = searches.filter(([, entry]) => entry.offers.length === 0).length;
+    searches = searches.filter(([, entry]) => entry.offers.length > 0);
+    if (args.refs) {
+      const wanted = args.refs.split(",").map((s) => s.trim());
+      const available = new Set(searches.map(([ref]) => ref));
+      const missing = wanted.filter((r) => !available.has(r));
+      if (missing.length) {
+        console.log(formatError("NOT_FOUND", `Refs not in session: ${missing.join(", ")}. Available: ${[...available].join(", ") || "(none)"}`));
+        return;
+      }
+      const wantedSet = new Set(wanted);
+      searches = searches.filter(([ref]) => wantedSet.has(ref));
+    }
     const config = await loadConfig();
     const affiliate = config.marker && config.trs ? { marker: config.marker, trs: config.trs } : null;
     const now = new Date;
@@ -61496,7 +61556,8 @@ var takeoutCommand = defineCommand({
       ok: true,
       path: outPath,
       searches: searches.length,
-      itineraries: itineraries.length
+      itineraries: itineraries.length,
+      ...skippedEmpty > 0 ? { skippedEmpty } : {}
     }));
     const active = getActiveSession(session);
     if (active && !args["keep-session"]) {
