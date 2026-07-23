@@ -1,4 +1,12 @@
-import { type SearchQuery, type SeatType, buildDatePairs, mergeExclusions, searchSingle } from '@flights/core'
+import {
+  LONG_RT_STAY_DAYS,
+  type SearchQuery,
+  type SeatType,
+  buildDatePairs,
+  mergeExclusions,
+  rtStayDays,
+  searchSingle,
+} from '@flights/core'
 import { defineCommand } from 'citty'
 import { loadConfig, withDefaults } from '../config'
 import { applyFilters, sortOffers } from '../filter'
@@ -134,6 +142,15 @@ export const searchCommand = defineCommand({
         no_data:
           'Page loaded but flight data was missing. Google may have changed the page structure.',
         no_flights: 'No flights found for this route/date. Try different dates or fewer stops.',
+      }
+      // Long-stay round trips often return nothing (fare max-stay rules) even
+      // though both directions have flights — steer towards two one-ways.
+      if (
+        returnDate &&
+        (err === 'no_flights' || err === undefined) &&
+        rtStayDays(date, returnDate) > LONG_RT_STAY_DAYS
+      ) {
+        hints.no_flights = `Round trips with stays over ~${LONG_RT_STAY_DAYS} days often return nothing (fare max-stay limits). Search each direction as a one-way: \`flt search ${query.from_airport} ${query.to_airport} ${date}\` + \`flt search ${query.to_airport} ${query.from_airport} ${returnDate}\`.`
       }
       const code =
         err === 'http' || err === 'no_script' ? 'BLOCKED' : (err ?? 'NO_RESULTS').toUpperCase()

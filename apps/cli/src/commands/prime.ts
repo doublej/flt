@@ -147,6 +147,7 @@ RULES:
 <errors>
 JSON format: {"err":"CODE","hint":"..."}.
 NO_RESULTS → relax filters. TOO_MANY → fewer date combos. NO_SESSION → search first. BLOCKED → stop, sleep 60, retry smaller.
+KNOWN LIMIT: round trips with stays over ~32 days often return NO_RESULTS (Google fare max-stay, route-dependent) → search each direction as a one-way instead.
 </errors>
 
 <output>

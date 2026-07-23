@@ -15,7 +15,9 @@ export {
   type TripType,
   buildDatePairs,
   parseSearchQuery,
+  rtStayDays,
   searchSingle,
+  LONG_RT_STAY_DAYS,
   MAX_RANGE_DAYS,
   MAX_TOTAL_SEARCHES,
 } from './search'

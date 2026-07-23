@@ -10,6 +10,18 @@ import { type ScrapeError, buildGoogleFlightsUrl, fetchFlights } from './scrape'
 export const MAX_RANGE_DAYS = 7
 export const MAX_TOTAL_SEARCHES = 21
 
+/**
+ * Round trips with stays longer than this often return zero itineraries from
+ * Google's js data source (fare max-stay rules; route-dependent — e.g.
+ * AMS-HND cuts off above 32 days while AMS-JFK still returns results at 40).
+ */
+export const LONG_RT_STAY_DAYS = 32
+
+/** Days between outbound and return date. */
+export function rtStayDays(depDate: string, retDate: string): number {
+  return Math.round((new Date(retDate).getTime() - new Date(depDate).getTime()) / 86400000)
+}
+
 export type SeatType = 'economy' | 'premium-economy' | 'business' | 'first'
 export type TripType = 'round-trip' | 'one-way'
 
