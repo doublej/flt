@@ -1,0 +1,24 @@
+{
+  "name": "@flights/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "flt-mcp": "./bin/flt-mcp"
+  },
+  "dependencies": {
+    "@flights/cli": "workspace:*",
+    "@flights/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "smoke": "bun run scripts/smoke.ts",
+    "test": "vitest run"
+  }
+}
