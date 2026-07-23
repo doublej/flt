@@ -1,4 +1,12 @@
-import { type SearchQuery, type SeatType, mergeExclusions, parseFlexDate, searchSingle } from '@flights/core'
+import {
+  LONG_RT_STAY_DAYS,
+  type SearchQuery,
+  type SeatType,
+  mergeExclusions,
+  parseFlexDate,
+  rtStayDays,
+  searchSingle,
+} from '@flights/core'
 import { type CellResult, dateRange, pickCheapest } from '@flights/core'
 import { defineCommand } from 'citty'
 import { applyFilters, parsePrice } from '../filter'
@@ -25,7 +33,7 @@ async function fetchAndCache(
   ret: string | null,
   query: SearchQuery,
   session: SessionState,
-): Promise<{ offers: Offer[]; ref: string }> {
+): Promise<{ offers: Offer[]; ref: string; err?: string }> {
   const cached = await loadCachedSearch(query, dep, ret)
   if (cached) {
     rememberSearch(session, cached)
@@ -34,6 +42,10 @@ async function fetchAndCache(
 
   await throttle()
   const result = await searchSingle(dep, ret, query)
+  if (result.error || result.flights.length === 0) {
+    // Transient failure (blocked, empty page) — don't cache it for 6h.
+    return { offers: [], ref: '', err: result.error ?? 'no_flights' }
+  }
   const entry = await saveCachedSearch(
     query,
     dep,
@@ -54,6 +66,7 @@ function printOneWay(cells: CellResult[], fmt: string): void {
           carrier: c.carrier,
           stops: c.stops,
           duration: c.duration,
+          ...(c.err ? { err: c.err } : {}),
         }),
       )
     return
@@ -74,7 +87,14 @@ function printOneWay(cells: CellResult[], fmt: string): void {
 function printGrid(depDates: string[], retDates: string[], cells: CellResult[], fmt: string): void {
   if (fmt === 'jsonl') {
     for (const c of cells)
-      console.log(JSON.stringify({ dep: c.dep, ret: c.ret, cheapest: c.cheapest }))
+      console.log(
+        JSON.stringify({
+          dep: c.dep,
+          ret: c.ret,
+          cheapest: c.cheapest,
+          ...(c.err ? { err: c.err } : {}),
+        }),
+      )
     return
   }
   const grid = new Map<string, string>()
@@ -193,11 +213,12 @@ export const matrixCommand = defineCommand({
     if (!retDates) {
       const cells: CellResult[] = []
       for (const d of depDates) {
-        const { offers, ref } = await fetchAndCache(d, null, query, session)
+        const { offers, ref, err } = await fetchAndCache(d, null, query, session)
         const filtered = filterOffers(offers)
         allOffers.push(...filtered)
         if (ref) allRefs.push(ref)
-        cells.push(pickCheapest(filtered, maxDur) ?? { ...EMPTY_CELL, dep: d })
+        const cell = pickCheapest(filtered, maxDur)
+        cells.push(cell ?? { ...EMPTY_CELL, dep: d, err: err ?? 'filtered' })
       }
       setLatestSearch(session, allOffers, describeSearchRequest(query), allRefs)
       await saveSession(session)
@@ -226,16 +247,26 @@ export const matrixCommand = defineCommand({
 
     const cells: CellResult[] = []
     for (const [d, r] of pairs) {
-      const { offers, ref } = await fetchAndCache(d, r, query, session)
+      const { offers, ref, err } = await fetchAndCache(d, r, query, session)
       const filtered = filterOffers(offers)
       allOffers.push(...filtered)
       if (ref) allRefs.push(ref)
-      cells.push(pickCheapest(filtered, maxDur) ?? { ...EMPTY_CELL, dep: d, ret: r })
+      const cell = pickCheapest(filtered, maxDur)
+      cells.push(cell ?? { ...EMPTY_CELL, dep: d, ret: r, err: err ?? 'filtered' })
     }
     setLatestSearch(session, allOffers, describeSearchRequest(query), allRefs)
     await saveSession(session)
     const codes = collectCodes(route)
     if (codes.length) console.log(`  ${formatLegend(codes)}\n`)
     printGrid(depDates, retDates, cells, args.fmt)
+    if (
+      cells.some(
+        (c) => c.err === 'no_flights' && c.ret && rtStayDays(c.dep, c.ret) > LONG_RT_STAY_DAYS,
+      )
+    ) {
+      console.error(
+        `note: stays over ~${LONG_RT_STAY_DAYS} days often return no round-trip fares (Google max-stay); try two one-way matrices.`,
+      )
+    }
   },
 })

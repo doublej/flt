@@ -8,6 +8,8 @@ export interface CellResult {
   carrier: string
   stops: number
   duration: string
+  /** Why the cell is empty: http | no_script | no_data | no_flights | filtered */
+  err?: string
 }
 
 export function dateRange(start: string, end: string): string[] {

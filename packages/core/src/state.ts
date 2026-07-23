@@ -295,6 +295,8 @@ export async function loadCachedSearch(
   if (entry.cacheKey !== cacheKey) return null
   if (JSON.stringify(entry.params) !== JSON.stringify(params)) return null
   if (!opts.allowStale && !isFresh(entry)) return null
+  // Empty result sets are transient failures, never intentionally cached — treat legacy ones as a miss.
+  if (entry.offers.length === 0) return null
   return entry
 }
 
