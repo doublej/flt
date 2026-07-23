@@ -57,8 +57,9 @@ MATRIX:
   Default output: table; \`--fmt jsonl\` for parsing.
 
 COMPARE (multi-origin or multi-destination cheapest comparison):
-  flt compare KUL,BKK,MNL AMS 2026-03-22          # cheapest from each origin
+  flt compare KUL,BKK,MNL AMS 2026-03-22           # cheapest from each origin
   flt compare CEB KUL,BKK,ICN 2026-03-19           # cheapest to each destination
+  flt compare AMS NRT,HND 2026-08-05 2026-08-26    # round-trip prices (4th arg = return date)
   Only one side can be comma-separated. Same filter options as search.
   Output: table sorted by cheapest price, showing best offer per route.
 

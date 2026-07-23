@@ -1,4 +1,11 @@
-import { type SearchQuery, type SeatType, mergeExclusions, searchSingle } from '@flights/core'
+import {
+  LONG_RT_STAY_DAYS,
+  type SearchQuery,
+  type SeatType,
+  mergeExclusions,
+  rtStayDays,
+  searchSingle,
+} from '@flights/core'
 import { defineCommand } from 'citty'
 import { loadConfig, withDefaults } from '../config'
 import { applyFilters, parsePrice, sortOffers } from '../filter'
@@ -76,6 +83,11 @@ export const compareCommand = defineCommand({
       required: true,
     },
     date: { type: 'positional', description: 'Departure date (YYYY-MM-DD)', required: true },
+    returnDate: {
+      type: 'positional',
+      description: 'Return date (YYYY-MM-DD) for round-trip compare',
+      required: false,
+    },
     seat: { type: 'string', default: 'economy' },
     pax: { type: 'string', default: '1ad' },
     'max-stops': { type: 'string' },
@@ -106,6 +118,8 @@ export const compareCommand = defineCommand({
     }
 
     const date = normalizeDate(args.date, 'Departure date')
+    // Rejects junk positionals with BAD_DATE instead of silently comparing one-way.
+    const returnDate = args.returnDate ? normalizeDate(args.returnDate, 'Return date') : null
     const pairs = origins.flatMap((o: string) => dests.map((d: string) => [o, d] as const))
     for (const [o, d] of pairs) {
       validateAirport(o, 'Origin')
@@ -125,10 +139,11 @@ export const compareCommand = defineCommand({
     }
 
     const session = (await loadSession()) ?? createEmptySession()
-    const label =
+    const routeLabel =
       origins.length > 1
         ? `${origins.join('/')} → ${dests[0]}`
         : `${origins[0]} → ${dests.join('/')}`
+    const label = returnDate ? `${routeLabel} return ${returnDate}` : routeLabel
     const { autoStarted } = ensureActiveSession(session, label)
     if (autoStarted) console.error(`[session] Auto-started "${label}".`)
 
@@ -141,13 +156,14 @@ export const compareCommand = defineCommand({
         from_airport: from,
         to_airport: to,
         date,
+        return_date: returnDate ?? undefined,
         ...pax,
         seat: args.seat as SeatType,
         max_stops: maxStops,
         currency: args.currency,
       }
 
-      const cached = args.refresh ? null : await loadCachedSearch(query, date, null)
+      const cached = args.refresh ? null : await loadCachedSearch(query, date, returnDate)
       let offers: Offer[]
       let ref = ''
 
@@ -157,7 +173,7 @@ export const compareCommand = defineCommand({
         ref = cached.ref
       } else {
         await throttle()
-        const res = await searchSingle(date, null, query)
+        const res = await searchSingle(date, returnDate, query)
         if (!res.flights.length) {
           rows.push({
             route: `${from} → ${to}`,
@@ -172,7 +188,7 @@ export const compareCommand = defineCommand({
         const entry = await saveCachedSearch(
           query,
           date,
-          null,
+          returnDate,
           res.flights.map((f) => ({ ...f, url: res.url })),
         )
         rememberSearch(session, entry)
@@ -214,6 +230,15 @@ export const compareCommand = defineCommand({
     const codes = collectCodes(routeText)
     if (codes.length) console.log(`  ${formatLegend(codes)}\n`)
     printRows(rows, args.fmt)
+    if (
+      returnDate &&
+      rtStayDays(date, returnDate) > LONG_RT_STAY_DAYS &&
+      rows.some((r) => r.cheapest === '-')
+    ) {
+      console.log(
+        `\n  note: stays over ~${LONG_RT_STAY_DAYS} days often return no round-trip fares (Google max-stay); try two one-way compares.`,
+      )
+    }
     if (allRefs.length) console.log(`\n  refs: ${allRefs.join(', ')}`)
   },
 })
