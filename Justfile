@@ -35,6 +35,7 @@ lint-fix:
 test:
     cd apps/web && bun run test
     cd apps/cli && bun run test
+    cd apps/mcp && bun run test
 
 # Flight search CLI
 [group('cli')]
@@ -45,3 +46,8 @@ flt *args:
 [group('cli')]
 tui *args:
     cd apps/tui && bun run src/index.ts {{args}}
+
+# flt MCP server (stdio)
+[group('cli')]
+mcp:
+    cd apps/mcp && bun run src/index.ts
