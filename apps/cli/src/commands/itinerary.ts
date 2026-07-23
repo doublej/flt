@@ -7,6 +7,7 @@ import {
   totalTravelTime,
 } from '@flights/core'
 import { formatError } from '../format'
+import { printWithLegend } from '../legend'
 import { listAvailableRefs, loadSession, resolveOffer } from '../state'
 import type { Offer } from '../types'
 
@@ -118,7 +119,7 @@ export const itineraryCommand = defineCommand({
       offers.push(offer)
     }
 
-    console.log(renderTable(offers, args.title, args.note))
+    printWithLegend(renderTable(offers, args.title, args.note))
 
     const warnings = checkConnections(offers)
     if (warnings.length) console.log(`\n${warnings.join('\n')}`)

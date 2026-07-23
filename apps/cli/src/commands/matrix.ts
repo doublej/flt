@@ -4,6 +4,7 @@ import { defineCommand } from 'citty'
 import { applyFilters, parsePrice } from '../filter'
 import { loadConfig, withDefaults } from '../config'
 import { formatError } from '../format'
+import { collectCodes, formatLegend } from '../legend'
 import {
   createEmptySession,
   describeSearchRequest,
@@ -204,6 +205,8 @@ export const matrixCommand = defineCommand({
       if (sortKey === 'price') cells.sort((a, b) => parsePrice(a.cheapest) - parsePrice(b.cheapest))
       const limit = Number.parseInt(args.limit)
       if (limit > 0 && cells.length > limit) cells.splice(limit)
+      const codes = collectCodes(route)
+      if (codes.length) console.log(`  ${formatLegend(codes)}\n`)
       printOneWay(cells, args.fmt)
       return
     }
@@ -231,6 +234,8 @@ export const matrixCommand = defineCommand({
     }
     setLatestSearch(session, allOffers, describeSearchRequest(query), allRefs)
     await saveSession(session)
+    const codes = collectCodes(route)
+    if (codes.length) console.log(`  ${formatLegend(codes)}\n`)
     printGrid(depDates, retDates, cells, args.fmt)
   },
 })

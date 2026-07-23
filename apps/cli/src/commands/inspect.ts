@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty'
 import { formatError } from '../format'
+import { printWithLegend } from '../legend'
 import { loadSession, resolveOffer } from '../state'
 
 export const inspectCommand = defineCommand({
@@ -73,7 +74,7 @@ export const inspectCommand = defineCommand({
         }
       }
       const maxKey = Math.max(...entries.map(([k]) => k.length))
-      console.log(entries.map(([k, v]) => `${k.padEnd(maxKey)}  ${v}`).join('\n'))
+      printWithLegend(entries.map(([k, v]) => `${k.padEnd(maxKey)}  ${v}`).join('\n'))
     } else {
       console.log(JSON.stringify(offer, null, 2))
     }

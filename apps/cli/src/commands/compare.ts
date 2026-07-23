@@ -3,6 +3,7 @@ import { defineCommand } from 'citty'
 import { loadConfig, withDefaults } from '../config'
 import { applyFilters, parsePrice, sortOffers } from '../filter'
 import { formatError } from '../format'
+import { collectCodes, formatLegend } from '../legend'
 import {
   createEmptySession,
   ensureActiveSession,
@@ -209,6 +210,9 @@ export const compareCommand = defineCommand({
     await saveSession(session)
 
     rows.sort((a, b) => parsePrice(a.cheapest) - parsePrice(b.cheapest))
+    const routeText = rows.map((r) => r.route).join(' ')
+    const codes = collectCodes(routeText)
+    if (codes.length) console.log(`  ${formatLegend(codes)}\n`)
     printRows(rows, args.fmt)
     if (allRefs.length) console.log(`\n  refs: ${allRefs.join(', ')}`)
   },

@@ -3,6 +3,7 @@ import { defineCommand } from 'citty'
 import { loadConfig, withDefaults } from '../config'
 import { applyFilters, sortOffers } from '../filter'
 import { formatError, formatOffers } from '../format'
+import { printWithLegend } from '../legend'
 import {
   createEmptySession,
   describeSearchRequest,
@@ -188,7 +189,7 @@ export const searchCommand = defineCommand({
     )
     await saveSession(session)
 
-    console.log(
+    printWithLegend(
       formatOffers(offers, args.fmt as Format, args.fields, args.view as View | undefined),
     )
 

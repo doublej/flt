@@ -17055,7 +17055,7 @@ var require_make_built_in = __commonJS((exports, module) => {
   var defineProperty = Object.defineProperty;
   var stringSlice = uncurryThis("".slice);
   var replace = uncurryThis("".replace);
-  var join3 = uncurryThis([].join);
+  var join4 = uncurryThis([].join);
   var CONFIGURABLE_LENGTH = DESCRIPTORS && !fails(function() {
     return defineProperty(function() {}, "length", { value: 8 }).length !== 8;
   });
@@ -17086,7 +17086,7 @@ var require_make_built_in = __commonJS((exports, module) => {
     } catch (error) {}
     var state = enforceInternalState(value);
     if (!hasOwn(state, "source")) {
-      state.source = join3(TEMPLATE, typeof name == "string" ? name : "");
+      state.source = join4(TEMPLATE, typeof name == "string" ? name : "");
     }
     return value;
   };
@@ -20052,7 +20052,7 @@ var require_es_array_join = __commonJS(() => {
   var ES3_STRINGS = IndexedObject !== Object;
   var FORCED = ES3_STRINGS || !arrayMethodIsStrict("join", ",");
   $({ target: "Array", proto: true, forced: FORCED }, {
-    join: function join3(separator) {
+    join: function join4(separator) {
       return nativeJoin(toIndexedObject(this), separator === undefined ? "," : separator);
     }
   });
@@ -39132,7 +39132,7 @@ function decodeLeg(leg) {
   const flight_number = String(at(leg, 22, 1) ?? "");
   const aircraft = at(leg, 17) ?? "";
   const departure_airport = at(leg, 3) ?? "";
-  const arrival_airport = at(leg, 5) ?? "";
+  const arrival_airport = at(leg, 6) ?? "";
   const departure_time = formatTime(leg[8]);
   const arrival_time = formatTime(leg[10]);
   const duration = leg[11] ?? 0;
@@ -57726,6 +57726,29 @@ function formatError(err, hint, url) {
     obj.url = url;
   return JSON.stringify(obj);
 }
+
+// src/legend.ts
+var IATA_RE = /\b([A-Z]{3})\b/g;
+function collectCodes(text) {
+  const codes = new Set;
+  for (const [, code] of text.matchAll(IATA_RE)) {
+    if (airportCity(code))
+      codes.add(code);
+  }
+  return [...codes].sort();
+}
+function formatLegend(codes) {
+  if (!codes.length)
+    return "";
+  return codes.map((c) => `${c} = ${airportCity(c)}`).join(", ");
+}
+function printWithLegend(output) {
+  const codes = collectCodes(output);
+  if (codes.length)
+    console.log(`  ${formatLegend(codes)}
+`);
+  console.log(output);
+}
 // src/validate.ts
 function normalizeDate(d, label) {
   const iso = parseFlexDate(d);
@@ -57922,6 +57945,11 @@ var compareCommand = defineCommand({
     setLatestSearch(session, allOffers, label, allRefs);
     await saveSession(session);
     rows.sort((a, b) => parsePrice(a.cheapest) - parsePrice(b.cheapest));
+    const routeText = rows.map((r) => r.route).join(" ");
+    const codes = collectCodes(routeText);
+    if (codes.length)
+      console.log(`  ${formatLegend(codes)}
+`);
     printRows(rows, args.fmt);
     if (allRefs.length)
       console.log(`
@@ -58171,7 +58199,7 @@ var inspectCommand = defineCommand({
         }
       }
       const maxKey = Math.max(...entries.map(([k]) => k.length));
-      console.log(entries.map(([k, v]) => `${k.padEnd(maxKey)}  ${v}`).join(`
+      printWithLegend(entries.map(([k, v]) => `${k.padEnd(maxKey)}  ${v}`).join(`
 `));
     } else {
       console.log(JSON.stringify(offer, null, 2));
@@ -58268,12 +58296,155 @@ var itineraryCommand = defineCommand({
       }
       offers.push(offer);
     }
-    console.log(renderTable(offers, args.title, args.note));
+    printWithLegend(renderTable(offers, args.title, args.note));
     const warnings = checkConnections(offers);
     if (warnings.length)
       console.log(`
 ${warnings.join(`
 `)}`);
+  }
+});
+
+// src/learnings.ts
+import { createHash as createHash2 } from "crypto";
+import { mkdir as mkdir3, readFile as readFile3, writeFile as writeFile3 } from "fs/promises";
+import { homedir as homedir2 } from "os";
+import { join as join3 } from "path";
+var DIR = join3(homedir2(), ".config", "flt");
+var FILE = join3(DIR, "learnings.json");
+function learningScore(l) {
+  return l.up - l.down;
+}
+function makeId(text) {
+  const norm = text.trim().toLowerCase().replace(/\s+/g, " ");
+  return `L${createHash2("sha1").update(norm).digest("hex").slice(0, 6)}`;
+}
+function topLearnings(list, limit) {
+  return [...list].sort((a, b) => learningScore(b) - learningScore(a) || b.up - a.up || b.created.localeCompare(a.created)).slice(0, Math.max(0, limit));
+}
+async function loadLearnings() {
+  try {
+    const parsed = JSON.parse(await readFile3(FILE, "utf-8"));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+async function saveLearnings(list) {
+  await mkdir3(DIR, { recursive: true });
+  await writeFile3(FILE, `${JSON.stringify(list, null, 2)}
+`);
+}
+async function addLearning(text) {
+  const clean = text.trim();
+  const id = makeId(clean);
+  const list = await loadLearnings();
+  const existing = list.find((l) => l.id === id);
+  if (existing)
+    return { learning: existing, created: false };
+  const learning = { id, text: clean, up: 0, down: 0, created: new Date().toISOString() };
+  list.push(learning);
+  await saveLearnings(list);
+  return { learning, created: true };
+}
+async function voteLearning(id, dir) {
+  const list = await loadLearnings();
+  const learning = list.find((l) => l.id === id);
+  if (!learning)
+    return null;
+  if (dir === "up")
+    learning.up++;
+  else
+    learning.down++;
+  await saveLearnings(list);
+  return learning;
+}
+
+// src/commands/learn.ts
+function fmtScore(l) {
+  const s = learningScore(l);
+  return s > 0 ? `+${s}` : `${s}`;
+}
+var learnCommand = defineCommand({
+  meta: { name: "learn", description: "Record a flight-search learning for future agents" },
+  args: {
+    text: {
+      type: "positional",
+      description: 'The learning, e.g. "Tue/Wed departures ~15% cheaper on longhaul"',
+      required: false
+    }
+  },
+  async run({ args }) {
+    const parts = Array.isArray(args._) ? args._ : [];
+    const text = (parts.length ? parts.join(" ") : String(args.text ?? "")).trim();
+    if (!text) {
+      console.log(JSON.stringify({ err: "EMPTY", hint: 'flt learn "the strategy that worked"' }));
+      return;
+    }
+    const { learning, created } = await addLearning(text);
+    console.log(JSON.stringify({
+      ok: true,
+      id: learning.id,
+      created,
+      score: learningScore(learning),
+      text: learning.text
+    }));
+  }
+});
+var voteCommand = defineCommand({
+  meta: { name: "vote", description: "Vote up or down on a learning (see `flt learnings`)" },
+  args: {
+    id: { type: "positional", description: "Learning ID (e.g. La1b2c3)", required: true },
+    dir: { type: "positional", description: "up or down", required: true }
+  },
+  async run({ args }) {
+    const dir = String(args.dir).toLowerCase();
+    if (dir !== "up" && dir !== "down") {
+      console.log(JSON.stringify({ err: "BAD_DIR", hint: "Use `up` or `down`." }));
+      return;
+    }
+    const learning = await voteLearning(args.id, dir);
+    if (!learning) {
+      console.log(JSON.stringify({ err: "NOT_FOUND", hint: `No learning '${args.id}'. Run \`flt learnings\`.` }));
+      return;
+    }
+    console.log(JSON.stringify({
+      ok: true,
+      id: learning.id,
+      score: learningScore(learning),
+      up: learning.up,
+      down: learning.down
+    }));
+  }
+});
+var learningsCommand = defineCommand({
+  meta: { name: "learnings", description: "List top flight-search learnings by vote score" },
+  args: {
+    limit: { type: "string", description: "Max learnings to show (default 10)", default: "10" },
+    fmt: { type: "string", description: "Output format: table|jsonl", default: "table" }
+  },
+  async run({ args }) {
+    const all = await loadLearnings();
+    if (!all.length) {
+      console.log('No learnings yet. Add one with `flt learn "..."`.');
+      return;
+    }
+    const limit = Number.parseInt(args.limit, 10) || 10;
+    const top = topLearnings(all, limit);
+    if (args.fmt === "jsonl") {
+      for (const l of top) {
+        console.log(JSON.stringify({ id: l.id, score: learningScore(l), up: l.up, down: l.down, text: l.text }));
+      }
+      return;
+    }
+    const idW = Math.max(2, ...top.map((l) => l.id.length));
+    const scW = Math.max(5, ...top.map((l) => fmtScore(l).length));
+    const lines = top.map((l, i) => `  ${String(i + 1).padStart(2)}  ${l.id.padEnd(idW)}  ${fmtScore(l).padStart(scW)}  ${l.text}`);
+    console.log(`  ${"#".padStart(2)}  ${"ID".padEnd(idW)}  ${"SCORE".padStart(scW)}  LEARNING`);
+    console.log(lines.join(`
+`));
+    console.error(`
+  ${all.length} learning${all.length !== 1 ? "s" : ""} total`);
   }
 });
 
@@ -58432,6 +58603,10 @@ var matrixCommand = defineCommand({
       const limit = Number.parseInt(args.limit);
       if (limit > 0 && cells2.length > limit)
         cells2.splice(limit);
+      const codes2 = collectCodes(route);
+      if (codes2.length)
+        console.log(`  ${formatLegend(codes2)}
+`);
       printOneWay(cells2, args.fmt);
       return;
     }
@@ -58457,6 +58632,10 @@ var matrixCommand = defineCommand({
     }
     setLatestSearch(session, allOffers, describeSearchRequest(query), allRefs);
     await saveSession(session);
+    const codes = collectCodes(route);
+    if (codes.length)
+      console.log(`  ${formatLegend(codes)}
+`);
     printGrid(depDates, retDates, cells, args.fmt);
   }
 });
@@ -58482,6 +58661,13 @@ SESSION:
 - Sessions auto-start on first search (named after route). \`flt takeout\` auto-closes (use \`--keep-session\` to prevent).
 - Start every response with: **session: <name> (<id>)** \u2014 or **session: none**.
 </rules>
+
+<learnings-protocol>
+SHARED MEMORY \u2014 flt accumulates flight-search strategies that worked, voted on by agents:
+- Apply the top learnings (listed at the end of this guide) when planning searches.
+- After a search or workflow that went well, record the insight: \`flt learn "what worked"\` (e.g. cheaper-ticket or faster-workflow tactics). Keep it one concrete, reusable sentence.
+- Vote on learnings you actually used: \`flt vote <ID> up\` (helped) or \`flt vote <ID> down\` (didn't pan out). Top 10 by score surface here for the next agent.
+</learnings-protocol>
 
 <commands>
 SESSION:
@@ -58530,6 +58716,11 @@ AIRPORTS:
 
 FAVORITES (session-scoped, survive cache expiry):
   flt fav <ID>  |  flt unfav <ID>  |  flt favs [--fmt table] [--view full]
+
+LEARNINGS (shared agent memory \u2014 strategies that worked, persisted globally):
+  flt learn "Tue/Wed departures ~15% cheaper on longhaul"   Record a learning
+  flt vote <ID> up  |  flt vote <ID> down                     Vote on a learning
+  flt learnings [--limit N] [--fmt jsonl]                     List top learnings by score
 
 CONNECTIONS (local route graph, no Google):
   flt connections <FROM> <TO> [OPTIONS]
@@ -58603,6 +58794,7 @@ NO_RESULTS \u2192 relax filters. TOO_MANY \u2192 fewer date combos. NO_SESSION \
 - Multi-leg: show itineraries with total price + connection notes.
 - Offer next steps only if useful: "I can widen time window / allow 1 stop / extend dates."
 - Use \`--fmt brief\` for readable pulls, \`--fmt tsv\` for compact parsing. Default \`--limit 100\`.
+- AIRPORT LEGEND: The CLI prints an airport code legend above results (e.g. "AMS = Amsterdam, CEB = Cebu"). When presenting results to the user, always include this legend at the top of your message so the user can understand all IATA codes at a glance.
 
 Limitations (mention only when relevant): no fare rules, baggage, seat maps, booking classes, or loyalty info.
 </output>
@@ -58643,13 +58835,36 @@ function formatSessionInfo(state) {
   return lines.join(`
 `);
 }
+function formatLearnings(learnings) {
+  const lines = ["<learnings>"];
+  if (learnings.length === 0) {
+    lines.push('No learnings yet. Record strategies that work with `flt learn "..."`.');
+    lines.push("</learnings>");
+    return lines.join(`
+`);
+  }
+  const top = topLearnings(learnings, 10);
+  lines.push(`Top ${top.length} learnings (shared across agents \u2014 apply, then vote):`);
+  for (const l of top) {
+    const score2 = learningScore(l);
+    const sign = score2 > 0 ? `+${score2}` : `${score2}`;
+    lines.push(`  [${l.id}] ${sign}  ${l.text}`);
+  }
+  lines.push("");
+  lines.push('Add yours: `flt learn "..."` \xB7 vote: `flt vote <ID> up|down`');
+  lines.push("</learnings>");
+  return lines.join(`
+`);
+}
 var primeCommand = defineCommand({
   meta: { name: "prime", description: "Print agent how-to guide for flt" },
   async run() {
-    const session = await loadSession();
-    console.log(PRIMER + `
+    const [session, learnings] = await Promise.all([loadSession(), loadLearnings()]);
+    console.log(`${PRIMER}
 
-` + formatSessionInfo(session));
+${formatSessionInfo(session)}
+
+${formatLearnings(learnings)}`);
   }
 });
 
@@ -58780,7 +58995,7 @@ var searchCommand = defineCommand({
     const truncated = totalAfterFilter > limit;
     setLatestSearch(session, offers, describeSearchRequest(query), results.flatMap((result) => result.ref ? [result.ref] : []));
     await saveSession(session);
-    console.log(formatOffers(offers, args.fmt, args.fields, args.view));
+    printWithLegend(formatOffers(offers, args.fmt, args.fields, args.view));
     const refs = results.flatMap((result) => result.ref ? [result.ref] : []);
     const refLabel = refs.length === 1 ? refs[0] : `${refs.length} refs`;
     const notes = [];
@@ -58936,8 +59151,8 @@ var sessionCommand = defineCommand({
 });
 
 // src/commands/takeout.ts
-import { writeFile as writeFile3 } from "fs/promises";
-import { join as join3 } from "path";
+import { writeFile as writeFile4 } from "fs/promises";
+import { join as join4 } from "path";
 
 // src/pdf.ts
 var import_jspdf = __toESM(require_jspdf_node_min(), 1);
@@ -61268,14 +61483,14 @@ var takeoutCommand = defineCommand({
     const date = now.toISOString().slice(0, 10);
     const time = now.toTimeString().slice(0, 5).replace(":", "");
     const ext = args.pdf ? "pdf" : "md";
-    const defaultPath = join3(process.env.HOME ?? ".", "Desktop", `flights-${date}-${time}.${ext}`);
+    const defaultPath = join4(process.env.HOME ?? ".", "Desktop", `flights-${date}-${time}.${ext}`);
     const outPath = args.output ?? defaultPath;
     if (args.pdf) {
       const buf = await generatePdf({ searches, itineraries, affiliate, title: args.title });
-      await writeFile3(outPath, buf);
+      await writeFile4(outPath, buf);
     } else {
       const md = buildMarkdown(searches, itineraries, { affiliate, title: args.title });
-      await writeFile3(outPath, md, "utf-8");
+      await writeFile4(outPath, md, "utf-8");
     }
     console.log(JSON.stringify({
       ok: true,
@@ -61307,7 +61522,10 @@ var SUB_COMMANDS = {
   connections: connectionsCommand,
   fav: favCommand,
   unfav: unfavCommand,
-  favs: favsCommand
+  favs: favsCommand,
+  learn: learnCommand,
+  vote: voteCommand,
+  learnings: learningsCommand
 };
 var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 var FLEX_DATE = /^\d{1,2}\/\d{1,2}\/\d{4}$|^(today|tomorrow|overmorrow)$/i;
