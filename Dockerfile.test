@@ -1,0 +1,2 @@
+FROM oven/bun:latest
+RUN bunx --force github:doublej/flt prime
