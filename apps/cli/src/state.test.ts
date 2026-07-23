@@ -136,7 +136,7 @@ describe('cli cache state', () => {
     })
   })
 
-  it('migrates legacy sessions and still resolves old refs', async () => {
+  it('migrates legacy sessions and re-keys offers to stable F-hash ids', async () => {
     const tmpRoot = await createTempRoot()
     const sessionDir = join(tmpRoot, 'flt')
     await mkdir(sessionDir, { recursive: true })
@@ -166,12 +166,16 @@ describe('cli cache state', () => {
     expect(session?.latest?.query).toBe('MNL AMS 2026-03-16')
     expect(session?.searches['MNL-AMS@0316']?.offerCount).toBe(1)
     if (!session) throw new Error('Expected migrated session')
-    await expect(state.resolveOffer(session, 'MNL-AMS@0316:O1')).resolves.toMatchObject({
-      id: 'O1',
+    // Legacy O-prefix ids are replaced by stable F-hash ids on load
+    const entry = await state.loadSearchByRef(session, 'MNL-AMS@0316')
+    const newId = entry?.offers[0]?.id
+    expect(newId).toMatch(/^F[0-9a-f]{4,}$/)
+    await expect(state.resolveOffer(session, `MNL-AMS@0316:${newId}`)).resolves.toMatchObject({
+      id: newId,
     })
   })
 
-  it('only resolves plain offer ids from the latest search snapshot', async () => {
+  it('resolves plain offer ids across session searches after latest is cleared', async () => {
     const tmpRoot = await createTempRoot()
     const state = await loadState(tmpRoot)
     const session = state.createEmptySession()
@@ -182,8 +186,8 @@ describe('cli cache state', () => {
     state.rememberSearch(session, entry)
     state.clearLatestSearch(session)
 
-    // Plain ID only resolves from latest (which was cleared)
-    await expect(state.resolveOffer(session, offerId)).resolves.toBeNull()
+    // Plain IDs fall back from latest to all cached session searches
+    await expect(state.resolveOffer(session, offerId)).resolves.toMatchObject({ id: offerId })
     // REF:ID resolves from cached searches
     await expect(state.resolveOffer(session, `${entry.ref}:${offerId}`)).resolves.toMatchObject({
       id: offerId,
