@@ -37,6 +37,34 @@ describe('decodeLeg', () => {
     expect(decodeLeg('bad')).toBeNull()
   })
 
+  it('decodes sparse time arrays with elided zero components', () => {
+    // Google omits zero values protobuf-style: [7] = 07:00, [null, 5] = 00:05, [22] = 22:00
+    const leg = new Array(23).fill(null)
+    leg[3] = 'DOH'
+    leg[6] = 'HND'
+    leg[8] = [7]
+    leg[10] = [null, 5]
+    leg[11] = 615
+    leg[22] = ['QR', '812', null, 'Qatar Airways']
+
+    const result = decodeLeg(leg)!
+    expect(result.departure_time).toBe('07:00')
+    expect(result.arrival_time).toBe('00:05')
+  })
+
+  it('keeps ??:?? for absent or malformed times', () => {
+    const leg = new Array(23).fill(null)
+    leg[3] = 'AMS'
+    leg[6] = 'NRT'
+    leg[8] = null
+    leg[10] = ['bad', 5]
+    leg[22] = ['KL', '861', null, 'KLM']
+
+    const result = decodeLeg(leg)!
+    expect(result.departure_time).toBe('??:??')
+    expect(result.arrival_time).toBe('??:??')
+  })
+
   it('handles missing optional fields', () => {
     const leg = new Array(23).fill(null)
     leg[3] = 'AMS'

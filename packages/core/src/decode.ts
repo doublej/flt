@@ -100,9 +100,10 @@ function at(data: NL, ...path: number[]): NL {
 }
 
 function formatTime(t: NL): string {
-  if (!Array.isArray(t) || t.length < 2) return '??:??'
-  const h = t[0]
-  const m = t[1]
+  // Google elides zero components protobuf-style: [7] = 07:00, [null, 5] = 00:05, [22] = 22:00.
+  if (!Array.isArray(t) || t.length === 0) return '??:??'
+  const h = t[0] ?? 0
+  const m = t[1] ?? 0
   if (typeof h !== 'number' || typeof m !== 'number') return '??:??'
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
@@ -203,12 +204,17 @@ function decodeItinerary(el: NL, is_best: boolean): DecodedFlight | null {
     const lastLeg = legs[legs.length - 1]
 
     let departure = formatTime(depTime) !== '??:??' ? formatTime(depTime) : (firstLeg?.departure_time ?? '??:??')
-    const arrival = formatTime(arrTime) !== '??:??' ? formatTime(arrTime) : (lastLeg?.arrival_time ?? '??:??')
+    let arrival = formatTime(arrTime) !== '??:??' ? formatTime(arrTime) : (lastLeg?.arrival_time ?? '??:??')
     if (departure === '??:??' && arrival !== '??:??' && travelTime > 0) {
       const [ah, am] = arrival.split(':').map(Number)
       const total = ah * 60 + am - travelTime
       const norm = ((total % 1440) + 1440) % 1440
       departure = `${String(Math.floor(norm / 60)).padStart(2, '0')}:${String(norm % 60).padStart(2, '0')}`
+    }
+    if (arrival === '??:??' && departure !== '??:??' && travelTime > 0) {
+      const [dh, dm] = departure.split(':').map(Number)
+      const norm = (dh * 60 + dm + travelTime) % 1440
+      arrival = `${String(Math.floor(norm / 60)).padStart(2, '0')}:${String(norm % 60).padStart(2, '0')}`
     }
 
     return {
