@@ -71,8 +71,9 @@ ITINERARY:
   flt itinerary <REF:ID> [REF:ID...] [--title "..."] [--note "..."]
 
 TAKEOUT:
-  flt takeout [--itin "Label" REF:ID REF:ID --note "..."] [--title "..."] [-o path]
+  flt takeout [--itin "Label" REF:ID REF:ID --note "..."] [--title "..."] [-o path] [--refs REF1,REF2]
   Default output: ~/Desktop/flights-<date>.md. Includes itineraries (if --itin) + top 10 per route.
+  Empty searches are skipped automatically; --refs limits the report to selected searches (client-ready exports).
 
 AIRPORTS:
   flt airports <QUERY>  |  flt tokyo

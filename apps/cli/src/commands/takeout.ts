@@ -57,6 +57,10 @@ export const takeoutCommand = defineCommand({
       description: 'Output file path (default: ~/Desktop/flights-<date>.<ext>)',
     },
     title: { type: 'string', description: 'Document title' },
+    refs: {
+      type: 'string',
+      description: 'Only include these search refs, comma-separated (default: all non-empty)',
+    },
     pdf: {
       type: 'boolean',
       description: 'Export as PDF instead of markdown',
@@ -98,7 +102,26 @@ export const takeoutCommand = defineCommand({
       itineraries.push({ title: def.title, note: def.note, legs, filters: refEntry?.params })
     }
 
-    const searches = await loadSessionScopedSearches(session)
+    let searches = await loadSessionScopedSearches(session)
+    // Empty searches (superseded compares, failed cells) add noise to a client-ready report.
+    const skippedEmpty = searches.filter(([, entry]) => entry.offers.length === 0).length
+    searches = searches.filter(([, entry]) => entry.offers.length > 0)
+    if (args.refs) {
+      const wanted = args.refs.split(',').map((s: string) => s.trim())
+      const available = new Set(searches.map(([ref]) => ref))
+      const missing = wanted.filter((r: string) => !available.has(r))
+      if (missing.length) {
+        console.log(
+          formatError(
+            'NOT_FOUND',
+            `Refs not in session: ${missing.join(', ')}. Available: ${[...available].join(', ') || '(none)'}`,
+          ),
+        )
+        return
+      }
+      const wantedSet = new Set(wanted)
+      searches = searches.filter(([ref]) => wantedSet.has(ref))
+    }
     const config = await loadConfig()
     const affiliate: AffiliateConfig | null =
       config.marker && config.trs ? { marker: config.marker, trs: config.trs } : null
@@ -123,6 +146,7 @@ export const takeoutCommand = defineCommand({
         path: outPath,
         searches: searches.length,
         itineraries: itineraries.length,
+        ...(skippedEmpty > 0 ? { skippedEmpty } : {}),
       }),
     )
 
