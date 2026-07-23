@@ -1,0 +1,5 @@
+{
+  "type": "workspace",
+  "description": "Bun monorepo: @flights/core engine, SvelteKit web UI, flt CLI, and Sabre-style TUI",
+  "archived": false
+}
