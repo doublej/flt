@@ -30,8 +30,9 @@ function parseOneItin(raw: string[], start: number): { itin: Itinerary; next: nu
   return { itin: { title, note, legs: refs as unknown as Offer[] }, next: i }
 }
 
-function parseItineraryArgs(raw: string[]): Itinerary[] {
+function parseItineraryArgs(raw: string[]): { itineraries: Itinerary[]; consumed: Set<number> } {
   const itineraries: Itinerary[] = []
+  const consumed = new Set<number>()
   let i = 0
   while (i < raw.length) {
     if (raw[i] !== '--itin') {
@@ -40,9 +41,16 @@ function parseItineraryArgs(raw: string[]): Itinerary[] {
     }
     const { itin, next } = parseOneItin(raw, i + 1)
     itineraries.push(itin)
+    for (let j = i; j < next; j++) consumed.add(j)
     i = next
   }
-  return itineraries
+  return { itineraries, consumed }
+}
+
+/** A --note outside any --itin block is the report summary, not a leg note. */
+function parseReportNote(raw: string[], consumed: Set<number>): string | undefined {
+  const i = raw.findIndex((a, idx) => a === '--note' && !consumed.has(idx))
+  return i >= 0 ? raw[i + 1] : undefined
 }
 
 export const takeoutCommand = defineCommand({
@@ -57,6 +65,14 @@ export const takeoutCommand = defineCommand({
       description: 'Output file path (default: ~/Desktop/flights-<date>.<ext>)',
     },
     title: { type: 'string', description: 'Document title' },
+    note: {
+      type: 'string',
+      description: 'Summary paragraph shown on the cover (outside an --itin block)',
+    },
+    pick: {
+      type: 'string',
+      description: 'Offer ID to mark as the recommended option (e.g. F2380)',
+    },
     refs: {
       type: 'string',
       description: 'Only include these search refs, comma-separated (default: all non-empty)',
@@ -81,7 +97,8 @@ export const takeoutCommand = defineCommand({
 
     // Parse --itin flags from raw argv (citty doesn't handle repeated flags well)
     const rawArgs = process.argv.slice(2)
-    const itinDefs = parseItineraryArgs(rawArgs)
+    const { itineraries: itinDefs, consumed } = parseItineraryArgs(rawArgs)
+    const reportNote = parseReportNote(rawArgs, consumed)
 
     // Resolve offer refs in itineraries
     const itineraries: Itinerary[] = []
@@ -133,7 +150,14 @@ export const takeoutCommand = defineCommand({
     const outPath = args.output ?? defaultPath
 
     if (args.pdf) {
-      const buf = await generatePdf({ searches, itineraries, affiliate, title: args.title })
+      const buf = await generatePdf({
+        searches,
+        itineraries,
+        affiliate,
+        title: args.title,
+        note: reportNote,
+        pick: args.pick,
+      })
       await writeFile(outPath, buf)
     } else {
       const md = buildMarkdown(searches, itineraries, { affiliate, title: args.title })
