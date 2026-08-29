@@ -15,7 +15,7 @@ export interface MapRoute {
 }
 
 /** One colour per option, so overlapping routes stay tellable apart. */
-export const ROUTE_COLORS = ['#0b5563', '#a8600a', '#6b4d7d', '#2f6b3c']
+export const ROUTE_COLORS = ['#0b5563', '#a8600a', '#6b4d7d', '#2f6b3c', '#8c2f39', '#1f4f8b']
 
 const OCEAN = '#eef2f4'
 const LAND = '#dde4e7'
@@ -60,7 +60,7 @@ export function drawRouteMap(
   // colour hiding the others.
   for (const [i, route] of [...routes].entries().toArray().reverse()) {
     doc.setDrawColor(route.color)
-    doc.setLineWidth(0.7 + i * 0.5)
+    doc.setLineWidth(0.7 + i * 0.3)
     for (const leg of route.legs) {
       const from = coords.get(leg.departure_airport)
       const to = coords.get(leg.arrival_airport)

@@ -198,10 +198,16 @@ export async function generatePdf(opts: PdfOpts): Promise<Buffer> {
   // An index is only worth a page once there are enough sections to get lost in.
   const sectionCount = groups.reduce((n, g) => n + g.searches.length, 0)
   const wantsContents = sectionCount >= 3
-  let contentsPage = 0
+  // Reserved up front: the index can only be filled in once every section knows
+  // its page, so the space it needs has to be booked before they are laid out.
+  const contentsPages: number[] = []
   if (wantsContents) {
-    doc.addPage()
-    contentsPage = currentPage(doc)
+    const rows = 1 + groups.length + sectionCount
+    const needed = Math.max(1, Math.ceil((rows * 7 + groups.length * 3 + 12) / (BOTTOM - 26)))
+    for (let i = 0; i < needed; i++) {
+      doc.addPage()
+      contentsPages.push(currentPage(doc))
+    }
   }
 
   const guidePage = allOffers.length > 0 ? renderReadingGuide(doc, W) : 0
@@ -239,8 +245,7 @@ export async function generatePdf(opts: PdfOpts): Promise<Buffer> {
   }
 
   if (wantsContents) {
-    doc.setPage(contentsPage)
-    renderContents(doc, W, index)
+    renderContents(doc, W, index, contentsPages)
   }
 
   drawFooters(doc, W, title)
@@ -363,7 +368,7 @@ function renderCover(
         .filter((c): c is { highlight: Highlight; color: string; heading: string } =>
           Boolean(c.highlight),
         )
-        .slice(0, 4)
+        .slice(0, 6)
     : pickHighlights(offers, opts.pick).map((h, i) => ({
         highlight: h,
         color: ROUTE_COLORS[i % ROUTE_COLORS.length],
@@ -384,41 +389,13 @@ function renderCover(
 
   const drawable = routes.filter((r) => r.legs.length > 0)
   if (drawable.length > 0) {
-    const mapW = Math.min(150, usable)
-    drawRouteMap(doc, drawable, (W - mapW) / 2, cy, mapW, 52)
-    cy += 56
+    const mapH = cards.length > 4 ? 86 : 52
+    const mapW = Math.min(mapH > 52 ? 175 : 150, usable)
+    drawRouteMap(doc, drawable, (W - mapW) / 2, cy, mapW, mapH)
+    cy += mapH + 4
     if (drawable.length > 1 || multiRoute) {
       cy = drawRouteLegend(doc, drawable, MARGIN, cy, usable) + 6
     }
-  }
-
-  if (cards.length > 0) {
-    cy = ensureSpace(doc, cy, 60)
-    doc.setFont(FONT, 'bold')
-    doc.setFontSize(12)
-    doc.setTextColor(INK)
-    doc.text('Start here', MARGIN, cy)
-    cy += 4
-    doc.setFont(FONT, 'normal')
-    doc.setFontSize(8.5)
-    doc.setTextColor(MUTED)
-    doc.text(
-      safe(
-        multiRoute
-          ? 'The best option on each route. Every route is reported separately from here on.'
-          : 'The rest of this report is detail. These are the options worth deciding between.',
-      ),
-      MARGIN,
-      cy,
-    )
-    cy += 6
-
-    const gap = 6
-    const cardW = (usable - gap * (cards.length - 1)) / cards.length
-    for (const [i, c] of cards.entries()) {
-      drawHighlightCard(doc, c.highlight, MARGIN + i * (cardW + gap), cy, cardW, c.color, c.heading)
-    }
-    cy += 46
   }
 
   if (opts.note) {
@@ -442,6 +419,45 @@ function renderCover(
       doc.text(line, MARGIN + 6, ny)
       ny += 4.4
     }
+    cy += boxH + 9
+  }
+
+  if (cards.length > 0) {
+    cy = ensureSpace(
+      doc,
+      cy,
+      14 + Math.ceil(cards.length / (cards.length <= 4 ? cards.length : 3)) * 46,
+    )
+    doc.setFont(FONT, 'bold')
+    doc.setFontSize(12)
+    doc.setTextColor(INK)
+    doc.text('Start here', MARGIN, cy)
+    cy += 4
+    doc.setFont(FONT, 'normal')
+    doc.setFontSize(8.5)
+    doc.setTextColor(MUTED)
+    doc.text(
+      safe(
+        multiRoute
+          ? 'The best option on each route. Every route is reported separately from here on.'
+          : 'The rest of this report is detail. These are the options worth deciding between.',
+      ),
+      MARGIN,
+      cy,
+    )
+    cy += 6
+
+    // Up to four side by side; beyond that they wrap, so a card never gets too
+    // narrow for a long city name.
+    const gap = 6
+    const perRow = cards.length <= 4 ? cards.length : 3
+    const cardW = (usable - gap * (perRow - 1)) / perRow
+    for (const [i, c] of cards.entries()) {
+      const x = MARGIN + (i % perRow) * (cardW + gap)
+      const y = cy + Math.floor(i / perRow) * 46
+      drawHighlightCard(doc, c.highlight, x, y, cardW, c.color, c.heading)
+    }
+    cy += Math.ceil(cards.length / perRow) * 46
   }
 }
 
@@ -465,7 +481,9 @@ function routeCard(group: RouteView, pick?: string): Highlight | undefined {
 }
 
 /** Index page: every row links to the page it names. */
-function renderContents(doc: jsPDF, W: number, index: ContentsIndex): void {
+function renderContents(doc: jsPDF, W: number, index: ContentsIndex, pages: number[]): void {
+  let page = 0
+  doc.setPage(pages[0])
   let cy = 24
   doc.setFont(FONT, 'bold')
   doc.setFontSize(14)
@@ -482,7 +500,7 @@ function renderContents(doc: jsPDF, W: number, index: ContentsIndex): void {
     marker: string,
     label: string,
     right: string,
-    page: number,
+    target: number,
     indent: number,
     bold: boolean,
     color = ACCENT,
@@ -494,14 +512,14 @@ function renderContents(doc: jsPDF, W: number, index: ContentsIndex): void {
 
     doc.setFont(FONT, bold ? 'bold' : 'normal')
     doc.setTextColor(bold ? INK : TEXT)
-    doc.textWithLink(safe(label), MARGIN + indent + 10, cy, { pageNumber: page })
+    doc.textWithLink(safe(label), MARGIN + indent + 10, cy, { pageNumber: target })
 
     doc.setFont(FONT, 'normal')
     doc.setTextColor(MUTED)
     doc.text(safe(right), W - MARGIN, cy, { align: 'right' })
 
     // Whole row clickable, not just the words.
-    doc.link(MARGIN, cy - 3.5, W - MARGIN * 2, 5.5, { pageNumber: page })
+    doc.link(MARGIN, cy - 3.5, W - MARGIN * 2, 5.5, { pageNumber: target })
     doc.setDrawColor(BORDER)
     doc.setLineWidth(0.1)
     doc.line(MARGIN, cy + 2, W - MARGIN, cy + 2)
@@ -519,12 +537,21 @@ function renderContents(doc: jsPDF, W: number, index: ContentsIndex): void {
     )
   }
 
+  // A route heading moves with its first section, never stranded alone.
+  const nextPage = (need = 8) => {
+    if (cy <= BOTTOM - need) return
+    if (page + 1 >= pages.length) return
+    page += 1
+    doc.setPage(pages[page])
+    cy = 24
+  }
+
   for (const route of index.routes) {
-    if (cy > BOTTOM - 8) return
+    nextPage(22)
     cy += 3
     row('>', route.label, `page ${route.page}`, route.page, 0, true, route.color)
     for (const sec of route.sections) {
-      if (cy > BOTTOM - 6) return
+      nextPage()
       const price = Number.isNaN(sec.cheapest)
         ? ''
         : `from ${sec.currency}${Math.round(sec.cheapest)}   -   `
@@ -578,7 +605,11 @@ function drawHighlightCard(
 
   doc.setFontSize(7.5)
   doc.setTextColor(MUTED)
-  doc.text(safe(`${viaLabel(o)}  -  ${o.duration}`), x + 4, y + 27)
+  // Naming every connection city is better, but a two-stop route would run off
+  // the card, so fall back to the stop count when it does not fit.
+  const via = `${viaLabel(o)}  -  ${o.duration}`
+  const short = `${o.stops} stop${o.stops === 1 ? '' : 's'}  -  ${o.duration}`
+  doc.text(safe(doc.getTextWidth(via) <= w - 8 ? via : short), x + 4, y + 27)
   doc.text(safe(arrivalLabel(o)), x + 4, y + 31)
 
   doc.setFontSize(6.5)
