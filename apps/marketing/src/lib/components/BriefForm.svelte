@@ -189,8 +189,9 @@ function confirm() {
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    background: #fff;
-    color: #000;
+    /* Apple's black button is the one for light backgrounds. */
+    background: #000;
+    color: #fff;
     border: none;
     border-radius: 8px;
     padding: 0.95rem 1.5rem;
