@@ -282,10 +282,7 @@ const LIMITS = [
     object-fit: cover;
     /* pushes the photograph's own board clear of the headline column */
     object-position: 22% 46%;
-    /* Slight defocus: it reads as depth of field and stops the signage in the
-       photograph competing with the headline for the reader's eye. */
-    filter: blur(2.5px) saturate(1.04);
-    transform: scale(1.05);
+    filter: saturate(1.04);
     z-index: -2;
   }
   .hero::before {
