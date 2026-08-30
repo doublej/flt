@@ -181,18 +181,73 @@ export const DISCOVERY = {
  * spread is what moving your dates inside that window is actually worth —
  * and it is wildly different per route, which is the whole point. */
 
-export type Spread = { route: string; window: string; low: number; high: number }
+/** `days` is the cheapest fare on each of the seven departure dates, in date order. */
+export type Spread = { route: string; window: string; low: number; high: number; days: number[] }
 
 export const SPREADS: Spread[] = [
-  { route: 'Amsterdam → New York JFK', window: '19–25 Dec', low: 400, high: 547 },
-  { route: 'Amsterdam → Newark', window: '19–25 Dec', low: 400, high: 544 },
-  { route: 'Amsterdam → Singapore', window: '3–9 Nov', low: 335, high: 479 },
-  { route: 'Amsterdam → Philadelphia', window: '19–25 Dec', low: 490, high: 625 },
-  { route: 'Amsterdam → Boston', window: '19–25 Dec', low: 432, high: 534 },
-  { route: 'Amsterdam → Turin', window: '16–22 Jan', low: 109, high: 148 },
-  { route: 'Amsterdam → Innsbruck', window: '16–22 Jan', low: 84, high: 121 },
-  { route: 'Amsterdam → Geneva', window: '16–22 Jan', low: 89, high: 119 },
-  { route: 'Amsterdam → Lyon', window: '16–22 Jan', low: 119, high: 128 },
+  {
+    route: 'Amsterdam → New York JFK',
+    window: '19–25 Dec',
+    low: 400,
+    high: 547,
+    days: [547, 511, 484, 400, 441, 441, 400],
+  },
+  {
+    route: 'Amsterdam → Newark',
+    window: '19–25 Dec',
+    low: 400,
+    high: 544,
+    days: [544, 511, 400, 400, 505, 441, 405],
+  },
+  {
+    route: 'Amsterdam → Singapore',
+    window: '3–9 Nov',
+    low: 335,
+    high: 479,
+    days: [410, 450, 335, 479, 362, 479, 479],
+  },
+  {
+    route: 'Amsterdam → Philadelphia',
+    window: '19–25 Dec',
+    low: 490,
+    high: 625,
+    days: [625, 590, 508, 490, 490, 490, 490],
+  },
+  {
+    route: 'Amsterdam → Boston',
+    window: '19–25 Dec',
+    low: 432,
+    high: 534,
+    days: [534, 534, 449, 433, 433, 433, 432],
+  },
+  {
+    route: 'Amsterdam → Turin',
+    window: '16–22 Jan',
+    low: 109,
+    high: 148,
+    days: [109, 109, 148, 127, 118, 124, 124],
+  },
+  {
+    route: 'Amsterdam → Innsbruck',
+    window: '16–22 Jan',
+    low: 84,
+    high: 121,
+    days: [121, 84, 92, 88, 113, 92, 98],
+  },
+  {
+    route: 'Amsterdam → Geneva',
+    window: '16–22 Jan',
+    low: 89,
+    high: 119,
+    days: [89, 89, 104, 119, 116, 104, 89],
+  },
+  {
+    route: 'Amsterdam → Lyon',
+    window: '16–22 Jan',
+    low: 119,
+    high: 128,
+    days: [119, 128, 120, 120, 120, 120, 119],
+  },
 ]
 
 /** Same route, same week, both cabins. Economy moved every day; premium did not move at all. */

@@ -10,9 +10,11 @@ const TICKS = [100, 200, 300, 400, 500, 600]
 const pct = (v: number) => ((v - LO) / (HI - LO)) * 100
 
 const rows = [...SPREADS].sort((a, b) => b.high - b.low - (a.high - a.low))
-const widest = Math.max(...SPREADS.map((r) => r.high - r.low))
 
 const spread = (r: Spread) => r.high - r.low
+/** Printed beside the euro figure: the same spread as a share of the cheapest fare,
+ *  because on a shared axis an expensive route looks flexible simply for being long. */
+const share = (r: Spread) => Math.round((spread(r) / r.low) * 100)
 </script>
 
 <figure>
@@ -24,26 +26,28 @@ const spread = (r: Spread) => r.high - r.low
 
   <ul>
     {#each rows as r}
-      {@const wide = spread(r) === widest}
-      <li class:wide>
+      <li>
         <span class="route">{r.route.replace('Amsterdam → ', '')}</span>
         <span class="scale">
-          <span class="seg" style:left="{pct(r.low)}%" style:width="{pct(r.high) - pct(r.low)}%">
-            <i class="dot lo"></i>
-            <i class="dot hi"></i>
-          </span>
+          <span class="seg" style:left="{pct(r.low)}%" style:width="{pct(r.high) - pct(r.low)}%"
+          ></span>
+          {#each r.days as d}
+            <i class="day" style:left="{pct(d)}%"></i>
+          {/each}
           <span class="lo-label" style:left="{pct(r.low)}%">€{r.low}</span>
           <span class="hi-label" style:left="{pct(r.high)}%">€{r.high}</span>
         </span>
-        <span class="spread">€{spread(r)}</span>
+        <span class="spread">€{spread(r)}<b>{share(r)}%</b></span>
       </li>
     {/each}
   </ul>
 
   <figcaption>
-    Each line runs from the cheapest departure date to the dearest, inside one seven-day window.
-    The number on the right is what moving your dates was worth. One-way economy fares, the
-    cheapest we saw at the time. The axis starts at €60, not zero.
+    One dot per departure date, showing the cheapest fare we found that day; the line spans the
+    week. On the right, what moving your dates was worth in euros and as a share of the cheapest
+    fare — the percentage matters because a long-haul route looks flexible on this axis simply for
+    being expensive. One-way economy fares, the cheapest we saw at the time. The axis starts at €60,
+    not zero, and no route is clipped by that.
   </figcaption>
 </figure>
 
@@ -57,7 +61,7 @@ const spread = (r: Spread) => r.high - r.low
     position: relative;
     height: 1.2rem;
     margin-left: var(--gutter);
-    margin-right: 3.5rem;
+    margin-right: 4.25rem;
     border-bottom: 1px solid var(--color-border);
   }
   .tick {
@@ -76,7 +80,7 @@ const spread = (r: Spread) => r.high - r.low
 
   li {
     display: grid;
-    grid-template-columns: var(--gutter) 1fr 3.5rem;
+    grid-template-columns: var(--gutter) 1fr 4.25rem;
     align-items: center;
     gap: 0 0;
     padding-block: 0.95rem;
@@ -99,28 +103,16 @@ const spread = (r: Spread) => r.high - r.low
     background: var(--color-primary);
     transform: translateY(-50%);
   }
-  .wide .seg {
-    background: var(--color-signal);
-    height: 3px;
-  }
-  .dot {
+  /* One dot per departure date. Semi-transparent, so repeated fares stack into a
+     darker mark and clustering reads without a second encoding. */
+  .day {
     position: absolute;
     top: 50%;
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: var(--color-bg);
-    border: 2px solid var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 45%, transparent);
     transform: translate(-50%, -50%);
-  }
-  .wide .dot {
-    border-color: var(--color-signal);
-  }
-  .dot.lo {
-    left: 0;
-  }
-  .dot.hi {
-    left: 100%;
   }
 
   .lo-label,
@@ -147,9 +139,11 @@ const spread = (r: Spread) => r.high - r.low
     font-size: 0.95rem;
     color: var(--color-primary);
   }
-  .wide .spread {
-    color: var(--color-signal);
-    font-weight: 500;
+  .spread b {
+    display: block;
+    font-weight: 400;
+    font-size: 0.72rem;
+    color: var(--color-muted);
   }
 
   figcaption {
@@ -164,7 +158,7 @@ const spread = (r: Spread) => r.high - r.low
       --gutter: 5.5rem;
     }
     li {
-      grid-template-columns: var(--gutter) 1fr 3rem;
+      grid-template-columns: var(--gutter) 1fr 4rem;
     }
     .route {
       font-size: 0.8rem;

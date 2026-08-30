@@ -3,7 +3,7 @@ import BriefForm from '$lib/components/BriefForm.svelte'
 import FareRange from '$lib/components/FareRange.svelte'
 import PriceTiers from '$lib/components/PriceTiers.svelte'
 import ReportShowcase from '$lib/components/ReportShowcase.svelte'
-import { AVOIDING, DISCOVERY, GRAPH, TOTALS } from '$lib/scenarios'
+import { AVOIDING, CABIN, DISCOVERY, GRAPH, TOTALS } from '$lib/scenarios'
 
 let tier = $state('survey')
 
@@ -67,6 +67,13 @@ const LIMITS = [
       some and almost nothing on others, and nothing about the route tells you which in advance.
     </p>
     <FareRange />
+    <p class="measure kicker">
+      Cabin makes its own point. Across that Singapore week economy moved between €{CABIN
+        .economyLow} and €{CABIN.economyHigh}, while premium economy sat at €{CABIN.premiumFlat} on
+      every single day. So the step up cost €{CABIN.premiumFlat - CABIN.economyHigh} on the dearest
+      economy day and €{CABIN.premiumFlat - CABIN.economyLow} on the cheapest — the upgrade never
+      moved, only the thing you were comparing it against.
+    </p>
 
     <div class="asides">
       <div>
