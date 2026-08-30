@@ -1,9 +1,12 @@
 <script lang="ts">
+import AvoidHubs from '$lib/components/AvoidHubs.svelte'
 import BriefForm from '$lib/components/BriefForm.svelte'
 import FareRange from '$lib/components/FareRange.svelte'
 import PriceTiers from '$lib/components/PriceTiers.svelte'
+import QueryGrid from '$lib/components/QueryGrid.svelte'
+import RouteWeb from '$lib/components/RouteWeb.svelte'
 import WeekBoard from '$lib/components/WeekBoard.svelte'
-import { AVOIDING, CABIN, DISCOVERY, GRAPH, TOTALS } from '$lib/scenarios'
+import { CABIN, TOTALS } from '$lib/scenarios'
 import { onMount } from 'svelte'
 import { fade } from 'svelte/transition'
 
@@ -16,11 +19,24 @@ let hero: HTMLElement
  *  came in at EUR 400, the 19th at EUR 547. Nine routes x seven dates is 63. */
 let hi = $state(0)
 const HEADLINES = [
-  ['The same seat.', 'A different day.', 'A different price.'],
-  ['€400 on the 22nd.', '€547 on the 19th.', 'The same flight.'],
-  ['Nine routes.', 'Sixty-three dates.', 'One afternoon.'],
-  ['€84 to Innsbruck.', '€121 to Innsbruck.', 'The same week.'],
+  {
+    kicker: 'Nine routes · one week each',
+    lines: ['Same seat.', 'Different day.', 'Different price.'],
+  },
+  {
+    kicker: 'Amsterdam → New York · December',
+    lines: ['€400 on the 22nd.', '€547 on the 19th.', 'The same flight.'],
+  },
+  {
+    kicker: 'Four briefs · one afternoon',
+    lines: ['Four briefs.', '75 searches.', 'One afternoon.'],
+  },
+  {
+    kicker: 'Amsterdam → Innsbruck · January',
+    lines: ['€84 on the 17th.', '€121 on the 16th.', 'The same week.'],
+  },
 ]
+let held = $state(false)
 
 const nf = new Intl.NumberFormat('en-GB')
 
@@ -39,7 +55,7 @@ onMount(() => {
     return () => io.disconnect()
   }
   const t = setInterval(() => {
-    hi = (hi + 1) % HEADLINES.length
+    if (!held) hi = (hi + 1) % HEADLINES.length
   }, 5200)
   return () => {
     io.disconnect()
@@ -86,11 +102,31 @@ const LIMITS = [
   <div class="hero-inner">
     <div class="rotor" aria-live="polite">
       {#key hi}
-        <h1 in:fade={{ duration: 700 }} out:fade={{ duration: 350 }}>
-          {HEADLINES[hi][0]}<br />{HEADLINES[hi][1]}<br /><em>{HEADLINES[hi][2]}</em>
-        </h1>
+        <div class="slab" in:fade={{ duration: 600 }} out:fade={{ duration: 300 }}>
+          <p class="kicker">{HEADLINES[hi].kicker}</p>
+          <h1>
+            {#each HEADLINES[hi].lines as line, n (n)}
+              <span style:--n={n} class:last={n === 2}>{line}</span>
+            {/each}
+          </h1>
+        </div>
       {/key}
     </div>
+    <ol class="ticks">
+      {#each HEADLINES as h, n (h.kicker)}
+        <li>
+          <button
+            type="button"
+            aria-label={h.kicker}
+            aria-current={hi === n}
+            onclick={() => {
+              held = true
+              hi = n
+            }}
+          ></button>
+        </li>
+      {/each}
+    </ol>
   </div>
 </section>
 
@@ -132,30 +168,34 @@ const LIMITS = [
       moved, only the thing you were comparing it against.
     </p>
 
-    <div class="asides">
-      <div>
-        <h3>Avoiding an airport has a price too</h3>
-        <p>
-          Skip every option connecting in Dubai, Doha or Abu Dhabi and the cheapest fare to
-          Singapore rises €{AVOIDING[0].cheapestAvoiding - AVOIDING[0].cheapest}, from €{AVOIDING[0]
-            .cheapest} to €{AVOIDING[0].cheapestAvoiding}. On the Hanoi brief the same preference
-          cost nothing at all — more of those options connected in the Gulf, but the cheapest one
-          already went another way.
-        </p>
-      </div>
-      <div>
-        <h3>Most routes are not on the first page</h3>
-        <p>
-          We start from a map of {nf.format(GRAPH.airports)} airports and {nf.format(
-            GRAPH.connections,
-          )} direct connections. {DISCOVERY.route} can be flown {nf.format(
-            DISCOVERY.byStops[2].routes,
-          )} ways within three stops. These are possible routes rather than offers: no price, no
-          timetable check, and nothing you can book. What they do is tell us where it is worth
-          pointing the search.
-        </p>
-      </div>
-    </div>
+  </section>
+
+  <section class="band" id="work">
+    <h2>Every search we ran, drawn</h2>
+    <p class="lead measure">
+      Four briefs, seventy-five searches. One square per search, laid out the way the job actually
+      ran: a row for each thing that varied, a column for each departure date.
+    </p>
+    <QueryGrid />
+  </section>
+
+  <section class="band" id="avoid">
+    <h2>Ruling an airport out</h2>
+    <p class="lead measure">
+      Say you will not change planes in the Gulf. We read every option first, then take away the
+      ones that connect there — so the question is what is left, and what the cheapest survivor
+      costs.
+    </p>
+    <AvoidHubs />
+  </section>
+
+  <section class="band" id="routes">
+    <h2>Before we search, we look at the map</h2>
+    <p class="lead measure">
+      Every line is one way of getting from Amsterdam to Hanoi within a stop budget. None of them
+      is an offer — they tell us where pointing a search is worth the time.
+    </p>
+    <RouteWeb />
   </section>
 
   <section class="band" id="report">
@@ -300,7 +340,7 @@ const LIMITS = [
     height: 100%;
     object-fit: cover;
     /* pushes the photograph's own board clear of the headline column */
-    object-position: 22% 46%;
+    object-position: 0% 46%;
     filter: saturate(1.04);
     z-index: -2;
   }
@@ -324,30 +364,75 @@ const LIMITS = [
   .hero-inner {
     max-width: 74rem;
     margin: 0 auto;
-    padding: 5.5rem var(--gutter) var(--space-5);
-    min-height: max(22rem, min(58vh, 36vw));
+    padding: 6rem var(--gutter) var(--space-5);
+    min-height: max(30rem, min(82vh, 48vw));
     display: grid;
-    align-items: center;
+    align-content: center;
+    justify-items: start;
+    gap: var(--space-4);
   }
   /* Only the headline sits on the photograph, in the clear glass to the left
-     of the board — about 19rem once the container gutter is taken off. */
+     of the board — about 22rem once the container gutter is taken off. */
   .rotor {
     display: grid;
-    max-width: 19rem;
+    max-width: 21rem;
+  }
+  .slab {
+    grid-area: 1 / 1;
+  }
+  .kicker {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(240 212 137 / 0.9);
+    padding-bottom: 0.7rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgb(240 212 137 / 0.35);
   }
   .rotor h1 {
-    grid-area: 1 / 1;
     font-family: var(--font-display);
     font-weight: 300;
-    font-size: clamp(1.75rem, 3vw, 2.5rem);
-    line-height: 1.06;
-    letter-spacing: -0.02em;
+    font-size: clamp(1.95rem, 3.2vw, 2.75rem);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
     color: #f2f4ec;
-    text-wrap: balance;
   }
-  .rotor em {
+  .rotor h1 span {
+    display: block;
+    animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: calc(var(--n) * 110ms);
+  }
+  .rotor h1 span.last {
     font-style: italic;
     color: #f0d489;
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.5em);
+    }
+  }
+
+  .ticks {
+    list-style: none;
+    display: flex;
+    gap: 0.5rem;
+  }
+  .ticks button {
+    width: 2.2rem;
+    height: 3px;
+    padding: 0;
+    border: none;
+    border-radius: 2px;
+    background: rgb(242 244 236 / 0.28);
+    transition: background 0.25s ease;
+  }
+  .ticks button:hover {
+    background: rgb(242 244 236 / 0.6);
+  }
+  .ticks button[aria-current="true"] {
+    background: #f0d489;
   }
 
   /* Narrow: the photograph becomes a band of its own and the copy sits under
@@ -371,7 +456,7 @@ const LIMITS = [
       max-width: none;
     }
     .rotor h1 {
-      font-size: clamp(1.9rem, 7vw, 2.6rem);
+      font-size: clamp(2.1rem, 8vw, 3rem);
     }
   }
 
@@ -499,38 +584,6 @@ const LIMITS = [
   }
   .btn:hover {
     background: var(--color-primary-hover);
-  }
-
-  .asides {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-    gap: var(--space-3);
-    margin-top: var(--space-6);
-  }
-  .asides > div {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-  }
-  .asides h3 {
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: clamp(1.25rem, 2.1vw, 1.7rem);
-    line-height: 1.12;
-    letter-spacing: -0.01em;
-    margin: 0;
-    text-wrap: balance;
-  }
-  .asides p {
-    margin: 0;
-    color: var(--color-text);
-    font-size: clamp(1.05rem, 1.7vw, 1.35rem);
-    line-height: 1.35;
-    text-wrap: pretty;
   }
 
   .steps {
