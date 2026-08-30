@@ -1,12 +1,14 @@
 <script lang="ts">
 import AvoidHubs from '$lib/components/AvoidHubs.svelte'
 import BriefForm from '$lib/components/BriefForm.svelte'
+import CompositeStage from '$lib/components/CompositeStage.svelte'
 import FareRange from '$lib/components/FareRange.svelte'
 import PriceTiers from '$lib/components/PriceTiers.svelte'
 import QueryGrid from '$lib/components/QueryGrid.svelte'
 import RouteWeb from '$lib/components/RouteWeb.svelte'
+import SplitFlapBoard, { type Column, type Point } from '$lib/components/SplitFlapBoard.svelte'
 import WeekBoard from '$lib/components/WeekBoard.svelte'
-import { CABIN, TOTALS } from '$lib/scenarios'
+import { CABIN, SPREADS, TOTALS } from '$lib/scenarios'
 import { onMount } from 'svelte'
 import { fade } from 'svelte/transition'
 
@@ -20,23 +22,88 @@ let hero: HTMLElement
 let hi = $state(0)
 const HEADLINES = [
   {
-    kicker: 'Nine routes · one week each',
+    kicker: 'NINE ROUTES ONE WEEK',
     lines: ['Same seat.', 'Different day.', 'Different price.'],
   },
   {
-    kicker: 'Amsterdam → New York · December',
+    kicker: 'AMSTERDAM-NEW YORK',
     lines: ['€400 on the 22nd.', '€547 on the 19th.', 'The same flight.'],
   },
   {
-    kicker: 'Four briefs · one afternoon',
+    kicker: 'SEVENTY-FIVE SEARCHES',
     lines: ['Four briefs.', '75 searches.', 'One afternoon.'],
   },
   {
-    kicker: 'Amsterdam → Innsbruck · January',
+    kicker: 'AMSTERDAM-INNSBRUCK',
     lines: ['€84 on the 17th.', '€121 on the 16th.', 'The same week.'],
   },
 ]
 let held = $state(false)
+
+/* The kicker is a real split-flap row, so it turns over between headlines
+ *  instead of cross-fading. It sits outside the {#key} block on purpose:
+ *  only the drums whose character actually changes move. */
+const KICKER_COLS: Column[] = [{ id: 'k', width: 21 }]
+const kickerRows = $derived([{ k: HEADLINES[hi].kicker }])
+
+/* The board inside the photograph. Every row is the cheapest fare we actually
+ *  found on that route, on the day it was cheapest — no gates, no statuses, no
+ *  departure times, because we do not have those and will not invent them. */
+const DEP_COLS: Column[] = [
+  { id: 'day', width: 6 },
+  { id: 'to', width: 15 },
+  { id: 'fare', width: 7 },
+  { id: 'save', width: 8 },
+]
+
+/* Solved on /labs/splitflap/terminal — fractions of the intrinsic 2000x853. */
+const CORNERS: Point[] = [
+  { x: 0.361, y: 0.44 },
+  { x: 0.649, y: 0.44 },
+  { x: 0.649, y: 0.646 },
+  { x: 0.361, y: 0.646 },
+]
+
+/* Grade sampled off the photograph, also on the terminal lab page. */
+const LOOK = {
+  renderer: 'canvas',
+  exposure: 1,
+  contrast: 1.14,
+  warmth: -0.1,
+  angle: 180,
+  multiply: '#00000000',
+  screen: '#ffca0030',
+  grain: 0.11,
+  aberration: 0.2,
+  vignette: 0,
+  blur: 0.2,
+  supersample: 3,
+  glass: true,
+  bg: '#000000ff',
+  pad: 0.55,
+  face: '#131313',
+  ink: '#dfd6c4',
+  aspect: 0.495,
+  glyph: 1.14,
+  squeeze: 0.66,
+  baseline: -0.04,
+  rowgap: 0.19,
+  grit: 0.185,
+  pins: false,
+}
+
+const DEPARTURES = SPREADS.map((r) => {
+  const i = r.days.indexOf(r.low)
+  const m = r.window.match(/^(\d+)\D+\d+\s+(\w+)$/)
+  const day = m ? String(Number(m[1]) + i) : ''
+  const mon = (m?.[2] ?? '').toUpperCase()
+  return {
+    day: `${day.padStart(2, '0')} ${mon}`,
+    to: r.route.replace('Amsterdam → ', '').toUpperCase(),
+    fare: `EUR ${r.low}`,
+    save: `SAVE ${r.high - r.low}`,
+  }
+}).slice(0, 6)
 
 const nf = new Intl.NumberFormat('en-GB')
 
@@ -98,12 +165,25 @@ const LIMITS = [
 </header>
 
 <section class="hero" id="top" bind:this={hero}>
-  <img src="/img/terminal.jpg" alt="" width="2000" height="853" fetchpriority="high" />
+  <div class="stage">
+    <CompositeStage
+      src="/img/terminal.jpg"
+      imageWidth={2000}
+      imageHeight={853}
+      objectPosition="0% 46%"
+      rows={DEPARTURES}
+      columns={DEP_COLS}
+      corners={CORNERS}
+      look={LOOK}
+    />
+  </div>
   <div class="hero-inner">
+    <div class="flap" style="--sf-ink: #f0d489">
+      <SplitFlapBoard rows={kickerRows} columns={KICKER_COLS} variant="night" flapMs={78} />
+    </div>
     <div class="rotor" aria-live="polite">
       {#key hi}
         <div class="slab" in:fade={{ duration: 600 }} out:fade={{ duration: 300 }}>
-          <p class="kicker">{HEADLINES[hi].kicker}</p>
           <h1>
             {#each HEADLINES[hi].lines as line, n (n)}
               <span style:--n={n} class:last={n === 2}>{line}</span>
@@ -333,33 +413,18 @@ const LIMITS = [
     isolation: isolate;
     background: #08120f;
   }
-  .hero img {
+  /* CompositeStage maps the corners through the same object-position as the
+     photograph, so our board stays on the concourse board through any crop. */
+  .stage {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    /* pushes the photograph's own board clear of the headline column */
-    object-position: 0% 46%;
-    filter: saturate(1.04);
     z-index: -2;
   }
-  .hero::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background:
-      linear-gradient(
-        90deg,
-        rgb(6 16 13 / 0.95) 0%,
-        rgb(6 16 13 / 0.9) 22%,
-        rgb(6 16 13 / 0.55) 34%,
-        rgb(6 16 13 / 0.12) 46%,
-        rgb(6 16 13 / 0.08) 70%,
-        rgb(6 16 13 / 0.4) 100%
-      ),
-      linear-gradient(180deg, rgb(6 16 13 / 0.7) 0%, rgb(6 16 13 / 0) 22%);
+  /* No `ratio` is passed — the hero sets its own height, so the stage's own
+     boxes have to be told to fill it. */
+  .stage :global(.work),
+  .stage :global(.photo) {
+    height: 100%;
   }
   .hero-inner {
     max-width: 74rem;
@@ -369,7 +434,7 @@ const LIMITS = [
     display: grid;
     align-content: center;
     justify-items: start;
-    gap: var(--space-4);
+    gap: var(--space-3);
   }
   /* Only the headline sits on the photograph, in the clear glass to the left
      of the board — about 22rem once the container gutter is taken off. */
@@ -380,14 +445,10 @@ const LIMITS = [
   .slab {
     grid-area: 1 / 1;
   }
-  .kicker {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgb(240 212 137 / 0.9);
-    padding-bottom: 0.7rem;
-    margin-bottom: 1rem;
+  .flap {
+    width: 21rem;
+    max-width: 100%;
+    padding-bottom: 0.9rem;
     border-bottom: 1px solid rgb(240 212 137 / 0.35);
   }
   .rotor h1 {
@@ -438,7 +499,7 @@ const LIMITS = [
   /* Narrow: the photograph becomes a band of its own and the copy sits under
      it, rather than being squeezed on top of the board. */
   @media (max-width: 860px) {
-    .hero img {
+    .stage {
       position: relative;
       height: 42vh;
       min-height: 15rem;
@@ -588,7 +649,7 @@ const LIMITS = [
 
   .steps {
     list-style: none;
-    margin: 0;
+    margin: var(--space-4) 0 0;
     display: grid;
     gap: var(--space-4);
     max-width: 46rem;

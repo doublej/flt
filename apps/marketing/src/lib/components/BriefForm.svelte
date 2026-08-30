@@ -123,6 +123,7 @@ function confirm() {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    margin-top: var(--space-5);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);

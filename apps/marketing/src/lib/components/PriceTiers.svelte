@@ -30,7 +30,8 @@ let { selected = $bindable('survey') }: { selected?: string } = $props()
   .tiers {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-    gap: 1rem;
+    gap: var(--space-3);
+    margin-top: var(--space-5);
   }
   .tier {
     display: flex;
@@ -76,7 +77,7 @@ let { selected = $bindable('survey') }: { selected?: string } = $props()
     padding-top: 0.75rem;
   }
   .foot {
-    margin-top: 1.5rem;
+    margin-top: var(--space-4);
     color: var(--color-muted);
     font-size: 0.9rem;
     max-width: var(--measure);
