@@ -2,7 +2,8 @@
  * Route graph — actual direct-flight connections between world airports.
  *
  * Loaded from route-graph.json (generated from OpenFlights + OurAirports data).
- * Contains 3,409 airports with 67,000+ direct routes.
+ * Contains 3,425 airports and 19,257 direct city-pair connections
+ * (3,409 origin keys, 37,595 directed entries; the graph is built bidirectional).
  *
  * To regenerate: cd packages/core/src/data && bun run generate.ts
  */

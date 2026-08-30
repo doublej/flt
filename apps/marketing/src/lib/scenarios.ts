@@ -95,3 +95,65 @@ export const TOTALS = {
 export const MANUAL_S = 90
 
 export const byHandHours = (queries: number) => (queries * MANUAL_S) / 3600
+
+/* ── Avoiding hubs, airlines and regions ──────────────────────────────────
+ * A filter applied to the options that came back, matching on each option's
+ * layover airports. Not a constraint sent to Google — we read everything, then
+ * throw out what you said you did not want. Measured on the runs above. */
+
+export type Avoidance = {
+  route: string
+  options: number
+  /** Options routing through a Gulf hub: DXB DOH AUH BAH MCT KWI. */
+  viaGulf: number
+  cheapest: number
+  cheapestAvoiding: number
+}
+
+export const AVOIDING: Avoidance[] = [
+  {
+    route: 'Amsterdam → Singapore',
+    options: 1060,
+    viaGulf: 113,
+    cheapest: 335,
+    cheapestAvoiding: 408,
+  },
+  {
+    route: 'Five cities → Hanoi',
+    options: 135,
+    viaGulf: 50,
+    cheapest: 320,
+    cheapestAvoiding: 320,
+  },
+]
+
+/** The six airports that swallowed the most connections across all 2,942 options. */
+export const LAYOVER_TOP = [
+  { code: 'LHR', count: 486 },
+  { code: 'CDG', count: 437 },
+  { code: 'FRA', count: 355 },
+  { code: 'MUC', count: 271 },
+  { code: 'BKK', count: 120 },
+  { code: 'ZRH', count: 111 },
+]
+export const LAYOVER_DISTINCT = 66
+
+/* ── Discovering possible routes ──────────────────────────────────────────
+ * A local walk over a static route graph. No searching, no prices, nothing
+ * bookable — a map of what connects to what, used before deciding what to
+ * search. Built from OpenFlights and OurAirports. */
+
+export const GRAPH = { airports: 3425, connections: 19257 }
+
+export const DISCOVERY = {
+  route: 'Amsterdam → Hanoi',
+  /** Routes found, by how many stops you will tolerate. */
+  byStops: [
+    { stops: 1, routes: 16 },
+    { stops: 2, routes: 1034 },
+    { stops: 3, routes: 62425 },
+  ],
+  /** Same query with Gulf hubs excluded, at up to 3 stops. */
+  noGulfAt3: 57035,
+  seconds: 0.16,
+}
