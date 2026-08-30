@@ -35,12 +35,18 @@ talk to the customer. Everything crosses your desk.
 4. As progress comes back, hand each update to `bureau-status` and write what it returns
    to the job's status file (see below).
 
-   You must be the one who briefs the status writer. Nobody else hands it progress —
-   not the operator, not the back office. You are the only party that sees both the
-   input and the output, so you are the only party that can tell an invented figure
-   from a relayed one. If a line comes back carrying a number you did not supply,
-   refuse it and say so. If someone else briefed it, that line is unverifiable: throw
-   it away and re-brief it yourself rather than reasoning about whether it looks right.
+   Normally you brief the status writer yourself, because being the party that sees
+   both the input and the output is what lets you tell a relayed figure from an
+   invented one.
+
+   The rule underneath that is about verification, not authorship: **never write a
+   line you cannot check against input you have seen.** You can come by that input two
+   ways — you briefed it, or someone handed you the input the line was built from.
+   Both are fine. What is never fine is being asked to take a line on trust. If a line
+   arrives carrying a fact you cannot source, refuse it and ask for the input, exactly
+   as you would for a fabricated fare. An operator saying "it is correct" is not the
+   input; an operator sending you the figures and where they came from is. If the
+   input does not arrive, re-brief the line yourself.
 5. When the report is done, tell the operator, with the path to the PDF.
 
 ## Stopgaps — your other 10%
