@@ -2,14 +2,25 @@
 import BriefForm from '$lib/components/BriefForm.svelte'
 import FareRange from '$lib/components/FareRange.svelte'
 import PriceTiers from '$lib/components/PriceTiers.svelte'
-import ReportShowcase from '$lib/components/ReportShowcase.svelte'
 import WeekBoard from '$lib/components/WeekBoard.svelte'
 import { AVOIDING, CABIN, DISCOVERY, GRAPH, TOTALS } from '$lib/scenarios'
 import { onMount } from 'svelte'
+import { fade } from 'svelte/transition'
 
 let tier = $state('survey')
 let scrolled = $state(false)
 let hero: HTMLElement
+
+/** Four ways of saying the same thing, every figure from the runs in
+ *  `scenarios.ts`. The Amsterdam-New York week ran 19-25 December: the 22nd
+ *  came in at EUR 400, the 19th at EUR 547. Nine routes x seven dates is 63. */
+let hi = $state(0)
+const HEADLINES = [
+  ['The same seat.', 'A different day.', 'A different price.'],
+  ['€400 on the 22nd.', '€547 on the 19th.', 'The same flight.'],
+  ['Nine routes.', 'Sixty-three dates.', 'One afternoon.'],
+  ['€84 to Innsbruck.', '€121 to Innsbruck.', 'The same week.'],
+]
 
 const nf = new Intl.NumberFormat('en-GB')
 
@@ -23,7 +34,17 @@ onMount(() => {
     { rootMargin: '-68px 0px 0px 0px' },
   )
   io.observe(hero)
-  return () => io.disconnect()
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return () => io.disconnect()
+  }
+  const t = setInterval(() => {
+    hi = (hi + 1) % HEADLINES.length
+  }, 5200)
+  return () => {
+    io.disconnect()
+    clearInterval(t)
+  }
 })
 
 const STEPS = [
@@ -63,17 +84,12 @@ const LIMITS = [
 <section class="hero" id="top" bind:this={hero}>
   <img src="/img/terminal.jpg" alt="" width="2000" height="853" fetchpriority="high" />
   <div class="hero-inner">
-    <div class="hero-copy">
-      <p class="eyebrow">Bureau — flight research</p>
-      <h1>The same seat.<br />A different day.<br /><em>A different price.</em></h1>
-      <p class="lead">
-        We price every departure date in your window and send you the answer, so you are not the
-        one holding nine tabs open at one in the morning.
-      </p>
-      <div class="hero-actions">
-        <a class="btn" href="#brief">Send a brief — from €7</a>
-        <a class="quiet" href="#report">See a real report</a>
-      </div>
+    <div class="rotor" aria-live="polite">
+      {#key hi}
+        <h1 in:fade={{ duration: 700 }} out:fade={{ duration: 350 }}>
+          {HEADLINES[hi][0]}<br />{HEADLINES[hi][1]}<br /><em>{HEADLINES[hi][2]}</em>
+        </h1>
+      {/key}
     </div>
   </div>
 </section>
@@ -87,6 +103,10 @@ const LIMITS = [
         was worth €147 on New York and €9 on Lyon — and nothing about either route said so in
         advance.
       </p>
+      <div class="weekband-actions">
+        <a class="btn" href="#brief">Send a brief — from €7</a>
+        <a class="quiet" href="#report">See a real report</a>
+      </div>
       <p class="proof">
         {TOTALS.queries} searches · {nf.format(TOTALS.options)} options · {TOTALS.carriers} airlines
         · one afternoon
@@ -151,7 +171,6 @@ const LIMITS = [
         </li>
       {/each}
     </ol>
-    <ReportShowcase />
   </section>
 
   <section class="band" id="pricing">
@@ -305,67 +324,30 @@ const LIMITS = [
   .hero-inner {
     max-width: 74rem;
     margin: 0 auto;
-    padding: 5.5rem var(--gutter) var(--space-6);
-    min-height: max(36rem, min(92vh, 54vw));
+    padding: 5.5rem var(--gutter) var(--space-5);
+    min-height: max(22rem, min(58vh, 36vw));
     display: grid;
     align-items: center;
   }
-  /* The clear glass to the left of the board is about 20rem wide once the
-     container gutter is taken off, so the column is set to exactly that. */
-  .hero-copy {
-    max-width: 20rem;
-    color: #f2f4ec;
+  /* Only the headline sits on the photograph, in the clear glass to the left
+     of the board — about 19rem once the container gutter is taken off. */
+  .rotor {
+    display: grid;
+    max-width: 19rem;
   }
-
-  .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgb(242 244 236 / 0.6);
-    margin-bottom: var(--space-4);
-  }
-  h1 {
+  .rotor h1 {
+    grid-area: 1 / 1;
     font-family: var(--font-display);
     font-weight: 300;
-    font-size: clamp(2rem, 3.8vw, 3.1rem);
-    line-height: 1.02;
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    line-height: 1.06;
     letter-spacing: -0.02em;
+    color: #f2f4ec;
     text-wrap: balance;
-    margin-bottom: var(--space-4);
   }
-  h1 em {
+  .rotor em {
     font-style: italic;
     color: #f0d489;
-  }
-  .hero .lead {
-    color: rgb(242 244 236 / 0.84);
-    font-size: 1rem;
-  }
-  .hero-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-3);
-    margin-top: var(--space-5);
-  }
-  .quiet {
-    color: rgb(242 244 236 / 0.82);
-    font-size: 0.92rem;
-    text-decoration: none;
-    border-bottom: 1px solid rgb(242 244 236 / 0.35);
-    padding-bottom: 1px;
-  }
-  .quiet:hover {
-    color: #fff;
-    border-bottom-color: #fff;
-  }
-  .hero .btn {
-    background: #f4f6ee;
-    color: #10201a;
-  }
-  .hero .btn:hover {
-    background: #fff;
   }
 
   /* Narrow: the photograph becomes a band of its own and the copy sits under
@@ -385,11 +367,11 @@ const LIMITS = [
       padding-top: var(--space-5);
       padding-bottom: var(--space-6);
     }
-    .hero-copy {
+    .rotor {
       max-width: none;
     }
-    .hero h1 {
-      font-size: clamp(2.1rem, 8vw, 3rem);
+    .rotor h1 {
+      font-size: clamp(1.9rem, 7vw, 2.6rem);
     }
   }
 
@@ -426,6 +408,31 @@ const LIMITS = [
     color: rgb(242 244 236 / 0.76);
     font-size: var(--text-lead);
     max-width: 34ch;
+  }
+  .weekband-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+  }
+  .weekband .btn {
+    background: #f4f6ee;
+    color: #10201a;
+  }
+  .weekband .btn:hover {
+    background: #fff;
+  }
+  .quiet {
+    color: rgb(242 244 236 / 0.82);
+    font-size: 0.92rem;
+    text-decoration: none;
+    border-bottom: 1px solid rgb(242 244 236 / 0.35);
+    padding-bottom: 1px;
+  }
+  .quiet:hover {
+    color: #fff;
+    border-bottom-color: #fff;
   }
   .proof {
     margin-top: var(--space-4);
@@ -528,7 +535,7 @@ const LIMITS = [
 
   .steps {
     list-style: none;
-    margin: 0 0 var(--space-6);
+    margin: 0;
     display: grid;
     gap: var(--space-4);
     max-width: 46rem;
