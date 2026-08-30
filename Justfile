@@ -15,6 +15,15 @@ dev:
 build:
     cd apps/web && bun run build
 
+# Bureau — commercial site
+[group('develop')]
+marketing:
+    cd apps/marketing && bun run dev
+
+[group('build')]
+marketing-build:
+    cd apps/marketing && bun run build
+
 [group('quality')]
 check:
     cd apps/web && just check

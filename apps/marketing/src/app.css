@@ -1,0 +1,85 @@
+@font-face {
+  font-family: "Departure Mono";
+  src: url("/fonts/DepartureMono-Regular.woff2") format("woff2"),
+    url("/fonts/DepartureMono-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --color-bg: #0c0e14;
+  --color-surface: #161b22;
+  --color-surface-raised: #1c2333;
+  --color-text: #e6edf3;
+  --color-muted: #7d8590;
+  --color-primary: #f0a030;
+  --color-primary-hover: #ffb224;
+  --color-border: rgb(255 255 255 / 0.08);
+  --color-amber-glow: rgb(240 160 48 / 0.25);
+  --color-track: rgb(255 255 255 / 0.15);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow-lg: 0 4px 20px rgb(0 0 0 / 0.4), 0 2px 6px rgb(0 0 0 / 0.25);
+  --font-mono: "Departure Mono", "SF Mono", "Fira Code", monospace;
+  --font-body: "Space Grotesk", system-ui, sans-serif;
+
+  /* type scale — the app tops out at 1.8rem; a page needs display sizing */
+  --text-display: clamp(2.5rem, 7.5vw, 5.25rem);
+  --text-h2: clamp(1.75rem, 3.6vw, 2.75rem);
+  --text-h3: clamp(1.15rem, 1.8vw, 1.4rem);
+  --text-lead: clamp(1.05rem, 1.6vw, 1.3rem);
+
+  /* vertical rhythm */
+  --section-y: clamp(4rem, 11vw, 8.5rem);
+  --measure: 62ch;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color-scheme: dark;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--color-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
