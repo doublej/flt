@@ -1,11 +1,54 @@
 <script lang="ts">
+import Bars from '$lib/components/Bars.svelte'
 import BriefForm from '$lib/components/BriefForm.svelte'
 import PriceTiers from '$lib/components/PriceTiers.svelte'
 import ReportShowcase from '$lib/components/ReportShowcase.svelte'
 import Scenarios from '$lib/components/Scenarios.svelte'
 import TabStrip from '$lib/components/TabStrip.svelte'
+import {
+  AVOIDING,
+  CABIN,
+  DISCOVERY,
+  GRAPH,
+  LAYOVER_DISTINCT,
+  LAYOVER_TOP,
+  SPREADS,
+  TOTALS,
+} from '$lib/scenarios'
 
 let tier = $state('survey')
+
+const nf = new Intl.NumberFormat('en-GB')
+
+const spreadBars = SPREADS.map((r) => ({
+  label: r.route,
+  value: r.high - r.low,
+  display: `€${r.high - r.low}`,
+  hint: `${r.window} · cheapest day €${r.low}, dearest €${r.high}`,
+})).sort((a, b) => b.value - a.value)
+
+const avoidBars = AVOIDING.flatMap((a) => [
+  {
+    label: `${a.route} — any routing`,
+    value: a.cheapest,
+    display: `€${a.cheapest}`,
+  },
+  {
+    label: `${a.route} — not connecting in the Gulf`,
+    value: a.cheapestAvoiding,
+    display: `€${a.cheapestAvoiding}`,
+    hint:
+      a.cheapestAvoiding === a.cheapest
+        ? `No change. ${a.viaGulf} of ${nf.format(a.options)} options connected in the Gulf, but the cheapest already did not.`
+        : `€${a.cheapestAvoiding - a.cheapest} more. ${a.viaGulf} of ${nf.format(a.options)} options connected in the Gulf.`,
+  },
+])
+
+const hubBars = LAYOVER_TOP.map((h) => ({
+  label: h.code,
+  value: h.count,
+  display: nf.format(h.count),
+}))
 
 const ERAS = [
   {
@@ -36,6 +79,14 @@ const HONEST = [
     text: 'Sends a PDF: a map, price-by-date charts, ranked options with airline, routing and total time.',
   },
   { is: true, text: 'Hands you the booking link for each option. You book where you always did.' },
+  {
+    is: false,
+    text: 'Excluding an airport is a filter on what came back, not a different search. We read every option, then drop the ones that connect where you did not want — which is how you also learn what the preference cost. It matches connecting airports only, so it cannot exclude where you start or land, and excluding an airline is best-effort: a codeshare can slip through under another name.',
+  },
+  {
+    is: false,
+    text: 'The map of possible routes comes from a published snapshot of who flies where, treated as two-way even where a route is only flown one way. Those routings are not priced, not checked against a schedule, and cannot be booked. It decides where we point the search; it is never the answer.',
+  },
   {
     is: true,
     text: 'The engine is a public command-line tool called flt. It is on GitHub. You can read it, or run it yourself and skip us entirely.',
@@ -91,17 +142,21 @@ const STEPS = [
   <section class="hero">
     <p class="eyebrow">Bureau — we bring back travel agents</p>
     <h1>
-      You used to have <br />a travel agent. <br />
-      <em>Now you have eleven tabs.</em>
+      One route. One week. <br />
+      <em>€335 to €4,586.</em>
     </h1>
     <p class="lead">
-      Bureau is a paid flight research service. You brief it the way you once briefed a person at
-      a desk. It works every route against every date you asked about, then sends back a PDF:
-      prices day by day, options ranked, and the link to book each one.
+      One-way fares, Amsterdam to Singapore, across the same seven days. We read 1,060 options to
+      find both ends of that range. A tab shows you a screenful and asks you to decide.
+    </p>
+    <p class="lead">
+      Bureau is a paid flight research service. You brief it the way you once briefed a person at a
+      desk. It works every route against every date you asked about, then sends back a PDF: prices
+      day by day, options ranked, and the link to book each one.
     </p>
     <div class="hero-actions">
       <a class="btn" href="#brief">Brief the Bureau — two minutes</a>
-      <a class="btn ghost" href="#report">See what lands in your inbox</a>
+      <a class="btn ghost" href="#answers">See what it finds</a>
     </div>
     <div class="strip"><TabStrip /></div>
   </section>
@@ -110,39 +165,65 @@ const STEPS = [
     <i></i><span></span><i></i><span></span><i></i>
   </div>
 
-  <!-- 2. The arithmetic -->
-  <section class="band">
-    <h2>The problem is the arithmetic.</h2>
+  <!-- 2. Three questions a tab cannot answer -->
+  <section class="band" id="answers">
+    <h2>Three questions a tab cannot answer</h2>
     <p class="lead measure">
-      A real trip last month: five possible arrival cities, a nine-day window either side of the date
-      that mattered, economy and premium worth comparing. That is
-      <strong>26 separate searches</strong> and <strong>985 options</strong>, and the answer only
-      falls out when you hold all of them at once.
+      Not because the tab is bad. Because each answer needs dozens of searches held side by side,
+      and a tab holds one. Every number below came out of real runs, listed further down.
     </p>
-    <div class="stats">
-      <div><span class="num">5</span><span class="cap">destinations worth comparing</span></div>
-      <div>
-        <span class="num">26</span><span class="cap"
-          >searches to cover them, about 40 minutes of your evening</span
-        >
-      </div>
-      <div><span class="num">985</span><span class="cap">options it read, so you read ten</span></div>
-      <div><span class="num">€185</span><span class="cap">between the best day and the worst, one route</span></div>
-    </div>
-    <p class="measure kicker">Tabs compare two things at a time, which is the whole problem.</p>
-  </section>
 
-  <!-- 3. Then / now / now again -->
-  <section class="band">
-    <h2>Then, now, and now again</h2>
-    <div class="eras">
-      {#each ERAS as era}
-        <article>
-          <span class="year">{era.year}</span>
-          <h3>{era.title}</h3>
-          <p>{era.body}</p>
-        </article>
-      {/each}
+    <div class="qa">
+      <h3>Is it worth moving my dates?</h3>
+      <p class="measure">
+        Sometimes enormously, sometimes not at all — and the gap between those two cases is the
+        thing you cannot see from inside one search. Same seven-day window, nine routes:
+      </p>
+      <Bars bars={spreadBars} unit="Gap between the cheapest and dearest departure date inside one seven-day window. One-way economy fares, cheapest we saw at the time." />
+      <p class="measure kicker">
+        Shifting your New York flight by a few days is worth €147. Doing the same to Lyon is worth
+        €9. Nobody can tell you which of those you are looking at without running both.
+      </p>
+    </div>
+
+    <div class="qa">
+      <h3>What is my preference actually costing me?</h3>
+      <p class="measure">
+        Say you would rather not change planes in the Gulf. That is a fine thing to want. The
+        question is what it costs, and the answer is not the same twice:
+      </p>
+      <Bars bars={avoidBars} unit="Cheapest one-way fare we saw, before and after dropping every option that connects in DXB, DOH, AUH, BAH, MCT or KWI." />
+      <p class="measure kicker">
+        On Singapore it costs €73. On Hanoi it costs nothing — even though Hanoi connected in the
+        Gulf more than three times as often, the cheapest option there already went another way.
+        You cannot guess which case you are in, which is the entire reason to check.
+      </p>
+    </div>
+
+    <div class="qa">
+      <h3>What else even connects?</h3>
+      <p class="measure">
+        Before searching anything, we walk a map of who flies where — {nf.format(GRAPH.airports)}
+        airports and {nf.format(GRAPH.connections)} direct connections — and count the ways the trip
+        could be pieced together without wandering more than three times the direct distance.
+        {DISCOVERY.route}:
+      </p>
+      <ol class="stops">
+        {#each DISCOVERY.byStops as s}
+          <li>
+            <span class="k">{s.stops} stop{s.stops > 1 ? 's' : ''}</span>
+            <span class="v">{nf.format(s.routes)}</span>
+            <span class="u">route{s.routes > 1 ? 's' : ''}</span>
+          </li>
+        {/each}
+      </ol>
+      <p class="measure kicker">
+        Tolerating one more connection multiplies the possibilities roughly sixty-fold, twice over.
+        This step takes {DISCOVERY.seconds} seconds and costs nothing, because no searching happens
+        yet. It is a map of what connects, not a list of what is for sale: those routings carry no
+        price, no schedule check, and cannot be booked. Some of them nobody sells at all. They only
+        tell us where to point the search.
+      </p>
     </div>
   </section>
 
@@ -150,17 +231,17 @@ const STEPS = [
     <i></i><span></span><i></i>
   </div>
 
-  <!-- 4. The report -->
-  <section class="band" id="report">
-    <h2>The report that lands in your inbox</h2>
+  <!-- 3. The searching -->
+  <section class="band" id="work">
+    <h2>So we do the searching</h2>
     <p class="lead measure">
-      The PDF a travel agent used to hand across the desk, except it covers every date you were
-      curious about.
+      Four briefs of the kind people send, run end to end one afternoon. Not a demo and not a
+      projection — the counts come off the engine's own log afterwards.
     </p>
-    <ReportShowcase />
+    <Scenarios />
   </section>
 
-  <!-- 5. How it works -->
+  <!-- 4. How it works -->
   <section class="band">
     <h2>How it works</h2>
     <ol class="steps">
@@ -174,8 +255,8 @@ const STEPS = [
     </ol>
     <p class="measure kicker">
       The waiting is the product. Searches go out one at a time with a gap between them, because a
-      flight site handed too many requests at once stops answering. Three to five minutes is what
-      the work takes, and it was always what a good agent did: go away, come back with options.
+      flight site handed too many requests at once stops answering. A few minutes is what the work
+      takes, and it was always what a good agent did: go away, come back with options.
     </p>
   </section>
 
@@ -183,24 +264,38 @@ const STEPS = [
     <i></i><span></span><i></i><span></span><i></i>
   </div>
 
-  <!-- Four real jobs -->
-  <section class="band" id="work">
-    <h2>Four jobs we actually ran</h2>
+  <!-- 5. The report -->
+  <section class="band" id="report">
+    <h2>What comes back</h2>
     <p class="lead measure">
-      Not a demo and not a projection. Four briefs of the kind people send, run end to end one
-      afternoon, with the counts taken off the engine afterwards.
+      The PDF a travel agent used to hand across the desk, except it covers every date you were
+      curious about.
     </p>
-    <Scenarios />
+    <ReportShowcase />
   </section>
 
-  <!-- 6. Pricing -->
+  <!-- 6. The aside -->
+  <section class="band">
+    <h2>This used to be someone's job</h2>
+    <div class="eras">
+      {#each ERAS as era}
+        <article>
+          <span class="year">{era.year}</span>
+          <h3>{era.title}</h3>
+          <p>{era.body}</p>
+        </article>
+      {/each}
+    </div>
+  </section>
+
+  <!-- 7. Pricing -->
   <section class="band" id="pricing">
     <h2>Priced by depth, not by seat</h2>
     <p class="lead measure">
-      The price follows how far the search goes: one route on one date, one route across nine
-      departure dates, or five destinations in economy and premium. On the trip above, €185
-      separated the best day from the worst. Finding that took 26 searches and costs €39. What you
-      do with the difference is your business.
+      The price follows how far the search goes: one route on one date, one route across a week of
+      departure dates, or several destinations in more than one cabin. The New York job above found
+      €147 between the best day and the worst. It took 28 searches. What you do with the difference
+      is your business.
     </p>
     <PriceTiers bind:selected={tier} />
   </section>
@@ -209,7 +304,7 @@ const STEPS = [
     <i></i><span></span><i></i><span></span><i></i>
   </div>
 
-  <!-- 7. Honesty panel -->
+  <!-- 8. Honesty panel -->
   <section class="band">
     <h2>The whole list, limits included</h2>
     <p class="lead measure">
@@ -225,13 +320,18 @@ const STEPS = [
         </li>
       {/each}
     </ul>
+    <div class="hubs">
+      <h3>Where {nf.format(TOTALS.options)} options actually changed planes</h3>
+      <Bars bars={hubBars} unit="Six airports out of the {LAYOVER_DISTINCT} we saw. This is the shape of the network, not a recommendation." />
+    </div>
   </section>
 
-  <!-- 8. Brief -->
+  <!-- 9. Brief -->
   <section class="band" id="brief">
     <h2>Brief the Bureau</h2>
     <p class="lead measure">
-      Tell it what you would have told the person at the desk. Vague is fine; vague is what it is good at.
+      Tell it what you would have told the person at the desk. Vague is fine; vague is what it is
+      good at.
     </p>
     <BriefForm {tier} />
   </section>
@@ -328,10 +428,6 @@ const STEPS = [
     color: var(--color-muted);
     max-width: var(--measure);
   }
-  .lead strong {
-    color: var(--color-text);
-    font-weight: 500;
-  }
   .hero-actions {
     display: flex;
     flex-wrap: wrap;
@@ -368,6 +464,63 @@ const STEPS = [
       opacity: 0;
       transform: translateY(18px);
     }
+  }
+
+  .qa {
+    margin-top: 3.5rem;
+  }
+  .qa h3 {
+    font-size: clamp(1.2rem, 2.2vw, 1.6rem);
+    margin: 0 0 0.75rem;
+    text-wrap: balance;
+  }
+  .qa > p:first-of-type {
+    margin-bottom: 1.75rem;
+  }
+  .qa .kicker {
+    margin-top: 1.5rem;
+  }
+
+  .stops {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+    max-width: 30rem;
+  }
+  .stops li {
+    display: grid;
+    grid-template-columns: 6rem auto 1fr;
+    gap: 0.75rem;
+    align-items: baseline;
+    padding-block: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .stops .k {
+    color: var(--color-muted);
+    font-size: 0.85rem;
+  }
+  .stops .v {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(1.3rem, 3vw, 1.9rem);
+    color: var(--color-primary);
+    text-shadow: 0 0 20px var(--color-amber-glow);
+  }
+  .stops .u {
+    color: var(--color-muted);
+    font-size: 0.85rem;
+  }
+
+  .hubs {
+    margin-top: 3rem;
+  }
+  .hubs h3 {
+    font-size: 1.05rem;
+    margin: 0 0 1.25rem;
+    color: var(--color-muted);
+    font-weight: 500;
   }
 
   /* Section divider, borrowed from the app's flight-path rule */
@@ -411,30 +564,6 @@ const STEPS = [
   }
   .kicker {
     margin-top: 2rem;
-    color: var(--color-muted);
-  }
-
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 1.5rem;
-    margin-top: 3rem;
-    padding-top: 2rem;
-    border-top: 1px solid var(--color-border);
-  }
-  .stats div {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  .num {
-    font-family: var(--font-mono);
-    font-size: clamp(2.25rem, 4.5vw, 3.25rem);
-    line-height: 1;
-    color: var(--color-primary);
-  }
-  .cap {
-    font-size: 0.85rem;
     color: var(--color-muted);
   }
 

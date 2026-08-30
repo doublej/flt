@@ -13,7 +13,7 @@ const hours = byHandHours(TOTALS.queries)
 	<div><span class="num">{TOTALS.routes}</span><span class="cap">routes</span></div>
 	<div><span class="num">{TOTALS.days}</span><span class="cap">departure days</span></div>
 	<div><span class="num">{TOTALS.carriers}</span><span class="cap">airlines</span></div>
-	<div><span class="num">{Math.round(TOTALS.seconds / 60)}<i>min</i></span><span class="cap">start to finish</span></div>
+	<div><span class="num">{Math.round(TOTALS.searchingSeconds / 60)}<i>min</i></span><span class="cap">spent searching</span></div>
 </div>
 
 <p class="against measure">
@@ -55,7 +55,10 @@ const hours = byHandHours(TOTALS.queries)
 
 <p class="prov">
 	Real runs, not projections. Counts come from the engine's own search log and result cache after the
-	fact; prices are what Google Flights was showing at the time.
+	fact. Every search here was one-way, so every price is a one-way fare — the cheapest we saw at the
+	time, not a quote. The four jobs took {TOTALS.searchingSeconds} seconds of searching between them,
+	and {TOTALS.seconds} seconds from the first search to the last, the difference being me deciding
+	what to run next.
 </p>
 
 <style>

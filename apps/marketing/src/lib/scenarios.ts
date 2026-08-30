@@ -87,8 +87,16 @@ export const TOTALS = {
   routes: 14,
   carriers: 58,
   aircraftTypes: 34,
+  /** Sum of the four per-job spans: 12 + 75 + 37 + 76. Time actually spent searching. */
+  searchingSeconds: 200,
+  /** First search to last, including the ~35s of gaps between the four jobs. */
   seconds: 235,
+  /** 176 of the 2,942 options were nonstop. */
+  nonstop: 176,
 }
+
+/** Every search in these runs was one-way. Every price on this page is a one-way fare. */
+export const ONE_WAY = true
 
 /** Seconds to run one search by hand: type the route, wait, scan, note the price.
  *  Shown on the page, because it is the only estimate in this section. */
@@ -137,6 +145,8 @@ export const LAYOVER_TOP = [
   { code: 'ZRH', count: 111 },
 ]
 export const LAYOVER_DISTINCT = 66
+/** Layover appearances across all 2,942 options — an option can stop more than once. */
+export const LAYOVER_APPEARANCES = 3314
 
 /* ── Discovering possible routes ──────────────────────────────────────────
  * A local walk over a static route graph. No searching, no prices, nothing
@@ -156,4 +166,34 @@ export const DISCOVERY = {
   /** Same query with Gulf hubs excluded, at up to 3 stops. */
   noGulfAt3: 57035,
   seconds: 0.16,
+  /** Routes capped at three times the direct great-circle distance (connections.ts). */
+  maxDetour: 3,
+}
+
+/* ── What a flexible week is worth ────────────────────────────────────────
+ * Cheapest option on each departure date, taken from the same runs. The
+ * spread is what moving your dates inside that window is actually worth —
+ * and it is wildly different per route, which is the whole point. */
+
+export type Spread = { route: string; window: string; low: number; high: number }
+
+export const SPREADS: Spread[] = [
+  { route: 'Amsterdam → New York JFK', window: '19–25 Dec', low: 400, high: 547 },
+  { route: 'Amsterdam → Newark', window: '19–25 Dec', low: 400, high: 544 },
+  { route: 'Amsterdam → Singapore', window: '3–9 Nov', low: 335, high: 479 },
+  { route: 'Amsterdam → Philadelphia', window: '19–25 Dec', low: 490, high: 625 },
+  { route: 'Amsterdam → Boston', window: '19–25 Dec', low: 432, high: 534 },
+  { route: 'Amsterdam → Turin', window: '16–22 Jan', low: 109, high: 148 },
+  { route: 'Amsterdam → Innsbruck', window: '16–22 Jan', low: 84, high: 121 },
+  { route: 'Amsterdam → Geneva', window: '16–22 Jan', low: 89, high: 119 },
+  { route: 'Amsterdam → Lyon', window: '16–22 Jan', low: 119, high: 128 },
+]
+
+/** Same route, same week, both cabins. Economy moved every day; premium did not move at all. */
+export const CABIN = {
+  route: 'Amsterdam → Singapore',
+  window: '3–9 November',
+  economyLow: 335,
+  economyHigh: 479,
+  premiumFlat: 822,
 }
