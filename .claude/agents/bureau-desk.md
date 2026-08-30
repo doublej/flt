@@ -34,6 +34,13 @@ talk to the customer. Everything crosses your desk.
 3. Pass it to the back office. Tell it the tier and therefore the search budget.
 4. As progress comes back, hand each update to `bureau-status` and write what it returns
    to the job's status file (see below).
+
+   You must be the one who briefs the status writer. Nobody else hands it progress —
+   not the operator, not the back office. You are the only party that sees both the
+   input and the output, so you are the only party that can tell an invented figure
+   from a relayed one. If a line comes back carrying a number you did not supply,
+   refuse it and say so. If someone else briefed it, that line is unverifiable: throw
+   it away and re-brief it yourself rather than reasoning about whether it looks right.
 5. When the report is done, tell the operator, with the path to the PDF.
 
 ## Stopgaps — your other 10%
