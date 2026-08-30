@@ -54,58 +54,61 @@ const ERAS = [
   {
     year: '1985',
     title: 'Someone else did this.',
-    body: 'You said where and roughly when. They went away, worked the terminal, and came back with four options and a reason for each. You did not see the work. That was the point.',
+    body: 'You said where you wanted to go and roughly when. They went away, did the work, and came back with four options and a reason for each. You never saw the searching, which was rather the point.',
   },
   {
     year: '2015',
     title: 'You did it. Badly. At 1am.',
-    body: 'The travel agents went away, and the work came to you. Eleven tabs, a price you half remember from Tuesday, and a booking made mostly to stop looking.',
+    body: 'The agents closed and the work landed on you. Eleven tabs, a price you half remember from Tuesday, and a booking made mostly to stop looking at it.',
   },
   {
     year: 'Today',
-    title: 'The Bureau does it, and does not get bored on search 26.',
-    body: 'Same job, same patience, no terminal. You brief it, it works every route and date you asked for, and a report comes back with the numbers laid out and the links to book.',
+    title: "We do it again, and we don't get bored on search 26.",
+    body: 'Same job, same patience. You tell us what you want, we search every route and date you asked for, and a report comes back with the numbers laid out and links to book.',
   },
 ]
 
 const HONEST = [
   {
     is: false,
-    text: 'One route on one fixed date? Do it yourself. Google Flights takes ninety seconds and it is free. The Bureau earns its fee at five destinations and nine dates, where the tabs stop working.',
+    text: "One route on one fixed date? Do it yourself — Google Flights takes ninety seconds and costs nothing. We're worth paying for at five destinations across nine dates, where tabs stop being any help.",
   },
   { is: true, text: 'Searches every route and date combination you ask for, one after another.' },
   {
     is: true,
     text: 'Sends a PDF: a map, price-by-date charts, ranked options with airline, routing and total time.',
   },
-  { is: true, text: 'Hands you the booking link for each option. You book where you always did.' },
   {
-    is: false,
-    text: 'Excluding an airport is a filter on what came back, not a different search. We read every option, then drop the ones that connect where you did not want — which is how you also learn what the preference cost. It matches connecting airports only, so it cannot exclude where you start or land, and excluding an airline is best-effort: a codeshare can slip through under another name.',
+    is: true,
+    text: 'Gives you a booking link for each option. You book in the same place you always did.',
   },
   {
     is: false,
-    text: 'The map of possible routes comes from a published snapshot of who flies where, treated as two-way even where a route is only flown one way. Those routings are not priced, not checked against a schedule, and cannot be booked. It decides where we point the search; it is never the answer.',
+    text: "Excluding an airport filters what came back, rather than searching differently. We read every option and then drop the ones connecting where you didn't want, which is also how we can tell you what it cost you. It only matches connecting airports, so it can't exclude where you start or land. Excluding an airline is best-effort — a codeshare can slip through under a different name.",
+  },
+  {
+    is: false,
+    text: "The map of possible routes comes from a published snapshot of who flies where, and treats every route as two-way even where it's only flown one way. These routes have no price, haven't been checked against a timetable, and can't be booked. They tell us where to search. They are never the answer.",
   },
   {
     is: true,
-    text: 'The engine is a public command-line tool called flt. It is on GitHub. You can read it, or run it yourself and skip us entirely.',
+    text: "The engine is a public command-line tool called flt. It's on GitHub — you can read it, or run it yourself and skip us entirely.",
   },
   {
     is: false,
-    text: 'Bureau does not book flights. It does not ticket or hold anything, and no payment to an airline passes through us.',
+    text: "We don't book flights. We don't ticket or hold anything, and no payment to an airline goes through us.",
   },
   {
     is: false,
-    text: 'Prices come from public flight search results, not from the airlines themselves. They are what was showing when we looked, so they can change before you book.',
+    text: "Prices come from public flight search results, not from the airlines. They're what was showing when we looked, so they can change before you book.",
   },
   {
     is: false,
-    text: 'Display price only. No baggage rules, fare conditions, tax breakdown or loyalty earning.',
+    text: 'Display price only — no baggage rules, fare conditions, tax breakdown or loyalty earning.',
   },
   {
     is: false,
-    text: 'One run covers up to 21 searches over a window of 7 days. A longer trip is split across more than one run.',
+    text: 'Return-trip date grids are capped at 21 departure and return combinations. The seven-day windows in the examples above were our choice, not a limit — a wider search just costs more, because it is more work.',
   },
 ]
 
@@ -118,12 +121,12 @@ const STEPS = [
   {
     n: '02',
     h: 'It works the routes',
-    p: 'It searches every destination against every date, one search at a time, with a gap between each. It takes a few minutes, and you are not the one waiting.',
+    p: "We search every destination against every date, one at a time, with a pause between each. It takes a few minutes and you don't have to sit through them.",
   },
   {
     n: '03',
     h: 'The report arrives',
-    p: 'A PDF lands in your inbox. Read it on a phone, argue about it over dinner, and book from its links once you have decided.',
+    p: "A PDF arrives in your inbox. Read it on your phone, argue about it over dinner, then book from the links once you've decided.",
   },
 ]
 </script>
@@ -146,13 +149,13 @@ const STEPS = [
       <em>€335 to €4,586.</em>
     </h1>
     <p class="lead">
-      One-way fares, Amsterdam to Singapore, across the same seven days. We read 1,060 options to
-      find both ends of that range. A tab shows you a screenful and asks you to decide.
+      Those are one-way fares to Singapore, all in the same week. We read 1,060 options to find
+      both ends of that range. Google shows you a screenful and leaves the rest to you.
     </p>
     <p class="lead">
-      Bureau is a paid flight research service. You brief it the way you once briefed a person at a
-      desk. It works every route against every date you asked about, then sends back a PDF: prices
-      day by day, options ranked, and the link to book each one.
+      Bureau does the searching for you. Tell us where you want to go and roughly when. We check
+      every route against every date you're considering and send back a PDF: prices day by day,
+      options ranked, and a link to book each one.
     </p>
     <div class="hero-actions">
       <a class="btn" href="#brief">Brief the Bureau — two minutes</a>
@@ -169,44 +172,44 @@ const STEPS = [
   <section class="band" id="answers">
     <h2>Three questions a tab cannot answer</h2>
     <p class="lead measure">
-      Not because the tab is bad. Because each answer needs dozens of searches held side by side,
-      and a tab holds one. Every number below came out of real runs, listed further down.
+      Each one needs dozens of searches lined up next to each other, and a browser tab shows you
+      one search at a time. Every number below comes from real runs, listed further down.
     </p>
 
     <div class="qa">
       <h3>Is it worth moving my dates?</h3>
       <p class="measure">
-        Sometimes enormously, sometimes not at all — and the gap between those two cases is the
-        thing you cannot see from inside one search. Same seven-day window, nine routes:
+        Sometimes it saves you a lot. Sometimes it saves you nothing at all. Here are nine routes,
+        each across a seven-day window:
       </p>
-      <Bars bars={spreadBars} unit="Gap between the cheapest and dearest departure date inside one seven-day window. One-way economy fares, cheapest we saw at the time." />
+      <Bars bars={spreadBars} unit="The gap between the cheapest and the most expensive departure date within one seven-day window. One-way economy fares, the cheapest we saw at the time." />
       <p class="measure kicker">
-        Shifting your New York flight by a few days is worth €147. Doing the same to Lyon is worth
-        €9. Nobody can tell you which of those you are looking at without running both.
+        Moving your New York flight a few days saves €147. The same shift to Lyon saves €9. You
+        can't tell which one you're dealing with until someone checks both.
       </p>
     </div>
 
     <div class="qa">
-      <h3>What is my preference actually costing me?</h3>
+      <h3>What does avoiding an airport cost?</h3>
       <p class="measure">
-        Say you would rather not change planes in the Gulf. That is a fine thing to want. The
-        question is what it costs, and the answer is not the same twice:
+        Say you'd rather not connect in Dubai or Doha. That's an easy thing to ask for, but what
+        it costs depends completely on where you're going:
       </p>
-      <Bars bars={avoidBars} unit="Cheapest one-way fare we saw, before and after dropping every option that connects in DXB, DOH, AUH, BAH, MCT or KWI." />
+      <Bars bars={avoidBars} unit="The cheapest one-way fare we saw, before and after removing every option that connects in Dubai, Doha, Abu Dhabi, Bahrain, Muscat or Kuwait." />
       <p class="measure kicker">
-        On Singapore it costs €73. On Hanoi it costs nothing — even though Hanoi connected in the
-        Gulf more than three times as often, the cheapest option there already went another way.
-        You cannot guess which case you are in, which is the entire reason to check.
+        To Singapore it costs €73. To Hanoi it costs nothing, even though far more of the Hanoi
+        options connected in the Gulf. The cheapest one there already went another way. There's no
+        rule of thumb for this, which is why we check.
       </p>
     </div>
 
     <div class="qa">
-      <h3>What else even connects?</h3>
+      <h3>Which routes even exist?</h3>
       <p class="measure">
-        Before searching anything, we walk a map of who flies where — {nf.format(GRAPH.airports)}
-        airports and {nf.format(GRAPH.connections)} direct connections — and count the ways the trip
-        could be pieced together without wandering more than three times the direct distance.
-        {DISCOVERY.route}:
+        Before we search anything, we check a map of which airports connect to which —
+        {nf.format(GRAPH.airports)} airports and {nf.format(GRAPH.connections)} direct connections —
+        and count the ways your trip could be put together without going more than three times the
+        direct distance. {DISCOVERY.route}:
       </p>
       <ol class="stops">
         {#each DISCOVERY.byStops as s}
@@ -218,11 +221,11 @@ const STEPS = [
         {/each}
       </ol>
       <p class="measure kicker">
-        Tolerating one more connection multiplies the possibilities roughly sixty-fold, twice over.
-        This step takes {DISCOVERY.seconds} seconds and costs nothing, because no searching happens
-        yet. It is a map of what connects, not a list of what is for sale: those routings carry no
-        price, no schedule check, and cannot be booked. Some of them nobody sells at all. They only
-        tell us where to point the search.
+        Every extra connection you'll put up with multiplies the options about sixty times. This
+        step takes {DISCOVERY.seconds} seconds and costs nothing, because nothing has been searched
+        yet. It's a map of what connects, not a list of what's for sale — these routes have no
+        price, haven't been checked against a timetable, and can't be booked. Some of them nobody
+        sells at all. They just tell us where to point the search.
       </p>
     </div>
   </section>
@@ -235,8 +238,8 @@ const STEPS = [
   <section class="band" id="work">
     <h2>So we do the searching</h2>
     <p class="lead measure">
-      Four briefs of the kind people send, run end to end one afternoon. Not a demo and not a
-      projection — the counts come off the engine's own log afterwards.
+      Four real briefs, run start to finish in one afternoon. Not a demo and not an estimate — the
+      counts come straight from the engine's own log.
     </p>
     <Scenarios />
   </section>
@@ -254,9 +257,9 @@ const STEPS = [
       {/each}
     </ol>
     <p class="measure kicker">
-      The waiting is the product. Searches go out one at a time with a gap between them, because a
-      flight site handed too many requests at once stops answering. A few minutes is what the work
-      takes, and it was always what a good agent did: go away, come back with options.
+      Searches go out one at a time, a few seconds apart, because a flight site that gets too many
+      requests at once stops answering. That's why this takes minutes rather than seconds. You're
+      not the one sitting there waiting for it.
     </p>
   </section>
 
@@ -268,8 +271,8 @@ const STEPS = [
   <section class="band" id="report">
     <h2>What comes back</h2>
     <p class="lead measure">
-      The PDF a travel agent used to hand across the desk, except it covers every date you were
-      curious about.
+      The kind of PDF a travel agent used to hand across the desk, covering every date you asked
+      about.
     </p>
     <ReportShowcase />
   </section>
@@ -292,10 +295,9 @@ const STEPS = [
   <section class="band" id="pricing">
     <h2>Priced by depth, not by seat</h2>
     <p class="lead measure">
-      The price follows how far the search goes: one route on one date, one route across a week of
-      departure dates, or several destinations in more than one cabin. The New York job above found
-      €147 between the best day and the worst. It took 28 searches. What you do with the difference
-      is your business.
+      You pay for how far the search goes: one route on one date, one route across a week of dates,
+      or several destinations in more than one cabin. The New York job above took 28 searches and
+      found €147 between the best day and the worst.
     </p>
     <PriceTiers bind:selected={tier} />
   </section>
@@ -308,9 +310,8 @@ const STEPS = [
   <section class="band">
     <h2>The whole list, limits included</h2>
     <p class="lead measure">
-      We do not sell tickets, so we have no deal with an airline to protect and no seats of our own
-      to sell. Nothing changes the ranking. The cheapest option is at the top because it is the
-      cheapest.
+      We don't sell tickets, so there's no airline deal to protect and no seats of our own to push.
+      The cheapest option is at the top because it's the cheapest.
     </p>
     <ul class="honest">
       {#each HONEST as row}
@@ -321,8 +322,8 @@ const STEPS = [
       {/each}
     </ul>
     <div class="hubs">
-      <h3>Where {nf.format(TOTALS.options)} options actually changed planes</h3>
-      <Bars bars={hubBars} unit="Six airports out of the {LAYOVER_DISTINCT} we saw. This is the shape of the network, not a recommendation." />
+      <h3>Where those {nf.format(TOTALS.options)} options changed planes</h3>
+      <Bars bars={hubBars} unit="The six busiest of the {LAYOVER_DISTINCT} connecting airports we saw. This is how the network is shaped, not a recommendation." />
     </div>
   </section>
 
@@ -330,8 +331,7 @@ const STEPS = [
   <section class="band" id="brief">
     <h2>Brief the Bureau</h2>
     <p class="lead measure">
-      Tell it what you would have told the person at the desk. Vague is fine; vague is what it is
-      good at.
+      Tell us roughly what you're after. Vague is fine — that's the part we're good at.
     </p>
     <BriefForm {tier} />
   </section>

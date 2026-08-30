@@ -4,6 +4,8 @@
 
 export type Scenario = {
   id: string
+  /** One square per search: rows x cols always equals queries. */
+  grid: { rows: number; cols: number; rowKind: string }
   /** What the traveller actually asked for. */
   ask: string
   route: string
@@ -22,6 +24,7 @@ export type Scenario = {
 export const SCENARIOS: Scenario[] = [
   {
     id: 'gateway',
+    grid: { rows: 5, cols: 1, rowKind: 'departure airports' },
     ask: 'Hanoi in November. I can start from any airport I can reach by train.',
     route: 'Amsterdam · Brussels · Paris · Düsseldorf · Frankfurt → Hanoi',
     window: '3 November',
@@ -36,6 +39,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'ski',
+    grid: { rows: 4, cols: 7, rowKind: 'destinations' },
     ask: 'Somewhere with snow, some time in the third week of January.',
     route: 'Amsterdam → Geneva · Innsbruck · Lyon · Turin',
     window: '16–22 January',
@@ -50,6 +54,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'cabin',
+    grid: { rows: 2, cols: 7, rowKind: 'cabins' },
     ask: 'Singapore in November. Is premium economy worth the money that week?',
     route: 'Amsterdam → Singapore, economy and premium economy',
     window: '3–9 November',
@@ -64,6 +69,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'holidays',
+    grid: { rows: 4, cols: 7, rowKind: 'destinations' },
     ask: 'New York for Christmas — or close enough that I can take a train in.',
     route: 'Amsterdam → JFK · Newark · Boston · Philadelphia',
     window: '19–25 December',

@@ -17,11 +17,11 @@ const hours = byHandHours(TOTALS.queries)
 </div>
 
 <p class="against measure">
-	The same {TOTALS.queries} searches by hand, at {MANUAL_S} seconds each — type the route, wait, scan,
-	write the price down — is <strong>{hours.toFixed(1)} hours</strong>. That is the honest comparison,
-	and it is also the wrong one: nobody sits down and does {TOTALS.queries} searches. The point is not
-	that the Bureau is faster at the job you were doing. It is that it does the version you were never
-	actually going to do.
+	Doing those {TOTALS.queries} searches yourself, at {MANUAL_S} seconds each — type in the route, wait,
+	read the results, write the price down — would take about <strong>{hours.toFixed(1)} hours</strong>.
+	That's the fair comparison, and it's also a bit misleading, because nobody actually sits down and
+	does {TOTALS.queries} searches. We're not faster at the job you were already doing. We do the
+	thorough version you were never going to get round to.
 </p>
 
 <ul class="jobs">
@@ -40,6 +40,19 @@ const hours = byHandHours(TOTALS.queries)
 					<dl>
 						<div><dt>Routes</dt><dd>{s.route}</dd></div>
 						<div><dt>Window</dt><dd>{s.window}</dd></div>
+						<div>
+							<dt>Searches</dt>
+							<dd>
+								<span class="grid" style:--cols={s.grid.cols}>
+									{#each { length: s.queries } as _}<i></i>{/each}
+								</span>
+								<span class="gridcap"
+									>{s.grid.rows} {s.grid.rowKind} × {s.grid.cols} date{s.grid.cols > 1
+										? 's'
+										: ''}</span
+								>
+							</dd>
+						</div>
 						<div><dt>Options read</dt><dd>{nf.format(s.options)}</dd></div>
 						<div><dt>Airlines seen</dt><dd>{s.carriers}</dd></div>
 						<div>
@@ -54,11 +67,11 @@ const hours = byHandHours(TOTALS.queries)
 </ul>
 
 <p class="prov">
-	Real runs, not projections. Counts come from the engine's own search log and result cache after the
-	fact. Every search here was one-way, so every price is a one-way fare — the cheapest we saw at the
-	time, not a quote. The four jobs took {TOTALS.searchingSeconds} seconds of searching between them,
-	and {TOTALS.seconds} seconds from the first search to the last, the difference being me deciding
-	what to run next.
+	These are real runs, not projections. The counts come from the engine's own search log afterwards.
+	Every search here was one-way, so every price is a one-way fare — the cheapest we saw at the time,
+	not a quote. The four jobs took {TOTALS.searchingSeconds} seconds of searching between them, and
+	{TOTALS.seconds} seconds from the first search to the last. The difference is the time in between,
+	while we set up the next one.
 </p>
 
 <style>
@@ -167,6 +180,27 @@ const hours = byHandHours(TOTALS.queries)
 		font-size: 0.78rem;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
+		color: var(--color-muted);
+	}
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(var(--cols), 0.6rem);
+		gap: 3px;
+		width: max-content;
+	}
+	.grid i {
+		display: block;
+		width: 0.6rem;
+		height: 0.6rem;
+		background: var(--color-primary);
+		opacity: 0.85;
+		border-radius: 1px;
+	}
+	.gridcap {
+		display: block;
+		margin-top: 0.5rem;
+		font-family: var(--font-body);
+		font-size: 0.78rem;
 		color: var(--color-muted);
 	}
 	dd {

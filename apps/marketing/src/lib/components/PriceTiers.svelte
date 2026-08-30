@@ -21,8 +21,9 @@ let { selected = $bindable('survey') }: { selected?: string } = $props()
 </div>
 
 <p class="foot">
-  Priced by how much searching you ask for, because that is the part that takes time. A Survey is
-  split into several runs. One run covers up to 21 searches over a window of 7 days.
+  You pay for how much searching you ask for, because that's the part that takes time. A Survey is
+  split across several runs. Return-trip date grids are capped at 21 departure and return
+  combinations; everything else is a matter of how much work you want done.
 </p>
 
 <style>
