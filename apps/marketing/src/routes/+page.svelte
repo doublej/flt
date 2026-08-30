@@ -8,7 +8,7 @@ import QueryGrid from '$lib/components/QueryGrid.svelte'
 import RouteWeb from '$lib/components/RouteWeb.svelte'
 import SplitFlapBoard, { type Column, type Point } from '$lib/components/SplitFlapBoard.svelte'
 import WeekBoard from '$lib/components/WeekBoard.svelte'
-import { CABIN, SPREADS, TOTALS } from '$lib/scenarios'
+import { CABIN, DISCOVERY, SPREADS, TOTALS } from '$lib/scenarios'
 import { onMount } from 'svelte'
 import { fade } from 'svelte/transition'
 
@@ -31,7 +31,7 @@ const HEADLINES = [
   },
   {
     kicker: 'SEVENTY-FIVE SEARCHES',
-    lines: ['Four briefs.', '75 searches.', 'One afternoon.'],
+    lines: ['Four briefs.', '75 searches.', '200 seconds.'],
   },
   {
     kicker: 'AMSTERDAM-INNSBRUCK',
@@ -64,31 +64,31 @@ const CORNERS: Point[] = [
   { x: 0.361, y: 0.646 },
 ]
 
-/* Grade sampled off the photograph, also on the terminal lab page. */
+/* Grade tuned against the photograph itself, at full size, on the page. */
 const LOOK = {
   renderer: 'canvas',
-  exposure: 1,
-  contrast: 1.14,
-  warmth: -0.1,
+  exposure: 0.69,
+  contrast: 1.31,
+  warmth: -0.17,
   angle: 180,
   multiply: '#00000000',
   screen: '#ffca0030',
-  grain: 0.11,
+  grain: 0.03,
   aberration: 0.2,
-  vignette: 0,
-  blur: 0.2,
+  vignette: 0.13,
+  blur: 0.6,
   supersample: 3,
   glass: true,
   bg: '#000000ff',
-  pad: 0.55,
+  pad: 0.52,
   face: '#131313',
   ink: '#dfd6c4',
   aspect: 0.495,
-  glyph: 1.14,
+  glyph: 1.07,
   squeeze: 0.66,
   baseline: -0.04,
   rowgap: 0.19,
-  grit: 0.185,
+  grit: 0,
   pins: false,
 }
 
@@ -103,7 +103,7 @@ const DEPARTURES = SPREADS.map((r) => {
     fare: `EUR ${r.low}`,
     save: `SAVE ${r.high - r.low}`,
   }
-}).slice(0, 6)
+})
 
 const nf = new Intl.NumberFormat('en-GB')
 
@@ -132,23 +132,23 @@ onMount(() => {
 
 const STEPS = [
   {
-    h: 'Tell us roughly what you want',
-    p: 'Where from, where to, and the rough dates. Several destinations is fine. Vague is fine — that is the part we are good at.',
+    h: 'Send a rough brief',
+    p: 'Where from, where to and roughly when. Several destinations is fine, and so is vague, because vague is the part we are good at.',
   },
   {
     h: 'We price every date',
     p: 'One search at a time, a few seconds apart, because a flight site that gets too many requests at once stops answering. It takes minutes, and you do not have to sit through them.',
   },
   {
-    h: 'A report arrives',
-    p: 'A PDF with prices day by day, options ranked by price and journey time, and a link to book each one. You book in the same place you always did.',
+    h: 'The report lands',
+    p: 'A PDF with the prices day by day, every option ranked by price and journey time, and a link to book each one. You book in the same place you always did.',
   },
 ]
 
 const LIMITS = [
   'We do not book or ticket anything. We find the options and hand you the links.',
-  'Prices come from public flight search results, not from the airlines. They are what was showing when we looked, so they can change before you book.',
-  'Display price only — no baggage rules, fare conditions or tax breakdown.',
+  'Prices come from public flight search results rather than from the airlines, so they are what was showing when we looked and they can move before you book.',
+  'Display price only, with no baggage rules, fare conditions or tax breakdown.',
   'The engine is a public command-line tool called flt. It is on GitHub, and you are welcome to run it yourself and skip us entirely.',
 ]
 </script>
@@ -157,9 +157,9 @@ const LIMITS = [
   <div class="bar">
     <a class="mark" href="#top">Bureau</a>
     <nav>
-      <a href="#report">The report</a>
+      <a href="#report">How it works</a>
       <a href="#pricing">Pricing</a>
-      <a class="cta" href="#brief">Send a brief</a>
+      <a class="cta" href="#brief">Start a brief</a>
     </nav>
   </div>
 </header>
@@ -192,6 +192,13 @@ const LIMITS = [
         </div>
       {/key}
     </div>
+    <p class="pitch">
+      We price every date you could fly, then send you one report. From €7.
+    </p>
+    <div class="hero-actions">
+      <a class="btn" href="#brief">Start a brief</a>
+      <a class="quiet" href="#report">See how it works</a>
+    </div>
     <ol class="ticks">
       {#each HEADLINES as h, n (h.kicker)}
         <li>
@@ -213,19 +220,19 @@ const LIMITS = [
 <section class="weekband">
   <div class="weekband-inner">
     <div class="weekband-copy">
-      <h2>Pick a route</h2>
+      <h2>The same seat, priced on every day of its week</h2>
       <p>
         Nine real briefs, each priced on all seven departure dates in its window. Moving your dates
-        was worth €147 on New York and €9 on Lyon — and nothing about either route said so in
+        was worth €147 on New York and €9 on Lyon, and nothing about either route said so in
         advance.
       </p>
       <div class="weekband-actions">
-        <a class="btn" href="#brief">Send a brief — from €7</a>
-        <a class="quiet" href="#report">See a real report</a>
+        <a class="btn" href="#brief">Start a brief, from €7</a>
+        <a class="quiet" href="#report">See how it works</a>
       </div>
       <p class="proof">
         {TOTALS.queries} searches · {nf.format(TOTALS.options)} options · {TOTALS.carriers} airlines
-        · one afternoon
+        · {TOTALS.searchingSeconds} seconds
       </p>
     </div>
     <WeekBoard />
@@ -234,52 +241,57 @@ const LIMITS = [
 
 <main>
   <section class="band" id="evidence">
-    <h2>Nine routes, one week each</h2>
+    <h2>Being flexible is worth €147 on New York and €9 on Lyon</h2>
     <p class="lead measure">
-      Every one of these was searched on all seven departure dates. Flexibility paid enormously on
-      some and almost nothing on others, and nothing about the route tells you which in advance.
+      Every route here was searched on all seven of its departure dates, so the spread is exactly
+      what moving your dates would have saved you. Nothing about a route tells you in advance which
+      kind it is going to be.
     </p>
     <FareRange />
     <p class="measure kicker">
       Cabin makes its own point. Across that Singapore week economy moved between €{CABIN
         .economyLow} and €{CABIN.economyHigh}, while premium economy sat at €{CABIN.premiumFlat} on
-      every single day. So the step up cost €{CABIN.premiumFlat - CABIN.economyHigh} on the dearest
-      economy day and €{CABIN.premiumFlat - CABIN.economyLow} on the cheapest — the upgrade never
-      moved, only the thing you were comparing it against.
+      every single day. The step up cost €{CABIN.premiumFlat - CABIN.economyHigh} on the dearest
+      economy day and €{CABIN.premiumFlat - CABIN.economyLow} on the cheapest. The upgrade never
+      moved; only the thing you were comparing it against did.
     </p>
 
   </section>
 
   <section class="band" id="work">
-    <h2>Every search we ran, drawn</h2>
+    <h2>Seventy-five searches took us 200 seconds and would have taken you two hours</h2>
     <p class="lead measure">
-      Four briefs, seventy-five searches. One square per search, laid out the way the job actually
-      ran: a row for each thing that varied, a column for each departure date.
+      Four briefs, seventy-five searches. Each square is one search, laid out the way the job
+      actually ran: a row for everything that varied, a column for every departure date.
     </p>
     <QueryGrid />
   </section>
 
   <section class="band" id="avoid">
-    <h2>Ruling an airport out</h2>
+    <h2>You can rule an airport out and still see what it cost you</h2>
     <p class="lead measure">
-      Say you will not change planes in the Gulf. We read every option first, then take away the
-      ones that connect there — so the question is what is left, and what the cheapest survivor
-      costs.
+      Say you will not change planes in the Gulf. We read every option first and then take away the
+      ones that connect there, so the question is never what we are able to search, but what is
+      left afterwards and what the cheapest survivor costs.
     </p>
     <AvoidHubs />
   </section>
 
   <section class="band" id="routes">
-    <h2>Before we search, we look at the map</h2>
+    <h2>
+      There are {nf.format(DISCOVERY.byStops[2].routes)} ways to reach Hanoi, so we read the map
+      before we price anything
+    </h2>
     <p class="lead measure">
-      Every line is one way of getting from Amsterdam to Hanoi within a stop budget. None of them
-      is an offer — they tell us where pointing a search is worth the time.
+      Every line is one way of getting from Amsterdam to Hanoi within a stop budget. These are
+      routes rather than fares, and knowing which ones exist is how we work out which are worth
+      going out and pricing.
     </p>
     <RouteWeb />
   </section>
 
   <section class="band" id="report">
-    <h2>What you get</h2>
+    <h2>How it works</h2>
     <ol class="steps">
       {#each STEPS as step, i}
         <li>
@@ -294,24 +306,24 @@ const LIMITS = [
   </section>
 
   <section class="band" id="pricing">
-    <h2>You pay for how far the search goes</h2>
+    <h2>You pay for the searching, not the seat</h2>
     <p class="lead measure">
-      One date is cheap. Five destinations across a fortnight in two cabins is not, because it is
-      more work. The New York job above took 28 searches and found €147 between the best day and the
-      worst.
+      One date is cheap to answer. Five destinations across a fortnight in two cabins is not,
+      because it is that much more work: the New York job above took 28 searches to find the €147
+      between its best day and its worst.
     </p>
     <PriceTiers bind:selected={tier} />
     <p class="measure kicker">
-      One route on one fixed date? Do not pay us. Google Flights does that free in ninety seconds.
-      We are worth the money once there are several destinations and a spread of dates, which is
-      where tabs stop being any help.
+      One route on one fixed date? Do not pay us for that, because Google Flights does it free in
+      ninety seconds. We start earning the money at several destinations across a spread of dates,
+      which is the point where tabs stop being any help.
     </p>
   </section>
 
   <section class="band" id="brief">
     <h2>Send a brief</h2>
     <p class="lead measure">
-      Tell us roughly what you are after. You will get the report back the same day.
+      Tell us roughly what you are after, and the report comes back the same day.
     </p>
     <BriefForm {tier} />
     <ul class="limits">
@@ -427,9 +439,20 @@ const LIMITS = [
     height: 100%;
   }
   .hero-inner {
-    max-width: 74rem;
-    margin: 0 auto;
-    padding: 6rem var(--gutter) var(--space-5);
+    /* The photograph is left-anchored and `cover`, so it is never narrower than
+       the viewport and the concourse board always begins at 36.1% of whatever
+       width the photo ends up displayed at. The copy column is placed against
+       that edge rather than against a centred container, which at wide viewports
+       drifts right faster than the board does and walks the text onto it. */
+    --photo-w: max(100vw, calc(max(30rem, min(82vh, 48vw)) * 2.3447));
+    --board-x: calc(0.361 * var(--photo-w));
+    max-width: none;
+    margin: 0;
+    padding: 6rem var(--gutter) var(--space-5)
+      min(
+        max(var(--gutter), calc((100vw - 74rem) / 2 + var(--gutter))),
+        calc(var(--board-x) - 24rem)
+      );
     min-height: max(30rem, min(82vh, 48vw));
     display: grid;
     align-content: center;
@@ -475,6 +498,27 @@ const LIMITS = [
     }
   }
 
+  /* The hero says what the thing is, once, in the same glass as the headline. */
+  .pitch {
+    max-width: 21rem;
+    color: rgb(242 244 236 / 0.82);
+    font-size: 1.02rem;
+    line-height: 1.5;
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .hero-actions .btn {
+    background: #f4f6ee;
+    color: #10201a;
+  }
+  .hero-actions .btn:hover {
+    background: #fff;
+  }
+
   .ticks {
     list-style: none;
     display: flex;
@@ -510,10 +554,10 @@ const LIMITS = [
     }
     .hero-inner {
       min-height: 0;
-      padding-top: var(--space-5);
-      padding-bottom: var(--space-6);
+      padding: var(--space-5) var(--gutter) var(--space-6);
     }
-    .rotor {
+    .rotor,
+    .pitch {
       max-width: none;
     }
     .rotor h1 {

@@ -74,11 +74,7 @@ onMount(() => {
   .board {
     display: grid;
     gap: var(--space-3);
-    padding: var(--space-4);
-    border-radius: var(--radius-lg);
-    background: rgb(9 18 15 / 0.62);
-    border: 1px solid rgb(240 244 232 / 0.16);
-    backdrop-filter: blur(14px);
+    padding: var(--space-4) 0 0;
     color: #f2f4ec;
   }
 
@@ -106,11 +102,12 @@ onMount(() => {
     color: #10201a;
   }
 
+  /* Route and window each get their own line whatever the route is called.
+     Sharing one wrapping line meant Lyon sat beside its dates and New York JFK
+     pushed them below, so the panel changed height as the route cycled. */
   .head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.6rem;
+    display: grid;
+    gap: 0.2rem;
     margin-top: var(--space-1);
   }
   .route {
@@ -166,10 +163,13 @@ onMount(() => {
     color: rgb(242 244 236 / 0.45);
   }
 
+  /* Two lines are reserved: the sentence is one line on the short routes and two
+     on the long ones, and the page must not jump between them. */
   .foot {
     font-size: 0.85rem;
     color: rgb(242 244 236 / 0.72);
     line-height: 1.5;
+    min-height: 2.55rem;
   }
   .foot b {
     font-family: var(--font-mono);
