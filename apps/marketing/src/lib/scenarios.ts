@@ -257,4 +257,9 @@ export const CABIN = {
   economyLow: 335,
   economyHigh: 479,
   premiumFlat: 822,
+  dates: ['3 Nov', '4 Nov', '5 Nov', '6 Nov', '7 Nov', '8 Nov', '9 Nov'],
+  /** Cheapest economy fare on each of the seven days. */
+  economyDays: [410, 450, 335, 479, 362, 479, 479],
+  /** Cheapest premium-economy fare on each of the same days. It never moved. */
+  premiumDays: [822, 822, 822, 822, 822, 822, 822],
 }

@@ -3,11 +3,28 @@ import BriefForm from '$lib/components/BriefForm.svelte'
 import FareRange from '$lib/components/FareRange.svelte'
 import PriceTiers from '$lib/components/PriceTiers.svelte'
 import ReportShowcase from '$lib/components/ReportShowcase.svelte'
+import WeekBoard from '$lib/components/WeekBoard.svelte'
 import { AVOIDING, CABIN, DISCOVERY, GRAPH, TOTALS } from '$lib/scenarios'
+import { onMount } from 'svelte'
 
 let tier = $state('survey')
+let scrolled = $state(false)
+let hero: HTMLElement
 
 const nf = new Intl.NumberFormat('en-GB')
+
+/** The header sits on the photograph until you have scrolled past it, then
+ *  takes the page background so the links stay readable. */
+onMount(() => {
+  const io = new IntersectionObserver(
+    (e) => {
+      scrolled = !e[0].isIntersecting
+    },
+    { rootMargin: '-68px 0px 0px 0px' },
+  )
+  io.observe(hero)
+  return () => io.disconnect()
+})
 
 const STEPS = [
   {
@@ -32,34 +49,54 @@ const LIMITS = [
 ]
 </script>
 
-<header>
-  <a class="mark" href="#top">Bureau</a>
-  <nav>
-    <a href="#report">The report</a>
-    <a href="#pricing">Pricing</a>
-    <a class="cta" href="#brief">Send a brief</a>
-  </nav>
+<header class:solid={scrolled}>
+  <div class="bar">
+    <a class="mark" href="#top">Bureau</a>
+    <nav>
+      <a href="#report">The report</a>
+      <a href="#pricing">Pricing</a>
+      <a class="cta" href="#brief">Send a brief</a>
+    </nav>
+  </div>
 </header>
 
-<main id="top">
-  <section class="hero">
-    <p class="eyebrow">Bureau — flight research</p>
-    <h1>€147 on New York.<br /><em>€9 on Lyon.</em></h1>
-    <p class="lead">
-      That is what moving your dates inside one week was worth on those two routes. Same week, same
-      cabin. There is no way to tell which one you are looking at without pricing every day — so we
-      price every day, and send you the answer.
-    </p>
-    <div class="hero-actions">
-      <a class="btn" href="#brief">Send a brief — from €7</a>
-      <a class="btn ghost" href="#report">See a real report</a>
+<section class="hero" id="top" bind:this={hero}>
+  <img src="/img/terminal.jpg" alt="" width="2000" height="853" fetchpriority="high" />
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <p class="eyebrow">Bureau — flight research</p>
+      <h1>The same seat.<br />A different day.<br /><em>A different price.</em></h1>
+      <p class="lead">
+        We price every departure date in your window and send you the answer, so you are not the
+        one holding nine tabs open at one in the morning.
+      </p>
+      <div class="hero-actions">
+        <a class="btn" href="#brief">Send a brief — from €7</a>
+        <a class="quiet" href="#report">See a real report</a>
+      </div>
     </div>
-    <p class="proof">
-      {TOTALS.queries} searches · {nf.format(TOTALS.options)} options · {TOTALS.carriers} airlines ·
-      one afternoon
-    </p>
-  </section>
+  </div>
+</section>
 
+<section class="weekband">
+  <div class="weekband-inner">
+    <div class="weekband-copy">
+      <h2>Pick a route</h2>
+      <p>
+        Nine real briefs, each priced on all seven departure dates in its window. Moving your dates
+        was worth €147 on New York and €9 on Lyon — and nothing about either route said so in
+        advance.
+      </p>
+      <p class="proof">
+        {TOTALS.queries} searches · {nf.format(TOTALS.options)} options · {TOTALS.carriers} airlines
+        · one afternoon
+      </p>
+    </div>
+    <WeekBoard />
+  </div>
+</section>
+
+<main>
   <section class="band" id="evidence">
     <h2>Nine routes, one week each</h2>
     <p class="lead measure">
@@ -154,46 +191,71 @@ const LIMITS = [
 </footer>
 
 <style>
+  /* ---- header ---------------------------------------------------------- */
   header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    transition: background 0.25s ease, border-color 0.25s ease;
+    border-bottom: 1px solid transparent;
+  }
+  header .bar {
+    max-width: 74rem;
+    margin: 0 auto;
+    padding: var(--space-3) var(--gutter);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1.5rem;
-    padding: 1.25rem clamp(1.25rem, 5vw, 4rem);
-    border-bottom: 1px solid var(--color-border);
-    position: sticky;
-    top: 0;
-    background: color-mix(in srgb, var(--color-bg) 88%, transparent);
-    backdrop-filter: blur(8px);
-    z-index: 10;
+    gap: var(--space-4);
   }
+  header.solid {
+    background: color-mix(in srgb, var(--color-bg) 96%, transparent);
+    backdrop-filter: blur(12px) saturate(1.2);
+    border-bottom-color: var(--color-border);
+  }
+
   .mark {
     font-family: var(--font-display);
     font-size: 1.3rem;
-    letter-spacing: 0.01em;
-    color: var(--color-text);
+    color: #f4f6ee;
     text-decoration: none;
+    transition: color 0.25s ease;
   }
   header nav {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: var(--space-4);
     font-size: 0.88rem;
   }
   header nav a {
-    color: var(--color-muted);
+    color: rgb(244 246 238 / 0.8);
     text-decoration: none;
+    transition: color 0.25s ease;
   }
   header nav a:hover {
-    color: var(--color-text);
+    color: #fff;
   }
   header nav .cta {
-    color: var(--color-surface);
-    background: var(--color-primary);
+    color: #10201a;
+    background: #f4f6ee;
     padding: 0.45rem 0.9rem;
     border-radius: var(--radius);
   }
-  header nav .cta:hover {
+
+  header.solid .mark {
+    color: var(--color-text);
+  }
+  header.solid nav a {
+    color: var(--color-muted);
+  }
+  header.solid nav a:hover {
+    color: var(--color-text);
+  }
+  header.solid nav .cta {
+    color: var(--color-surface);
+    background: var(--color-primary);
+  }
+  header.solid nav .cta:hover {
     background: var(--color-primary-hover);
     color: var(--color-surface);
   }
@@ -203,43 +265,192 @@ const LIMITS = [
     }
   }
 
-  main {
+  /* ---- hero ------------------------------------------------------------ */
+  /* The photograph is the point, so it is never cropped harder than it has to
+     be and the copy stays in the dark glass on the left, clear of the board. */
+  .hero {
+    position: relative;
+    margin-top: -5.5rem;
+    isolation: isolate;
+    background: #08120f;
+  }
+  .hero img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* pushes the photograph's own board clear of the headline column */
+    object-position: 22% 46%;
+    /* Slight defocus: it reads as depth of field and stops the signage in the
+       photograph competing with the headline for the reader's eye. */
+    filter: blur(2.5px) saturate(1.04);
+    transform: scale(1.05);
+    z-index: -2;
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(
+        90deg,
+        rgb(6 16 13 / 0.95) 0%,
+        rgb(6 16 13 / 0.9) 22%,
+        rgb(6 16 13 / 0.55) 34%,
+        rgb(6 16 13 / 0.12) 46%,
+        rgb(6 16 13 / 0.08) 70%,
+        rgb(6 16 13 / 0.4) 100%
+      ),
+      linear-gradient(180deg, rgb(6 16 13 / 0.7) 0%, rgb(6 16 13 / 0) 22%);
+  }
+  .hero-inner {
     max-width: 74rem;
     margin: 0 auto;
-    padding: 0 clamp(1.25rem, 5vw, 4rem);
+    padding: 5.5rem var(--gutter) var(--space-6);
+    min-height: max(36rem, min(92vh, 54vw));
+    display: grid;
+    align-items: center;
+  }
+  /* The clear glass to the left of the board is about 20rem wide once the
+     container gutter is taken off, so the column is set to exactly that. */
+  .hero-copy {
+    max-width: 20rem;
+    color: #f2f4ec;
   }
 
-  section {
-    padding-block: var(--section-y);
-  }
-  .band + .band,
-  .hero + .band {
-    border-top: 1px solid var(--color-border);
-  }
-
-  .hero {
-    padding-block: clamp(3.5rem, 9vw, 7rem);
-  }
   .eyebrow {
     font-family: var(--font-mono);
     font-size: 0.75rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--color-muted);
-    margin-bottom: 1.75rem;
+    color: rgb(242 244 236 / 0.6);
+    margin-bottom: var(--space-4);
   }
   h1 {
     font-family: var(--font-display);
     font-weight: 300;
-    font-size: var(--text-display);
+    font-size: clamp(2rem, 3.8vw, 3.1rem);
     line-height: 1.02;
     letter-spacing: -0.02em;
     text-wrap: balance;
-    margin-bottom: 1.75rem;
+    margin-bottom: var(--space-4);
   }
   h1 em {
     font-style: italic;
-    color: var(--color-signal);
+    color: #f0d489;
+  }
+  .hero .lead {
+    color: rgb(242 244 236 / 0.84);
+    font-size: 1rem;
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-5);
+  }
+  .quiet {
+    color: rgb(242 244 236 / 0.82);
+    font-size: 0.92rem;
+    text-decoration: none;
+    border-bottom: 1px solid rgb(242 244 236 / 0.35);
+    padding-bottom: 1px;
+  }
+  .quiet:hover {
+    color: #fff;
+    border-bottom-color: #fff;
+  }
+  .hero .btn {
+    background: #f4f6ee;
+    color: #10201a;
+  }
+  .hero .btn:hover {
+    background: #fff;
+  }
+
+  /* Narrow: the photograph becomes a band of its own and the copy sits under
+     it, rather than being squeezed on top of the board. */
+  @media (max-width: 860px) {
+    .hero img {
+      position: relative;
+      height: 42vh;
+      min-height: 15rem;
+      z-index: 0;
+    }
+    .hero::before {
+      background: linear-gradient(180deg, rgb(6 16 13 / 0.55) 0%, rgb(6 16 13 / 0) 30%);
+    }
+    .hero-inner {
+      min-height: 0;
+      padding-top: var(--space-5);
+      padding-bottom: var(--space-6);
+    }
+    .hero-copy {
+      max-width: none;
+    }
+    .hero h1 {
+      font-size: clamp(2.1rem, 8vw, 3rem);
+    }
+  }
+
+  /* ---- the week board, still in the photograph's world ------------------ */
+  .weekband {
+    background: #0c1512;
+    border-top: 1px solid rgb(240 244 232 / 0.1);
+    color: #f2f4ec;
+  }
+  .weekband-inner {
+    max-width: 74rem;
+    margin: 0 auto;
+    padding: var(--space-6) var(--gutter);
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    align-items: center;
+    gap: var(--space-6);
+  }
+  @media (max-width: 900px) {
+    .weekband-inner {
+      grid-template-columns: 1fr;
+      gap: var(--space-4);
+    }
+  }
+  .weekband h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: var(--text-h2);
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    margin-bottom: var(--space-3);
+  }
+  .weekband-copy p {
+    color: rgb(242 244 236 / 0.76);
+    font-size: var(--text-lead);
+    max-width: 34ch;
+  }
+  .proof {
+    margin-top: var(--space-4);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: rgb(242 244 236 / 0.5);
+  }
+  .weekband-copy .proof {
+    font-size: 0.78rem;
+  }
+
+  /* ---- page ------------------------------------------------------------ */
+  main {
+    max-width: 74rem;
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+  }
+  section.band {
+    padding-block: var(--section-y);
+  }
+  .band + .band {
+    border-top: 1px solid var(--color-border);
   }
 
   h2 {
@@ -249,14 +460,13 @@ const LIMITS = [
     line-height: 1.12;
     letter-spacing: -0.015em;
     text-wrap: balance;
-    margin-bottom: 1.25rem;
+    margin-bottom: var(--space-3);
   }
   h3 {
     font-size: var(--text-h3);
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--space-1);
   }
-
   .lead {
     font-size: var(--text-lead);
     color: var(--color-muted);
@@ -266,17 +476,11 @@ const LIMITS = [
     max-width: var(--measure);
   }
   .kicker {
-    margin-top: 2rem;
+    margin-top: var(--space-5);
     color: var(--color-muted);
     font-size: 0.95rem;
   }
 
-  .hero-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-top: 2.25rem;
-  }
   .btn {
     display: inline-block;
     padding: 0.8rem 1.4rem;
@@ -286,41 +490,27 @@ const LIMITS = [
     text-decoration: none;
     font-weight: 500;
     font-size: 0.95rem;
+    border: 1px solid transparent;
     transition: background 0.15s ease;
   }
   .btn:hover {
     background: var(--color-primary-hover);
   }
-  .btn.ghost {
-    background: none;
-    color: var(--color-primary);
-    border: 1px solid var(--color-border);
-  }
-  .btn.ghost:hover {
-    background: var(--color-surface);
-  }
-
-  .proof {
-    margin-top: 2.5rem;
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    color: var(--color-muted);
-  }
 
   .asides {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-    gap: 1.25rem;
-    margin-top: 3.5rem;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
   }
   .asides > div {
     display: flex;
     flex-direction: column;
-    gap: 0.9rem;
+    gap: var(--space-2);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    padding: clamp(1.4rem, 2.4vw, 1.9rem);
+    padding: var(--space-4);
   }
   .asides h3 {
     font-family: var(--font-display);
@@ -334,23 +524,22 @@ const LIMITS = [
   .asides p {
     margin: 0;
     color: var(--color-text);
-    font-size: clamp(1.12rem, 1.9vw, 1.5rem);
-    line-height: 1.3;
+    font-size: clamp(1.05rem, 1.7vw, 1.35rem);
+    line-height: 1.35;
     text-wrap: pretty;
   }
 
   .steps {
     list-style: none;
-    margin: 0 0 3.5rem;
-    padding: 0;
+    margin: 0 0 var(--space-6);
     display: grid;
-    gap: 1.75rem;
+    gap: var(--space-4);
     max-width: 46rem;
   }
   .steps li {
     display: grid;
     grid-template-columns: 2rem 1fr;
-    gap: 1.25rem;
+    gap: var(--space-3);
   }
   .steps .n {
     font-family: var(--font-mono);
@@ -365,11 +554,11 @@ const LIMITS = [
 
   .limits {
     list-style: none;
-    margin: 3rem 0 0;
-    padding: 1.75rem 0 0;
+    margin-top: var(--space-6);
+    padding-top: var(--space-4);
     border-top: 1px solid var(--color-border);
     display: grid;
-    gap: 0.7rem;
+    gap: var(--space-2);
     max-width: var(--measure);
   }
   .limits li {
@@ -386,11 +575,11 @@ const LIMITS = [
 
   footer {
     border-top: 1px solid var(--color-border);
-    padding: 2.5rem clamp(1.25rem, 5vw, 4rem);
+    padding: var(--space-5) var(--gutter);
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-3);
     font-size: 0.83rem;
     color: var(--color-muted);
     max-width: 74rem;

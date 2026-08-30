@@ -17,6 +17,8 @@
   --color-primary: #0b5f52;
   --color-primary-hover: #084a40;
   --color-signal: #c34527;
+  --color-saving: #b8871f;
+  --color-saving-soft: #f0e3bd;
   --color-border: #dcded6;
   --color-track: #e2e4dc;
   --radius: 3px;
@@ -31,8 +33,19 @@
   --text-h3: clamp(1.1rem, 1.7vw, 1.35rem);
   --text-lead: clamp(1.05rem, 1.5vw, 1.22rem);
 
-  --section-y: clamp(3.5rem, 8vw, 6rem);
-  --measure: 60ch;
+  /* One spacing scale. Everything on the page steps through these, so vertical
+     rhythm stays the same whichever section you are in. */
+  --space-1: 0.5rem;
+  --space-2: 0.75rem;
+  --space-3: 1.25rem;
+  --space-4: 2rem;
+  --space-5: 3rem;
+  --space-6: 4.5rem;
+  --space-7: 6.5rem;
+
+  --section-y: clamp(5rem, 10vw, 8.5rem);
+  --gutter: clamp(1.5rem, 5vw, 4.5rem);
+  --measure: 62ch;
 }
 
 html {

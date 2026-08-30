@@ -1,169 +1,182 @@
 <script lang="ts">
-import { SPREADS, type Spread } from '$lib/scenarios'
+import { SPREADS } from '$lib/scenarios'
 
-/** Shared price axis, so a segment's position shows the fare and its length shows
- *  what a week of flexibility is worth. The axis does not start at zero and says so. */
-const LO = 60
-const HI = 650
-const TICKS = [100, 200, 300, 400, 500, 600]
+/** One bar per route, drawn to the dearest fare and split where the cheapest
+ *  day ends. The dark part is what you pay if you are flexible; the gold part
+ *  is what the worst day in the same week adds on top. */
+const rows = [...SPREADS]
+  .map((r) => ({
+    ...r,
+    spread: r.high - r.low,
+    share: Math.round(((r.high - r.low) / r.low) * 100),
+  }))
+  .sort((a, b) => b.spread - a.spread)
 
-const pct = (v: number) => ((v - LO) / (HI - LO)) * 100
-
-const rows = [...SPREADS].sort((a, b) => b.high - b.low - (a.high - a.low))
-
-const spread = (r: Spread) => r.high - r.low
-/** Printed beside the euro figure: the same spread as a share of the cheapest fare,
- *  because on a shared axis an expensive route looks flexible simply for being long. */
-const share = (r: Spread) => Math.round((spread(r) / r.low) * 100)
+const max = Math.max(...rows.map((r) => r.high))
+const pct = (v: number) => `${(v / max) * 100}%`
 </script>
 
 <figure>
-  <div class="axis" aria-hidden="true">
-    {#each TICKS as t}
-      <span class="tick" style:left="{pct(t)}%">€{t}</span>
-    {/each}
-  </div>
-
-  <ul>
-    {#each rows as r}
-      <li>
-        <span class="route">{r.route.replace('Amsterdam → ', '')}</span>
-        <span class="scale">
-          <span class="seg" style:left="{pct(r.low)}%" style:width="{pct(r.high) - pct(r.low)}%"
-          ></span>
-          {#each r.days as d}
-            <i class="day" style:left="{pct(d)}%"></i>
-          {/each}
-          <span class="lo-label" style:left="{pct(r.low)}%">€{r.low}</span>
-          <span class="hi-label" style:left="{pct(r.high)}%">€{r.high}</span>
-        </span>
-        <span class="spread">€{spread(r)}<b>{share(r)}%</b></span>
-      </li>
-    {/each}
-  </ul>
-
   <figcaption>
-    One dot per departure date, showing the cheapest fare we found that day; the line spans the
-    week. On the right, what moving your dates was worth in euros and as a share of the cheapest
-    fare — the percentage matters because a long-haul route looks flexible on this axis simply for
-    being expensive. One-way economy fares, the cheapest we saw at the time. The axis starts at €60,
-    not zero, and no route is clipped by that.
+    <span><i class="key pay"></i>Cheapest day of the week</span>
+    <span><i class="key add"></i>What the dearest day adds</span>
   </figcaption>
+
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Route</th>
+        <th scope="col" class="chart">One-way fare across the week</th>
+        <th scope="col" class="num">Cheapest</th>
+        <th scope="col" class="num">Dearest</th>
+        <th scope="col" class="num">You save</th>
+      </tr>
+    </thead>
+    <tbody>
+      {#each rows as r}
+        <tr>
+          <th scope="row">{r.route.replace('Amsterdam → ', '')}</th>
+          <td class="chart">
+            <div class="bar">
+              <span class="pay" style:width={pct(r.low)}></span>
+              <span class="add" style:width={pct(r.spread)}></span>
+            </div>
+          </td>
+          <td class="num">€{r.low}</td>
+          <td class="num dear">€{r.high}</td>
+          <td class="num save">€{r.spread} <span class="pc">{r.share}%</span></td>
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+
+  <p class="note">
+    Every route searched on all seven departure dates. Bars are drawn to the same scale, so the
+    Alpine routes are genuinely that much cheaper than the Atlantic ones. The percentage is the
+    saving measured against the cheapest fare, which is why Innsbruck beats New York on flexibility
+    while costing a tenth as much. One-way economy fares, the cheapest showing when we looked.
+  </p>
 </figure>
 
 <style>
   figure {
-    --gutter: 7.5rem;
-    margin: 2.5rem 0 0;
-  }
-
-  .axis {
-    position: relative;
-    height: 1.2rem;
-    margin-left: var(--gutter);
-    margin-right: 4.25rem;
-    border-bottom: 1px solid var(--color-border);
-  }
-  .tick {
-    position: absolute;
-    transform: translateX(-50%);
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--color-muted);
-  }
-
-  ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  li {
-    display: grid;
-    grid-template-columns: var(--gutter) 1fr 4.25rem;
-    align-items: center;
-    gap: 0 0;
-    padding-block: 0.95rem;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .route {
-    font-size: 0.9rem;
-    padding-right: 1rem;
-  }
-
-  .scale {
-    position: relative;
-    height: 1.5rem;
-  }
-  .seg {
-    position: absolute;
-    top: 50%;
-    height: 2px;
-    background: var(--color-primary);
-    transform: translateY(-50%);
-  }
-  /* One dot per departure date. Semi-transparent, so repeated fares stack into a
-     darker mark and clustering reads without a second encoding. */
-  .day {
-    position: absolute;
-    top: 50%;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--color-primary) 45%, transparent);
-    transform: translate(-50%, -50%);
-  }
-
-  .lo-label,
-  .hi-label {
-    position: absolute;
-    top: calc(50% + 0.55rem);
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--color-muted);
-    white-space: nowrap;
-  }
-  .lo-label {
-    transform: translateX(-100%);
-    padding-right: 0.5rem;
-  }
-  .hi-label {
-    padding-left: 0.5rem;
-  }
-
-  .spread {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-    font-size: 0.95rem;
-    color: var(--color-primary);
-  }
-  .spread b {
-    display: block;
-    font-weight: 400;
-    font-size: 0.72rem;
-    color: var(--color-muted);
+    margin: var(--space-5) 0 0;
   }
 
   figcaption {
-    margin-top: 1.5rem;
-    font-size: 0.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    font-size: 0.78rem;
     color: var(--color-muted);
-    max-width: 44rem;
+  }
+  figcaption span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .key {
+    width: 1.6rem;
+    height: 0.55rem;
+    border-radius: 1px;
+  }
+  .key.pay {
+    background: var(--color-primary);
+  }
+  .key.add {
+    background: var(--color-saving);
   }
 
-  @media (max-width: 640px) {
-    figure {
-      --gutter: 5.5rem;
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    text-align: left;
+    padding: var(--space-2) var(--space-3) var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+  }
+  th:last-child,
+  td:last-child {
+    padding-right: 0;
+  }
+  thead th {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    padding-bottom: var(--space-2);
+  }
+  tbody th {
+    font-weight: 400;
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+
+  .chart {
+    width: 42%;
+  }
+  .bar {
+    display: flex;
+    align-items: stretch;
+    height: 0.85rem;
+    background: var(--color-track);
+    border-radius: 1px;
+  }
+  .bar .pay {
+    background: var(--color-primary);
+    border-radius: 1px 0 0 1px;
+  }
+  .bar .add {
+    background: var(--color-saving);
+    border-radius: 0 1px 1px 0;
+  }
+
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+    text-align: right;
+    white-space: nowrap;
+  }
+  thead .num {
+    text-align: right;
+  }
+  .num.dear {
+    color: var(--color-text);
+  }
+  .num.save {
+    color: var(--color-saving);
+  }
+  .pc {
+    color: var(--color-muted);
+    font-size: 0.76rem;
+  }
+
+  .note {
+    margin-top: var(--space-4);
+    font-size: 0.84rem;
+    color: var(--color-muted);
+    max-width: var(--measure);
+  }
+
+  @media (max-width: 760px) {
+    .chart {
+      display: none;
     }
-    li {
-      grid-template-columns: var(--gutter) 1fr 4rem;
+    tbody th {
+      white-space: normal;
+      font-size: 0.85rem;
     }
-    .route {
-      font-size: 0.8rem;
+    .num {
+      font-size: 0.82rem;
     }
-    .lo-label {
+    .pc {
       display: none;
     }
   }
