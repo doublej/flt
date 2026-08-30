@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Aggregate real flt search stats from session.json + the result cache.
 
-Usage: scenario-stats.py [--since EPOCH_MS] [--label NAME] [--route-prefix AMS]
+Usage: scenario-stats.py [--since EPOCH_MS] [--label NAME] [--match REGEX]
 Every number comes off disk. Nothing here is estimated.
 """
 import json, os, re, sys
@@ -34,7 +34,7 @@ def price_of(offer):
     except ValueError:
         return None
 
-def collect(since=0, label='all'):
+def collect(since=0, label='all', match=None):
     sess = json.load(open(FLT + 'session.json'))
     routes, days, carriers, cabins = set(), set(), set(), set()
     aircraft, stops_seen = set(), set()
@@ -45,6 +45,8 @@ def collect(since=0, label='all'):
 
     for s in sess['searches'].values():
         if int(s['timestamp']) < since:
+            continue
+        if match and not re.search(match, s['query']):
             continue
         options += int(s['offerCount'])
         ts.append(int(s['timestamp']))
@@ -110,10 +112,12 @@ def collect(since=0, label='all'):
 
 if __name__ == '__main__':
     a = sys.argv[1:]
-    since, label = 0, 'all'
+    since, label, match = 0, 'all', None
     for i, x in enumerate(a):
         if x == '--since':
             since = int(a[i + 1])
         if x == '--label':
             label = a[i + 1]
-    print(json.dumps(collect(since, label), indent=2))
+        if x == '--match':
+            match = a[i + 1]
+    print(json.dumps(collect(since, label, match), indent=2))

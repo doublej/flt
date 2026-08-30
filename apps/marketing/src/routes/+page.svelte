@@ -2,6 +2,7 @@
 import BriefForm from '$lib/components/BriefForm.svelte'
 import PriceTiers from '$lib/components/PriceTiers.svelte'
 import ReportShowcase from '$lib/components/ReportShowcase.svelte'
+import Scenarios from '$lib/components/Scenarios.svelte'
 import TabStrip from '$lib/components/TabStrip.svelte'
 
 let tier = $state('survey')
@@ -125,7 +126,7 @@ const STEPS = [
           >searches to cover them, about 40 minutes of your evening</span
         >
       </div>
-      <div><span class="num">985</span><span class="cap">options that came back</span></div>
+      <div><span class="num">985</span><span class="cap">options it read, so you read ten</span></div>
       <div><span class="num">€185</span><span class="cap">between the best day and the worst, one route</span></div>
     </div>
     <p class="measure kicker">Tabs compare two things at a time, which is the whole problem.</p>
@@ -176,6 +177,20 @@ const STEPS = [
       flight site handed too many requests at once stops answering. Three to five minutes is what
       the work takes, and it was always what a good agent did: go away, come back with options.
     </p>
+  </section>
+
+  <div class="rule" aria-hidden="true">
+    <i></i><span></span><i></i><span></span><i></i>
+  </div>
+
+  <!-- Four real jobs -->
+  <section class="band" id="work">
+    <h2>Four jobs we actually ran</h2>
+    <p class="lead measure">
+      Not a demo and not a projection. Four briefs of the kind people send, run end to end one
+      afternoon, with the counts taken off the engine afterwards.
+    </p>
+    <Scenarios />
   </section>
 
   <!-- 6. Pricing -->
