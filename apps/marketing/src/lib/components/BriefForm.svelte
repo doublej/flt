@@ -34,7 +34,7 @@ function confirm() {
       <input
         bind:value={to}
         required
-        placeholder="Vietnam — Hanoi, Da Nang, anywhere sensible"
+        placeholder="Vietnam: Hanoi, Da Nang, anywhere sensible"
         autocomplete="off"
       />
     </label>
@@ -75,8 +75,8 @@ function confirm() {
   </button>
 
   <p class="note">
-    <strong>Mockup.</strong> Payment is not live yet — nothing is charged and no card is read. The
-    brief and the price are real; the checkout is a placeholder while billing is built.
+    <strong>Mockup.</strong> Nothing is charged and no card is read. The brief and the price are
+    real; the checkout is a placeholder while billing is built.
   </p>
 </form>
 

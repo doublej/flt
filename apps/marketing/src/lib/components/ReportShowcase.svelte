@@ -15,7 +15,7 @@ const PAGES = [
     id: 'table',
     label: 'Options',
     caption:
-      'Ten options per date — airline, routing, total time, arrival day — each with a booking link out.',
+      'Ten options per date, each with airline, routing, total time, arrival day, and a booking link out.',
   },
 ]
 

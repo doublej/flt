@@ -21,9 +21,8 @@ let { selected = $bindable('survey') }: { selected?: string } = $props()
 </div>
 
 <p class="foot">
-  Priced by how much searching you ask for, because that is the part that takes time. Every search
-  is throttled and sequential — the same fare, hammered, is a fare that stops answering. A Survey is
-  broken into several runs; the engine caps a single run at 21 searches over a 7-day window.
+  Priced by how much searching you ask for, because that is the part that takes time. A Survey is
+  split into several runs. One run covers up to 21 searches over a window of 7 days.
 </p>
 
 <style>

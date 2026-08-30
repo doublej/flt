@@ -15,7 +15,7 @@ const ERAS = [
   {
     year: '2015',
     title: 'You did it. Badly. At 1am.',
-    body: 'The agent went away and the work came to you. Eleven tabs, a price you half remember from Tuesday, and a booking made mostly to stop looking.',
+    body: 'The travel agents went away, and the work came to you. Eleven tabs, a price you half remember from Tuesday, and a booking made mostly to stop looking.',
   },
   {
     year: 'Today',
@@ -25,19 +25,27 @@ const ERAS = [
 ]
 
 const HONEST = [
+  {
+    is: false,
+    text: 'One route on one fixed date? Do it yourself. Google Flights takes ninety seconds and it is free. The Bureau earns its fee at five destinations and nine dates, where the tabs stop working.',
+  },
   { is: true, text: 'Searches every route and date combination you ask for, one after another.' },
   {
     is: true,
-    text: 'Sends a report: a map, price-by-date charts, ranked options with airline, routing and total time.',
+    text: 'Sends a PDF: a map, price-by-date charts, ranked options with airline, routing and total time.',
   },
   { is: true, text: 'Hands you the booking link for each option. You book where you always did.' },
   {
-    is: false,
-    text: 'It does not book, ticket, or hold anything. No payment to an airline passes through us.',
+    is: true,
+    text: 'The engine is a public command-line tool called flt. It is on GitHub. You can read it, or run it yourself and skip us entirely.',
   },
   {
     is: false,
-    text: 'Prices come from public flight search results, not an airline feed. Treat them as what was showing when we looked, not a promise.',
+    text: 'Bureau does not book flights. It does not ticket or hold anything, and no payment to an airline passes through us.',
+  },
+  {
+    is: false,
+    text: 'Prices come from public flight search results, not from the airlines themselves. They are what was showing when we looked, so they can change before you book.',
   },
   {
     is: false,
@@ -45,7 +53,7 @@ const HONEST = [
   },
   {
     is: false,
-    text: 'Flexibility has limits: a run covers a 7-day window and 21 searches. Longer trips get split across runs.',
+    text: 'One run covers up to 21 searches over a window of 7 days. A longer trip is split across more than one run.',
   },
 ]
 
@@ -53,17 +61,17 @@ const STEPS = [
   {
     n: '01',
     h: 'Brief the Bureau',
-    p: 'Where from, where to, roughly when, and what you actually care about. Two minutes.',
+    p: 'Where from, where to, roughly when, and what you care about. Two minutes.',
   },
   {
     n: '02',
     h: 'It works the routes',
-    p: 'Every destination against every date, one search at a time, throttled on purpose. It takes minutes. You are not the one waiting.',
+    p: 'It searches every destination against every date, one search at a time, with a gap between each. It takes a few minutes, and you are not the one waiting.',
   },
   {
     n: '03',
     h: 'The report arrives',
-    p: 'A document you can read on a phone, argue about over dinner, and book from when you have decided.',
+    p: 'A PDF lands in your inbox. Read it on a phone, argue about it over dinner, and book from its links once you have decided.',
   },
 ]
 </script>
@@ -80,18 +88,18 @@ const STEPS = [
 <main id="top">
   <!-- 1. Hero -->
   <section class="hero">
-    <p class="eyebrow">We bring back travel agents</p>
+    <p class="eyebrow">Bureau — we bring back travel agents</p>
     <h1>
-      You used to have<br />a travel agent.<br />
+      You used to have <br />a travel agent. <br />
       <em>Now you have eleven tabs.</em>
     </h1>
     <p class="lead">
-      Brief the Bureau the way you once briefed a person at a desk. It works every route and every
-      date you asked about, and comes back with a report — the prices, the routings, the trade-offs,
-      and the link to book each one.
+      Bureau is a paid flight research service. You brief it the way you once briefed a person at
+      a desk. It works every route against every date you asked about, then sends back a PDF:
+      prices day by day, options ranked, and the link to book each one.
     </p>
     <div class="hero-actions">
-      <a class="btn" href="#brief">Brief the Bureau</a>
+      <a class="btn" href="#brief">Brief the Bureau — two minutes</a>
       <a class="btn ghost" href="#report">See what lands in your inbox</a>
     </div>
     <div class="strip"><TabStrip /></div>
@@ -103,20 +111,24 @@ const STEPS = [
 
   <!-- 2. The arithmetic -->
   <section class="band">
-    <h2>It is not annoying. It is arithmetic.</h2>
+    <h2>The problem is the arithmetic.</h2>
     <p class="lead measure">
       A real trip last month: five possible arrival cities, a nine-day window either side of the date
       that mattered, economy and premium worth comparing. That is
-      <strong>26 separate searches</strong> and <strong>985 options</strong> — and the answer only
+      <strong>26 separate searches</strong> and <strong>985 options</strong>, and the answer only
       falls out when you hold all of them at once.
     </p>
     <div class="stats">
       <div><span class="num">5</span><span class="cap">destinations worth comparing</span></div>
-      <div><span class="num">26</span><span class="cap">searches to cover them</span></div>
+      <div>
+        <span class="num">26</span><span class="cap"
+          >searches to cover them, about 40 minutes of your evening</span
+        >
+      </div>
       <div><span class="num">985</span><span class="cap">options that came back</span></div>
       <div><span class="num">€185</span><span class="cap">between the best day and the worst, one route</span></div>
     </div>
-    <p class="measure kicker">Tabs let you compare two things at a time. That is the whole problem.</p>
+    <p class="measure kicker">Tabs compare two things at a time, which is the whole problem.</p>
   </section>
 
   <!-- 3. Then / now / now again -->
@@ -139,10 +151,10 @@ const STEPS = [
 
   <!-- 4. The report -->
   <section class="band" id="report">
-    <h2>What lands in your inbox</h2>
+    <h2>The report that lands in your inbox</h2>
     <p class="lead measure">
-      Not a link to a search. A document — the thing a travel agent used to hand across the desk,
-      except it covers every date you were curious about.
+      The PDF a travel agent used to hand across the desk, except it covers every date you were
+      curious about.
     </p>
     <ReportShowcase />
   </section>
@@ -160,9 +172,9 @@ const STEPS = [
       {/each}
     </ol>
     <p class="measure kicker">
-      The slowness is the product. Searches go out one at a time, spaced out, because a search engine
-      that is hammered stops answering honestly. Four minutes is what the work costs — and it was
-      always what a good agent did. They went away. They came back with options.
+      The waiting is the product. Searches go out one at a time with a gap between them, because a
+      flight site handed too many requests at once stops answering. Three to five minutes is what
+      the work takes, and it was always what a good agent did: go away, come back with options.
     </p>
   </section>
 
@@ -170,8 +182,10 @@ const STEPS = [
   <section class="band" id="pricing">
     <h2>Priced by depth, not by seat</h2>
     <p class="lead measure">
-      You are not paying for a ticket. You are paying for how far the search goes — one date, one
-      week, or the whole shape of a trip.
+      The price follows how far the search goes: one route on one date, one route across nine
+      departure dates, or five destinations in economy and premium. On the trip above, €185
+      separated the best day from the worst. Finding that took 26 searches and costs €39. What you
+      do with the difference is your business.
     </p>
     <PriceTiers bind:selected={tier} />
   </section>
@@ -182,10 +196,11 @@ const STEPS = [
 
   <!-- 7. Honesty panel -->
   <section class="band">
-    <h2>What it is, and what it is not</h2>
+    <h2>The whole list, limits included</h2>
     <p class="lead measure">
-      We do not sell tickets, so there is no airline relationship to protect and no inventory to
-      push. Nothing bends the ranking. The cheapest option is at the top because it is the cheapest.
+      We do not sell tickets, so we have no deal with an airline to protect and no seats of our own
+      to sell. Nothing changes the ranking. The cheapest option is at the top because it is the
+      cheapest.
     </p>
     <ul class="honest">
       {#each HONEST as row}
@@ -201,8 +216,7 @@ const STEPS = [
   <section class="band" id="brief">
     <h2>Brief the Bureau</h2>
     <p class="lead measure">
-      Tell it what you would have told the person at the desk. Vague is fine — vague is what it is
-      good at.
+      Tell it what you would have told the person at the desk. Vague is fine; vague is what it is good at.
     </p>
     <BriefForm {tier} />
   </section>
