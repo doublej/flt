@@ -1,3 +1,6 @@
+<!-- Block-level: never put one inside a <p>. See the note on SplitFlapBoard —
+     the parser closes the paragraph, hydration throws, and it takes every
+     onMount on the page with it. -->
 <script lang="ts">
 /** The lit sign above a board. Its box IS the lit panel — the glow overflows it
  *  on purpose, so a caller can position the panel where the panel goes and not

@@ -1,3 +1,17 @@
+<!-- A split-flap board.
+
+     NEVER put one inside a <p>. The board renders divs, and the HTML parser
+     closes an open paragraph before a div, so the server tree and the hydrated
+     tree disagree and hydration throws HierarchyRequestError. That failure is
+     wildly out of proportion to the mistake: it kills hydration for the WHOLE
+     page at the first offending board, so every onMount on the page silently
+     stops and nothing interactive works anywhere. It presents as "the pane
+     stopped opening", not as "the board is broken".
+
+     Nothing here can guard against it — hydration dies before any of this
+     component's code runs. Inline wrappers that a div does not auto-close,
+     <b> and <h4> among them, are fine. LightBox is block-level on the same
+     terms. -->
 <script lang="ts" module>
 export type Column = { id: string; label?: string; width: number; align?: 'left' | 'right' }
 export type Point = { x: number; y: number }
