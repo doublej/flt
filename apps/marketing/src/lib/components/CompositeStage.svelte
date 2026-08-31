@@ -1,7 +1,7 @@
 <script lang="ts">
 import LightBox from '$lib/components/LightBox.svelte'
 import SplitFlapBoard, { type Column, type Point } from '$lib/components/SplitFlapBoard.svelte'
-import { SIGN, SIGN_ASPECT } from '$lib/lightbox-canvas'
+import { SIGN } from '$lib/lightbox-canvas'
 import { shade } from '$lib/splitflap-canvas'
 import { loadTuning, saveTuning } from '$lib/tuning'
 import { onMount } from 'svelte'
@@ -318,11 +318,10 @@ function seedSign() {
     signPad: SIGN.pad,
     signTextY: SIGN.textY,
     signIcon: SIGN.icon,
-    signAspect: SIGN_ASPECT,
-    signWidth: 1,
-    signHeight: 0,
-    signShift: 0,
-    signGap: 1,
+    signX: 0,
+    signY: 0.02,
+    signW: 1,
+    signH: 0.13,
   }
   for (const [k, v] of Object.entries(fill)) if (!(k in look)) look[k] = v
 }
@@ -415,16 +414,10 @@ onMount(() => {
       lit.addBinding(look, 'signGlow', { view: 'color', label: 'spill' })
       lit.addBinding(look, 'signLip', { view: 'color', label: 'lip' })
       lit.addBinding(look, 'signFrame', { view: 'color', label: 'frame' })
-      lit.addBinding(look, 'signAspect', { min: 4, max: 60, step: 0.1, label: 'w : h' })
-      lit.addBinding(look, 'signWidth', { min: 0.1, max: 1.5, step: 0.005, label: 'width' })
-      lit.addBinding(look, 'signHeight', {
-        min: 0,
-        max: 6,
-        step: 0.01,
-        label: 'height (0 = w:h)',
-      })
-      lit.addBinding(look, 'signShift', { min: -0.5, max: 0.5, step: 0.005, label: 'shift across' })
-      lit.addBinding(look, 'signGap', { min: -1, max: 4, step: 0.01, label: 'gap (cells)' })
+      lit.addBinding(look, 'signX', { min: -0.5, max: 1, step: 0.002, label: 'x' })
+      lit.addBinding(look, 'signY', { min: -0.2, max: 0.6, step: 0.002, label: 'y (above board)' })
+      lit.addBinding(look, 'signW', { min: 0.05, max: 1.5, step: 0.002, label: 'width' })
+      lit.addBinding(look, 'signH', { min: 0.01, max: 0.6, step: 0.002, label: 'height' })
       lit.addBinding(look, 'signPad', { min: 0, max: 3, step: 0.01, label: 'inner pad' })
       lit.addBinding(look, 'signTextY', { min: 0.1, max: 0.9, step: 0.005, label: 'text y' })
       lit.addBinding(look, 'signGlyph', { min: 0.2, max: 0.9, step: 0.01, label: 'cap height' })
@@ -502,15 +495,7 @@ onMount(() => {
 			<img class="scene" {src} alt="" draggable="false" style:object-position={objectPosition} />
 			<div class="pinned" style:width="{width}px">
 				{#snippet lit()}
-					<LightBox
-						text={sign}
-						aspect={n('signAspect', SIGN_ASPECT)}
-						height={n('signHeight', 0) > 0
-							? `calc(var(--ch) * ${n('signHeight', 0)})`
-							: undefined}
-						sign={SIGNSKIN}
-						scale={n('supersample', 2)}
-					/>
+					<LightBox text={sign} sign={SIGNSKIN} scale={n('supersample', 2)} />
 				{/snippet}
 				<SplitFlapBoard
 					{rows}
@@ -520,9 +505,10 @@ onMount(() => {
 					{skinKey}
 					composite={COMPOSITE}
 					sign={sign ? lit : undefined}
-					signGap={n('signGap', 1)}
-					signWidth={n('signWidth', 1)}
-					signShift={n('signShift', 0)}
+					signX={n('signX', 0)}
+					signY={n('signY', 0.02)}
+					signW={n('signW', 1)}
+					signH={n('signH', 0.13)}
 				/>
 			</div>
 			{#if editable}

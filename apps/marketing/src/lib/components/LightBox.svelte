@@ -2,28 +2,19 @@
      the parser closes the paragraph, hydration throws, and it takes every
      onMount on the page with it. -->
 <script lang="ts">
-/** The lit sign above a board. Its box IS the lit panel — the glow overflows it
- *  on purpose, so a caller can position the panel where the panel goes and not
- *  have to know how far the light spreads. */
-import { SIGN, SIGN_ASPECT, type Sign, paintSign } from '$lib/lightbox-canvas'
+/** The lit sign above a board. It fills whatever box it is given and paints the
+ *  panel edge to edge; the glow overflows that box on purpose, so a caller can
+ *  position the panel where the panel goes and never has to know how far the
+ *  light spreads. It has no size of its own — the parent decides. */
+import { SIGN, type Sign, paintSign } from '$lib/lightbox-canvas'
 
 let {
   text = '',
-  /** panel width : height. The photograph's fixture is 24:1. Ignored when
-   *  `height` is set. */
-  aspect = SIGN_ASPECT,
-  /** A CSS length, when the height should be stated rather than derived from
-   *  the width — `calc(var(--ch) * 2)` to size against a board's own cells.
-   *  Height is measured off the laid-out box either way, so CSS decides and the
-   *  painter simply follows. */
-  height,
   sign,
   /** draw above device resolution: the composite homography scales it down */
   scale = 2,
 }: {
   text?: string
-  aspect?: number
-  height?: string
   sign?: Partial<Sign>
   scale?: number
 } = $props()
@@ -55,8 +46,6 @@ $effect(() => {
 	class="sign"
 	bind:clientWidth={w}
 	bind:clientHeight={h}
-	style:aspect-ratio={height ? null : `${aspect}`}
-	style:height={height ?? null}
 	style:--h="{h}px"
 	style:--up="{up}px"
 	style:--down="{down}px"
@@ -68,6 +57,7 @@ $effect(() => {
 <style>
 	.sign {
 		position: relative;
+		height: 100%;
 	}
 	canvas {
 		position: absolute;

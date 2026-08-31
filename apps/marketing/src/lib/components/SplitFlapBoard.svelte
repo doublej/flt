@@ -76,10 +76,10 @@ let {
   renderer = 'dom',
   skinKey,
   sign,
-  signGap = 1,
-  signWidth = 1,
-  signShift = 0,
-  signHead = 5,
+  signX = 0,
+  signY = 0.02,
+  signW = 1,
+  signH = 0.13,
 }: {
   rows: Record<string, string>[]
   columns: Column[]
@@ -96,18 +96,15 @@ let {
    *  real wall it is the same object; anything pinned separately reads as a
    *  sticker. */
   sign?: Snippet
-  /** clearance between that fixture and the top row, in cell heights */
-  signGap?: number
-  /** fixture width as a fraction of the board's, and how far it is shifted
-   *  across, likewise as a fraction of the board's width */
-  signWidth?: number
-  signShift?: number
-  /** How much room the fixture needs above the board, in cell heights, INCLUDING
-   *  anything it spills past its own box. The lens filter region is grown to
-   *  match; a fixture taller than this keeps its geometry but loses grain and
-   *  aberration above the cut, because an SVG filter simply stops there.
-   *  5 covers a LightBox at its default glow. */
-  signHead?: number
+  /** Where that fixture sits, as plain fractions of the board's own box: x and
+   *  w across, y and h up. y is the clearance between the fixture's underside
+   *  and the top row, so every one of the four grows in the direction you would
+   *  expect. They are handed to CSS as percentages and nothing here does any
+   *  geometry with them. */
+  signX?: number
+  signY?: number
+  signW?: number
+  signH?: number
 } = $props()
 
 /* Every internal dimension is a ratio of the cell, so the board is the same
@@ -464,9 +461,12 @@ $effect(() => {
 
 /* --- compositing -------------------------------------------------------- */
 
-/* the filter region is a percentage of the filtered box, so a fixture standing
-   proud of the board has to be paid for in percent of the board's own height */
-const head = $derived(sign && bh > 0 ? Math.min(400, (signHead * cellH * 100) / bh) : 0)
+/* The filter region is a percentage of the filtered box, and the fixture stands
+   proud of it, so the headroom has to be bought back in percent. Three times the
+   fixture's height covers its own box plus a spill of up to two heights; a
+   fiercer glow than that keeps its geometry but loses grain and aberration above
+   the cut, because an SVG filter simply stops at its region edge. */
+const head = $derived(sign ? Math.min(400, (signY + signH * 3) * 100) : 0)
 
 const pin = $derived(composite?.corners ? cornerPinMatrix(bw, bh, composite.corners) : null)
 const grade = $derived(composite?.grade)
@@ -494,9 +494,10 @@ const lensCss = $derived(
 			{#if sign}
 				<div
 					class="fixture"
-					style:--sign-gap="calc(var(--ch) * {signGap})"
-					style:--sign-w="{signWidth * 100}%"
-					style:--sign-x="{signShift * 100}%"
+					style:--sign-x="{signX * 100}%"
+					style:--sign-y="{signY * 100}%"
+					style:--sign-w="{signW * 100}%"
+					style:--sign-h="{signH * 100}%"
 				>
 					{@render sign()}
 				</div>
@@ -734,11 +735,15 @@ const lensCss = $derived(
 	}
 	/* the sign sits above the flaps without joining their grid: the board's own
 	   height still drives the pin, so adding one does not move the board */
+	/* Every one of these percentages resolves against this box, which is the
+	   board: left and width against its width, bottom and height against its
+	   height. That is the whole positioning model. */
 	.fixture {
 		position: absolute;
-		bottom: calc(100% + var(--sign-gap));
-		left: var(--sign-x, 0);
-		width: var(--sign-w, 100%);
+		bottom: calc(100% + var(--sign-y));
+		left: var(--sign-x);
+		width: var(--sign-w);
+		height: var(--sign-h);
 	}
 	.root {
 		transform-origin: 0 0;

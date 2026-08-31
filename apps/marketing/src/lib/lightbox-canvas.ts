@@ -60,9 +60,6 @@ export const SIGN: Sign = {
   icon: true,
 }
 
-/** panel width : panel height, straight off the photograph */
-export const SIGN_ASPECT = 24.1
-
 function rgb(hex: string): [number, number, number] {
   const n = Number.parseInt(hex.slice(1), 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]

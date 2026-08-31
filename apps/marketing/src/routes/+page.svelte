@@ -62,7 +62,7 @@ let CORNERS = $state<Point[]>([
 ])
 
 /* Grade tuned against the photograph itself, at full size, on the page. */
-const LOOK = $state({
+let LOOK = $state({
   renderer: 'canvas',
   exposure: 0.69,
   contrast: 1.31,
@@ -94,14 +94,18 @@ const LOOK = $state({
   signFrame: '#974716',
   signInk: '#cc6707',
   signGlow: '#ff5a0f',
-  signAspect: 19.8,
-  signGap: 0.25,
   signGlyph: 0.52,
   signLetter: 0,
   signBloom: 0.04,
   signUp: 0,
   signDown: 0,
   signIcon: false,
+  signX: 0,
+  signY: 0.0238,
+  signW: 1,
+  signH: 0.1656,
+  signPad: 0.55,
+  signTextY: 0.42,
 })
 
 const DEPARTURES = SPREADS.map((r) => {
@@ -192,7 +196,7 @@ const LIMITS = [
         rows={DEPARTURES}
         columns={DEP_COLS}
         bind:corners={CORNERS}
-        look={LOOK}
+        bind:look={LOOK}
         sign="Cheapest day by route"
         editable={tuning}
         storageKey="hero"
@@ -463,36 +467,35 @@ const LIMITS = [
 
   /* ---- the camera ------------------------------------------------------
      The hero is meant to read as one held shot of a concourse, board and all,
-     so the whole composite drifts together: a slow tripod creep on the stage,
+     so the whole composite moves together: a slow tripod creep on the stage,
      a handheld tremble on the photo, an exposure that hunts and a lens that
-     loses focus for a beat. Everything is a fraction of a pixel or a percent —
-     you should feel it, not see it. Periods are coprime so the loop never
-     lands in the same place twice. */
+     loses focus for a beat. Periods are coprime so the loop never lands in the
+     same place twice. */
   .stage {
-    /* scaled up so the tremble never walks an edge into frame */
-    transform: scale(1.035);
+    /* zoomed enough that the tremble and the roll never walk an edge in */
+    transform: scale(1.03);
   }
   .stage::after {
     content: "";
     position: absolute;
     /* over-hangs the frame so the grain can crawl without showing its own edge */
-    inset: -80px;
+    inset: -90px;
     pointer-events: none;
-    opacity: 0.13;
+    opacity: 0.09;
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   @media (prefers-reduced-motion: no-preference) {
     .stage {
-      animation: hero-drift 31s ease-in-out infinite;
+      animation: hero-drift 29s ease-in-out infinite;
     }
     .stage :global(.photo) {
       animation:
-        hero-handheld 5.1s ease-in-out infinite,
-        hero-camera 17s ease-in-out infinite;
+        hero-handheld 4.9s ease-in-out infinite,
+        hero-camera 15s ease-in-out infinite;
     }
     .stage::after {
-      animation: hero-grain 0.5s steps(1) infinite;
+      animation: hero-grain 0.45s steps(1) infinite;
     }
   }
   /* tuning fights a moving target */
@@ -504,16 +507,16 @@ const LIMITS = [
   @keyframes hero-drift {
     0%,
     100% {
-      transform: scale(1.035) translate3d(0, 0, 0) rotate(0deg);
+      transform: scale(1.03) translate3d(0, 0, 0) rotate(0deg);
     }
     23% {
-      transform: scale(1.045) translate3d(-0.6%, 0.34%, 0) rotate(0.2deg);
+      transform: scale(1.036) translate3d(-0.4%, 0.28%, 0) rotate(0.18deg);
     }
     47% {
-      transform: scale(1.035) translate3d(0.42%, 0.55%, 0) rotate(-0.16deg);
+      transform: scale(1.03) translate3d(0.32%, 0.44%, 0) rotate(-0.15deg);
     }
     71% {
-      transform: scale(1.052) translate3d(0.68%, -0.28%, 0) rotate(0.12deg);
+      transform: scale(1.038) translate3d(0.45%, -0.24%, 0) rotate(0.12deg);
     }
   }
   @keyframes hero-handheld {
@@ -522,43 +525,51 @@ const LIMITS = [
       transform: translate3d(0, 0, 0);
     }
     17% {
-      transform: translate3d(2.2px, -4px, 0);
+      transform: translate3d(1.8px, -3.2px, 0);
     }
     34% {
-      transform: translate3d(-4.4px, 1.5px, 0);
+      transform: translate3d(-3.5px, 1.2px, 0);
     }
     52% {
-      transform: translate3d(3.3px, 3.6px, 0);
+      transform: translate3d(2.6px, 2.8px, 0);
     }
     68% {
-      transform: translate3d(-1.8px, -2.6px, 0);
+      transform: translate3d(-1.4px, -2.1px, 0);
     }
     85% {
-      transform: translate3d(4px, 0.8px, 0);
+      transform: translate3d(3.2px, 0.7px, 0);
     }
   }
+  /* Exposure hunts slowly; focus goes twice, and a focus hunt is quick — the
+     blur ramps and snaps back inside a second, so the keyframes sit close. */
   @keyframes hero-camera {
     0%,
     100% {
       filter: brightness(1) contrast(1) blur(0px);
     }
-    13% {
-      filter: brightness(1.11) contrast(0.95) blur(0px);
+    12% {
+      filter: brightness(1.07) contrast(0.97) blur(0px);
     }
-    29% {
-      filter: brightness(1.04) contrast(1) blur(1.8px);
+    24% {
+      filter: brightness(1.02) contrast(1) blur(0px);
     }
-    36% {
-      filter: brightness(1.01) contrast(1.05) blur(0px);
+    27% {
+      filter: brightness(1.015) contrast(1) blur(1.2px);
     }
-    58% {
-      filter: brightness(0.89) contrast(1.08) blur(0px);
+    31% {
+      filter: brightness(1.008) contrast(1.015) blur(0px);
+    }
+    56% {
+      filter: brightness(0.93) contrast(1.05) blur(0px);
+    }
+    71% {
+      filter: brightness(0.98) contrast(1.01) blur(0px);
     }
     74% {
-      filter: brightness(0.97) contrast(1) blur(1.2px);
+      filter: brightness(0.99) contrast(1) blur(0.8px);
     }
-    81% {
-      filter: brightness(1.05) contrast(0.98) blur(0px);
+    78% {
+      filter: brightness(1.02) contrast(0.99) blur(0px);
     }
   }
   @keyframes hero-grain {
@@ -566,16 +577,16 @@ const LIMITS = [
       transform: translate3d(0, 0, 0);
     }
     20% {
-      transform: translate3d(-42px, 27px, 0);
+      transform: translate3d(-48px, 30px, 0);
     }
     40% {
-      transform: translate3d(31px, -38px, 0);
+      transform: translate3d(36px, -45px, 0);
     }
     60% {
-      transform: translate3d(-19px, -29px, 0);
+      transform: translate3d(-22px, -35px, 0);
     }
     80% {
-      transform: translate3d(37px, 16px, 0);
+      transform: translate3d(42px, 18px, 0);
     }
   }
 

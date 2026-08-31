@@ -12,7 +12,7 @@ const hours = byHandHours(TOTALS.queries)
 <div class="jobs">
   {#each SCENARIOS as s (s.id)}
     <figure>
-      <img class="who" src="/img/people/{s.id}.webp" alt="" width="640" height="800" loading="lazy" />
+      <img class="who" src="/img/people/{s.id}.webp" alt="" width="350" height="450" loading="lazy" />
       <blockquote>{s.ask}</blockquote>
       <p class="route">{s.route}</p>
       <div class="win"><FlapText text={s.window} size="0.55rem" /></div>
@@ -60,17 +60,22 @@ const hours = byHandHours(TOTALS.queries)
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
   }
-  /* A face for the person who sent the brief. The briefs and the numbers are
-     real runs; these portraits are not, which the note under the cards says. */
+  /* The person who sent the brief, cropped to the one portrait format this
+     subject already owns: 35x45mm, the passport and visa standard, head filling
+     most of the frame. Square-cut and ruled like a print, not rounded like an
+     avatar — four of them across the row read as a strip of document photos.
+     The briefs and the numbers are real runs; the faces are not, which the note
+     under the cards says. */
   .who {
-    width: 4.5rem;
+    width: 6rem;
     /* the height attribute is a presentational hint, so aspect-ratio only gets
        a say once height is back to auto */
     height: auto;
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 35 / 45;
     object-fit: cover;
-    border-radius: var(--radius);
-    margin-bottom: 0.15rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    margin-bottom: var(--space-1);
   }
   blockquote {
     margin: 0;
