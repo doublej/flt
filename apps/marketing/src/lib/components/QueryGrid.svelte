@@ -12,6 +12,14 @@ const copy = $derived(getCopy())
  *  and sized off the count itself, so five searches and twenty-eight are told
  *  apart before either number is read. */
 const nf = $derived(new Intl.NumberFormat(getLocale() === 'nl' ? 'nl-NL' : 'en-GB'))
+/** One decimal, but still through Intl: `1.9` is not what 1.9 looks like in
+ *  Dutch, and `.toFixed(1)` always writes a period no matter the locale. */
+const nf1 = $derived(
+  new Intl.NumberFormat(getLocale() === 'nl' ? 'nl-NL' : 'en-GB', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }),
+)
 const hours = byHandHours(TOTALS.queries)
 
 /** Every print is the same size and the same proportion — tall, the way a
@@ -168,7 +176,7 @@ onMount(() => {
     TOTALS.carriers,
     MANUAL_S,
     TOTALS.queries,
-    hours.toFixed(1),
+    nf1.format(hours),
   )}
 </p>
 
