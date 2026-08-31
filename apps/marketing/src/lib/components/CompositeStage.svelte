@@ -510,6 +510,13 @@ onMount(() => {
   }
   baseHash = defaults
 
+  /* The pane lives on the body, not in the composite. Two things inside here
+     make an ancestor a containing block for fixed children — the camera's
+     transform on .stage and the entry's filter on .work — so a pane left in
+     place is laid out against the stage and clipped away by the hero's
+     overflow. Moved out, it is fixed to the viewport wherever it is used. */
+  if (panel) document.body.append(panel)
+
   import('tweakpane').then(({ Pane }) => {
     if (cancelled || !panel) return
     const p = new Pane({ container: panel, title: 'Composite' })
@@ -669,6 +676,7 @@ onMount(() => {
   return () => {
     cancelled = true
     pane?.dispose()
+    panel?.remove()
   }
 })
 </script>
@@ -946,9 +954,17 @@ onMount(() => {
 		cursor: move;
 		touch-action: none;
 	}
+	/* On the body, so fixed means fixed: the pane stays in the corner and scrolls
+	   inside itself however long the folder list gets. */
 	.panel {
-		position: sticky;
-		top: 1rem;
+		position: fixed;
+		top: 5rem;
+		right: 1rem;
+		z-index: 60;
+		width: 21rem;
+		max-height: calc(100svh - 6rem);
+		overflow: auto;
+		overscroll-behavior: contain;
 	}
 	@media (max-width: 900px) {
 		.work {

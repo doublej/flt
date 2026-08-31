@@ -5,6 +5,39 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="theme-color" content="#f4f7f3" />
 		<link rel="icon" href="/favicon.svg" />
+		<!-- Locale pick, before anything paints. Both `/` and `/nl` are fully
+		     prerendered and addressable on their own; this only decides which one
+		     a first-time visitor with no stored choice lands on, and it runs
+		     synchronously in <head> so there is nothing on screen yet to flash.
+		     A stored `lang` cookie (set by the language switcher) always wins over
+		     the browser's own language list, in both directions — including
+		     bouncing an explicit English choice off an old `/nl` bookmark, which a
+		     first-time Dutch guest hitting that same bookmark never sees, because
+		     with no cookie this only ever redirects away from the unprefixed page,
+		     never away from `/nl`. -->
+		<script>
+			(function () {
+				var path = location.pathname
+				var onNl = path === '/nl' || path.indexOf('/nl/') === 0
+				var m = document.cookie.match(/(?:^|; )lang=(en|nl)/)
+				var pref = m && m[1]
+				if (!pref) {
+					var langs = navigator.languages || [navigator.language || '']
+					pref = langs.some(function (l) {
+						return /^nl\b/i.test(l)
+					})
+						? 'nl'
+						: 'en'
+				}
+				var target = null
+				if (pref === 'nl' && !onNl) {
+					target = '/nl' + (path === '/' ? '' : path)
+				} else if (pref === 'en' && onNl && m) {
+					target = path.replace(/^\/nl/, '') || '/'
+				}
+				if (target) location.replace(target + location.search + location.hash)
+			})()
+		</script>
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,100..125,400..700;1,100..125,400..700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />

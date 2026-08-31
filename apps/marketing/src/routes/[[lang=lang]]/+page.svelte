@@ -10,7 +10,7 @@ import QueryGrid from '$lib/components/QueryGrid.svelte'
 import RouteWeb from '$lib/components/RouteWeb.svelte'
 import type { Column, Point } from '$lib/components/SplitFlapBoard.svelte'
 import WeekBoard from '$lib/components/WeekBoard.svelte'
-import { en as copy } from '$lib/i18n/en'
+import { getCopy, getLocale } from '$lib/i18n/copy.svelte'
 import { CABIN, DISCOVERY, FLEX, SPREADS, TOTALS } from '$lib/scenarios'
 import { onMount } from 'svelte'
 import { fade } from 'svelte/transition'
@@ -20,6 +20,15 @@ let scrolled = $state(false)
 /** ?tune opens the hero's tuning pane. Read from location rather than from
  *  $app/state because the page is prerendered and has no searchParams then. */
 let tuning = $state(false)
+
+/* Reads the `[[lang]]` route param, so a client-side navigation between this
+   page and its /nl twin swaps every string below without a full reload. */
+const copy = $derived(getCopy())
+const locale = $derived(getLocale())
+
+function setLangCookie(lang: 'en' | 'nl') {
+  document.cookie = `lang=${lang}; path=/; max-age=31536000; samesite=lax`
+}
 
 /** Four ways of saying the same thing, every figure from the runs in
  *  `scenarios.ts`. Hanoi on 3 November was priced from five departure airports
@@ -33,21 +42,28 @@ let hi = $state(0)
    below it are quoting the same row. A headline naming a route that is not on
    the board is a copy bug, and it throws at module load rather than rendering
    a blank. */
-const HEADLINES = copy.hero.headlines.map((h) => {
-  const i = SPREADS.findIndex((r) => r.route === h.route)
-  if (i < 0) throw new Error(`hero headline names a route that is not in SPREADS: ${h.route}`)
-  return { ...h, row: i, spread: SPREADS[i].high - SPREADS[i].low }
-})
+const HEADLINES = $derived(
+  copy.hero.headlines.map((h) => {
+    const i = SPREADS.findIndex((r) => r.route === h.route)
+    if (i < 0) throw new Error(`hero headline names a route that is not in SPREADS: ${h.route}`)
+    return { ...h, row: i, spread: SPREADS[i].high - SPREADS[i].low }
+  }),
+)
 let held = $state(false)
 
 /* The board inside the photograph. Every row is the cheapest fare we actually
  *  found on that route, on the day it was cheapest — no gates, no statuses, no
  *  departure times, because we do not have those and will not invent them. */
+/* `save` is 11 wide, not 8: English "SAVE 147" only needs 8, but Dutch
+   "BESPAAR 147" needs 11, and `padCells` truncates silently rather than
+   shrinking — so the column is sized for the longer word and English just
+   carries a little trailing blank. Checked against the corner-pinned board in
+   the browser at both widths. */
 const DEP_COLS: Column[] = [
   { id: 'day', width: 6 },
   { id: 'to', width: 15 },
   { id: 'fare', width: 7 },
-  { id: 'save', width: 8 },
+  { id: 'save', width: 11 },
 ]
 
 /* Solved on /labs/splitflap/terminal — fractions of the intrinsic 2000x853. */
@@ -106,18 +122,20 @@ let LOOK = $state({
   signSqueeze: 1,
 })
 
-const DEP_ROWS = SPREADS.map((r) => {
-  const i = r.days.indexOf(r.low)
-  const m = r.window.match(/^(\d+)\D+\d+\s+(\w+)$/)
-  const day = m ? String(Number(m[1]) + i) : ''
-  const mon = (m?.[2] ?? '').toUpperCase()
-  return {
-    day: `${day.padStart(2, '0')} ${mon}`,
-    to: r.route.replace('Amsterdam → ', '').toUpperCase(),
-    fare: copy.hero.boardFare(r.low),
-    save: copy.hero.boardSave(r.high - r.low),
-  }
-})
+const DEP_ROWS = $derived(
+  SPREADS.map((r) => {
+    const i = r.days.indexOf(r.low)
+    const m = r.window.match(/^(\d+)\D+\d+\s+(\w+)$/)
+    const day = m ? String(Number(m[1]) + i) : ''
+    const mon = (m?.[2] ?? '').toUpperCase()
+    return {
+      day: `${day.padStart(2, '0')} ${mon}`,
+      to: r.route.replace('Amsterdam → ', '').toUpperCase(),
+      fare: copy.hero.boardFare(r.low),
+      save: copy.hero.boardSave(r.high - r.low),
+    }
+  }),
+)
 
 /* The board leads with whatever route the headline is naming. A swap and not a
    reorder: two rows flap on each rotation instead of all nine, which reads as
@@ -129,7 +147,7 @@ const DEPARTURES = $derived.by(() => {
   return rows
 })
 
-const nf = new Intl.NumberFormat('en-GB')
+const nf = $derived(new Intl.NumberFormat(locale === 'nl' ? 'nl-NL' : 'en-GB'))
 
 /** The bar's type is dark, because at rest it stands on the page's own ground
  *  above the hero panel rather than on the photograph. It is sticky, though, so
@@ -157,9 +175,9 @@ onMount(() => {
   }
 })
 
-const STEPS = copy.report.steps
+const STEPS = $derived(copy.report.steps)
 
-const LIMITS = copy.brief.limits
+const LIMITS = $derived(copy.brief.limits)
 </script>
 
 <header class:solid={scrolled}>
@@ -168,6 +186,24 @@ const LIMITS = copy.brief.limits
     <nav>
       <a href="#report">{copy.nav.howItWorks}</a>
       <a href="#pricing">{copy.nav.pricing}</a>
+      <div class="lang" role="group" aria-label="Language / Taal">
+        <a
+          href="/"
+          hreflang="en"
+          aria-current={locale === 'en' ? 'page' : undefined}
+          onclick={() => setLangCookie('en')}
+        >
+          EN
+        </a>
+        <a
+          href="/nl"
+          hreflang="nl"
+          aria-current={locale === 'nl' ? 'page' : undefined}
+          onclick={() => setLangCookie('nl')}
+        >
+          NL
+        </a>
+      </div>
       <a class="cta" href="#brief">{copy.nav.brief}</a>
     </nav>
   </div>
@@ -394,6 +430,25 @@ const LIMITS = copy.brief.limits
     border-radius: var(--radius);
   }
 
+  /* EN / NL. A pair, not a dropdown — there are only ever two, so a native
+     <select> would be one extra click to see an option that fits on the bar
+     already. */
+  .lang {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+  }
+  .lang a {
+    color: var(--color-muted);
+  }
+  .lang a[aria-current="page"] {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
   header.solid .mark {
     color: var(--color-text);
   }
@@ -414,6 +469,11 @@ const LIMITS = copy.brief.limits
   @media (max-width: 620px) {
     header nav a:not(.cta) {
       display: none;
+    }
+    /* higher-specificity override: the switcher stays even though its two
+       links would otherwise match the rule above */
+    header nav .lang a {
+      display: inline;
     }
   }
 

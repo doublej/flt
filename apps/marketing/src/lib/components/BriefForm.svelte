@@ -1,6 +1,7 @@
 <script lang="ts">
-import { en as copy } from '$lib/i18n/en'
+import { getCopy, getLocale } from '$lib/i18n/copy.svelte'
 import { TIERS } from '$lib/tiers'
+import { untrack } from 'svelte'
 
 /** A brief should be a minute of tapping, not a form to fill in. The
  *  destination is the only thing we cannot guess. Every other row is chips,
@@ -8,33 +9,43 @@ import { TIERS } from '$lib/tiers'
  *  ours. Tapping a chosen chip again clears it. */
 let { tier = 'survey' }: { tier?: string } = $props()
 
-const ORIGINS = copy.brief.origins
-const LENGTHS = copy.brief.lengths
-const DATES = copy.brief.dates
-const CABINS = copy.brief.cabins
-const PRIORITIES = copy.brief.priorities
-const DISLIKES = copy.brief.dislikes
-const DEALBREAKERS = copy.brief.dealbreakers
+const copy = $derived(getCopy())
+const locale = $derived(getLocale())
+
+const ORIGINS = $derived(copy.brief.origins)
+const LENGTHS = $derived(copy.brief.lengths)
+const DATES = $derived(copy.brief.dates)
+const CABINS = $derived(copy.brief.cabins)
+const PRIORITIES = $derived(copy.brief.priorities)
+const DISLIKES = $derived(copy.brief.dislikes)
+const DEALBREAKERS = $derived(copy.brief.dealbreakers)
 /** The last origin is the escape hatch: picking it opens the free-text airport
  *  field, so the two have to be the same string in every language. */
-const ELSEWHERE = ORIGINS[ORIGINS.length - 1]
+const ELSEWHERE = $derived(ORIGINS[ORIGINS.length - 1])
 
-/** The next nine months by name, so nobody has to type a date. */
+/** The next nine months by name, so nobody has to type a date. Dutch month
+ *  names come back lower-case from `toLocaleString` already, same as English
+ *  would if it wrote them that way. */
 const now = new Date()
-const MONTHS = Array.from({ length: 9 }, (_, n) => {
-  const d = new Date(now.getFullYear(), now.getMonth() + n, 1)
-  const m = d.toLocaleString('en-GB', { month: 'long' })
-  return d.getFullYear() === now.getFullYear() ? m : `${m} ${d.getFullYear()}`
-})
+const MONTHS = $derived(
+  Array.from({ length: 9 }, (_, n) => {
+    const d = new Date(now.getFullYear(), now.getMonth() + n, 1)
+    const m = d.toLocaleString(locale === 'nl' ? 'nl-NL' : 'en-GB', { month: 'long' })
+    return d.getFullYear() === now.getFullYear() ? m : `${m} ${d.getFullYear()}`
+  }),
+)
 
 let to = $state('')
 let email = $state('')
-let from = $state(ORIGINS[0])
+/* untrack: these three chip lists are reactive (they follow the locale), but
+   a form's default selection is meant to be set once, not re-picked out from
+   under someone who has already started answering. */
+let from = $state(untrack(() => ORIGINS[0]))
 let elsewhere = $state('')
 let month = $state('')
 let length = $state('')
-let dates = $state(DATES[1])
-let cabin = $state(CABINS[0])
+let dates = $state(untrack(() => DATES[1]))
+let cabin = $state(untrack(() => CABINS[0]))
 let priorities = $state<string[]>([])
 let dislikes = $state<string[]>([])
 let dealbreakers = $state<string[]>([])

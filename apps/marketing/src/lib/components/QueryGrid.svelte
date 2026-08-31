@@ -1,80 +1,38 @@
 <script lang="ts">
 import { BLOBS as BLOB } from '$lib/blobs'
-import { en as copy } from '$lib/i18n/en'
+import { getCopy, getLocale } from '$lib/i18n/copy.svelte'
 import { MANUAL_S, SCENARIOS, TOTALS, byHandHours } from '$lib/scenarios'
 import { onMount } from 'svelte'
 
 let list: HTMLElement
 
+const copy = $derived(getCopy())
+
 /** Four jobs, alternating sides. The search count is set as the item's numeral
  *  and sized off the count itself, so five searches and twenty-eight are told
  *  apart before either number is read. */
-const nf = new Intl.NumberFormat('en-GB')
+const nf = $derived(new Intl.NumberFormat(getLocale() === 'nl' ? 'nl-NL' : 'en-GB'))
 const hours = byHandHours(TOTALS.queries)
 
-/** No two photographs are the same size or proportion, and each sits at its
- *  own angle, the way prints do when they have been put down on a desk rather
- *  than mounted. Proportion follows the job behind it: five airports on one
- *  date is a tall narrow search, two cabins across a week is a wide one. The
- *  crops are composed at these ratios in the source files rather than squeezed
- *  from one master, so no one is cut through the chin to make a shape. */
-/*  align — where the copy sits against its photograph, so the four rows are
- *          not all centred on the same line
- *  pull  — how far the copy laps over the blob. The outline is curved, so
- *          there is always slack at its edge for a line of type to sit in.
- *  meas  — the copy's own measure, which narrows as its photograph widens */
+/** Every print is the same size and the same proportion — tall, the way a
+ *  portrait is. Varying the proportion per job made the row with the widest
+ *  print look like a different component, and the widths it produced were what
+ *  drove the copy onto the photograph. What varies now is only placement: which
+ *  side the print sits on, how far down the row it is dropped, the angle it was
+ *  put down at, and whether it runs off the edge.
+ *
+ *  indent — how far the whole row is set in from the list's own edge, so the
+ *           four do not all start on one vertical
+ *  drop — how far down its row the print sits, so the four do not band
+ *  rot  — the angle it was put down at, the way prints lie on a desk
+ *  out  — this one breaks the list's own edge and runs to the page's */
 const SHAPE = {
-  gateway: {
-    ar: '2 / 3',
-    w: '20rem',
-    rot: '-1.6deg',
-    align: 'start',
-    pull: '3.5rem',
-    meas: '33rem',
-    iw: 640,
-    ih: 960,
-  },
-  ski: {
-    ar: '1 / 1',
-    w: '25rem',
-    rot: '1.1deg',
-    align: 'end',
-    pull: '5.5rem',
-    meas: '30rem',
-    iw: 800,
-    ih: 800,
-  },
-  cabin: {
-    ar: '5 / 4',
-    w: '30rem',
-    rot: '-0.7deg',
-    align: 'center',
-    pull: '2rem',
-    meas: '27rem',
-    iw: 900,
-    ih: 720,
-  },
-  holidays: {
-    ar: '4 / 5',
-    w: '23rem',
-    rot: '1.9deg',
-    align: 'start',
-    pull: '6rem',
-    meas: '31rem',
-    iw: 720,
-    ih: 900,
-  },
+  gateway: { rot: '-1.6deg', drop: '7rem', indent: '7rem', out: false, iw: 640, ih: 960 },
+  ski: { rot: '1.1deg', drop: '3rem', indent: '0rem', out: true, iw: 800, ih: 800 },
+  cabin: { rot: '-0.9deg', drop: '0rem', indent: '3rem', out: false, iw: 900, ih: 720 },
+  holidays: { rot: '1.7deg', drop: '5rem', indent: '0rem', out: false, iw: 720, ih: 900 },
 } as const
-const FALLBACK = {
-  ar: '4 / 5',
-  w: '23rem',
-  rot: '0deg',
-  align: 'center',
-  pull: '0rem',
-  meas: '34rem',
-  iw: 720,
-  ih: 900,
-}
+const FALLBACK = { rot: '0deg', drop: '0rem', indent: '0rem', out: false, iw: 720, ih: 900 }
 const shapeOf = (id: string) => SHAPE[id as keyof typeof SHAPE] ?? FALLBACK
 
 /** Each photograph sits on a wash cut to its neighbour's blob, so the two
@@ -161,13 +119,11 @@ onMount(() => {
     <article
       class="job"
       class:flip={i % 2 === 1}
+      class:out={sh.out}
       style:--n={s.queries}
-      style:--ar={sh.ar}
-      style:--w={sh.w}
       style:--rot={sh.rot}
-      style:--align={sh.align}
-      style:--pull={sh.pull}
-      style:--meas={sh.meas}
+      style:--drop={sh.drop}
+      style:--indent={sh.indent}
     >
       <div class="frame">
         <span class="wash" aria-hidden="true" style:clip-path="url(#blob-{wash})"></span>
@@ -227,7 +183,15 @@ onMount(() => {
      measure into the gutters so the photographs get the room, while the copy
      beside them keeps its own line length. */
   .jobs {
-    --bleed: min(94rem, calc(100vw - 2 * var(--gutter)));
+    /* Narrower than it was, and deliberately: the list needs a margin for the
+       one print that breaks it to have something to break out of. At the old
+       full-bleed width there was no room left and the print could only overflow
+       the document. */
+    --bleed: min(88rem, calc(100vw - 4 * var(--gutter)));
+    /* The wash is 11% wider than its frame on this side and the print is
+       rotated on top of that, so the outermost painted pixel sits about this
+       far beyond the frame's own box. The break-out is measured against it. */
+    --wash-over: 6rem;
     display: grid;
     gap: var(--space-6);
     width: var(--bleed);
@@ -238,10 +202,20 @@ onMount(() => {
   /* The photograph changes sides down the list so four jobs read as a sequence
      rather than four of the same thing. */
   .job {
+    /* The gap is real and the copy no longer laps back over the print. The lap
+       relied on the blob's curve leaving slack, but the tally sits at the
+       print's vertical midpoint where the blob is at its widest, and the wash
+       reaches 11% beyond the frame on top of that — so there was never slack
+       there to lap into. */
+    --w: 22rem;
     display: grid;
     grid-template-columns: var(--w) minmax(0, 1fr);
-    gap: var(--space-5);
-    align-items: var(--align);
+    gap: var(--space-6);
+    align-items: start;
+    /* set in from the list's edge, per row — the first is set in furthest, so
+       it starts below and to the right of the paragraph above it rather than
+       flush under it */
+    margin-inline-start: var(--indent);
   }
   .job.flip {
     grid-template-columns: minmax(0, 1fr) var(--w);
@@ -256,6 +230,27 @@ onMount(() => {
     grid-row: 1;
     position: relative;
     isolation: isolate;
+    /* margin, not a transform: the row has to actually grow around the drop or
+       the next print climbs into this one */
+    margin-block-start: var(--drop);
+  }
+  /* One of the four breaks the list's edge and runs at the page's own. What it
+     may take is the room outside the list minus the wash's overhang, floored at
+     zero — so on a narrow viewport it simply stops breaking out rather than
+     pushing the document sideways. Measured, not assumed: an earlier version of
+     this pushed by the full gutter, forgot the overhang, and put the document
+     at 1502px inside a 1440px window. */
+  .job.out {
+    /* Floored at zero so a narrow viewport simply stops breaking out, and
+       capped so a very wide one does not fling the print halfway to the edge
+       of a 2560 display and drag its own row's copy under it. */
+    --break: clamp(0px, calc((100vw - var(--bleed)) / 2 - var(--wash-over)), 8rem);
+  }
+  .job.out.flip .frame {
+    margin-inline-end: calc(-1 * var(--break));
+  }
+  .job.out:not(.flip) .frame {
+    margin-inline-start: calc(-1 * var(--break));
   }
   /* the wash is generously larger than the print so it never uncovers a corner
      as it turns, and it is always the neighbour's blob, never its own */
@@ -271,7 +266,7 @@ onMount(() => {
     display: block;
     width: 100%;
     height: auto;
-    aspect-ratio: var(--ar);
+    aspect-ratio: 3 / 4;
     object-fit: cover;
     object-position: 50% 42%;
     rotate: var(--rot);
@@ -284,8 +279,10 @@ onMount(() => {
     grid-column: 2;
     grid-row: 1;
     align-content: center;
-    max-width: var(--meas);
-    margin-inline-start: calc(-1 * var(--pull));
+    max-width: 32rem;
+    /* the copy hangs a little below its print's top, so the pair is not two
+       things starting on one line */
+    margin-block-start: calc(var(--drop) + var(--space-4));
   }
   .flip .frame {
     grid-column: 2;
@@ -293,8 +290,6 @@ onMount(() => {
   .flip .body {
     grid-column: 1;
     justify-self: end;
-    margin-inline-start: 0;
-    margin-inline-end: calc(-1 * var(--pull));
   }
 
   .when {
@@ -344,7 +339,23 @@ onMount(() => {
     column-gap: var(--space-3);
     align-items: center;
     margin-top: var(--space-4);
+    /* Outdented so the numeral lines up with the quote's hanging opening mark
+       rather than with the text after it. */
     margin-inline-start: -2.75rem;
+  }
+  /* Except when the print is on this side. The copy laps back over the print's
+     column on the strength of the blob's curve leaving slack at its edge — but
+     the tally sits at the print's vertical midpoint, which is exactly where the
+     blob is widest and there is no slack at all. Left as it was, the outdent
+     put the whole numeral inside the photograph on the first row and 22px of it
+     on the third. So on these rows the tally gives back both the outdent and
+     the lap and starts at the column edge; the quote above it still laps,
+     because at its own height the curve really has pulled away. */
+  /* On the rows where the print is on this side, the outdent would walk the
+     numeral back toward it. The gap absorbs it on the flipped rows, where the
+     print is a column away. */
+  .job:not(.flip) .tally {
+    margin-inline-start: 0;
   }
   .count {
     display: grid;

@@ -1,6 +1,6 @@
 <script lang="ts">
-import { en as copy } from '$lib/i18n/en'
-import { DISCOVERY, GRAPH, ROUTE_EXAMPLE } from '$lib/scenarios'
+import { getCopy, getLocale } from '$lib/i18n/copy.svelte'
+import { DISCOVERY, GRAPH, HUB_SAMPLE, ROUTE_EXAMPLE } from '$lib/scenarios'
 import { cubicOut } from 'svelte/easing'
 import { draw } from 'svelte/transition'
 
@@ -13,7 +13,8 @@ import { draw } from 'svelte/transition'
  *  faint haze behind the drawn sample stands in for the routes we did not
  *  draw — depth for the count printed under it, not more lines to follow.
  *  Underneath, the one pair from that mesh we actually priced. */
-const nf = new Intl.NumberFormat('en-GB')
+const copy = $derived(getCopy())
+const nf = $derived(new Intl.NumberFormat(getLocale() === 'nl' ? 'nl-NL' : 'en-GB'))
 
 const W = 640
 const H = 220
@@ -135,6 +136,53 @@ $effect(() => {
 })
 
 const diff = ROUTE_EXAMPLE.nonstop.price - ROUTE_EXAMPLE.alt.price
+
+/* ── Hub map: six real hubs left open, six real hubs ruled out ───────────
+ * Scattered like waypoints jotted on a route plan, not sorted into a grid:
+ * shuffled order, uneven spacing, each sitting at its own distance along the
+ * trip. An open hub's line carries on to the far side; a closed one just
+ * stops there. */
+const HW = 640
+const HH = 210
+const HPAD = 22
+const hr = seeded(4242)
+
+function shuffled<T>(items: T[], r: () => number) {
+  const a = [...items]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+const HUBS = shuffled(
+  [
+    ...HUB_SAMPLE.open.map((code) => ({ code, open: true })),
+    ...HUB_SAMPLE.closed.map((code) => ({ code, open: false })),
+  ],
+  hr,
+)
+
+/* Uneven gaps down the column, and each hub sits its own distance out from
+ * Amsterdam — a scatter of waypoints, not a ruler. */
+const gaps = HUBS.map(() => 0.55 + hr())
+const gapSpan = gaps.reduce((a, b) => a + b, 0)
+let hubRun = 0
+const hubY = gaps.map((g) => {
+  hubRun += g
+  return HPAD + ((hubRun - g / 2) / gapSpan) * (HH - 2 * HPAD)
+})
+const hubX = HUBS.map(() => HW * 0.36 + hr() * HW * 0.3)
+
+const hubPaths = HUBS.map((h, i) => {
+  const pts = [
+    { x: HPAD, y: HH / 2 },
+    { x: hubX[i], y: hubY[i] },
+  ]
+  if (h.open) pts.push({ x: HW - HPAD, y: HH / 2 })
+  return curve(pts)
+})
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -205,15 +253,47 @@ const diff = ROUTE_EXAMPLE.nonstop.price - ROUTE_EXAMPLE.alt.price
 </div>
 
 <p class="note">
-  {copy.routes.webNote(
-    nf.format(GRAPH.airports),
-    nf.format(GRAPH.connections),
-    DISCOVERY.seconds,
-    DISCOVERY.maxDetour,
-    nf.format(DISCOVERY.byStops[2].routes),
-    nf.format(DISCOVERY.noGulfAt3),
-  )}
+  {copy.routes.webNote(nf.format(GRAPH.airports), nf.format(GRAPH.connections), DISCOVERY.seconds, DISCOVERY.maxDetour)}
 </p>
+
+<figure class="hubmap">
+  <figcaption><span class="eyebrow">{copy.routes.hubsEyebrow}</span></figcaption>
+  <div class="hubgrid">
+    <svg viewBox="0 0 {HW} {HH}" class="hubsvg" preserveAspectRatio="none">
+      <g class="hublines">
+        {#each hubPaths as d, i (i)}
+          <path {d} class:closed={!HUBS[i].open} />
+        {/each}
+      </g>
+      <circle class="halo" cx={HPAD} cy={HH / 2} r="8" />
+      <circle class="halo" cx={HW - HPAD} cy={HH / 2} r="8" />
+      <circle class="end" cx={HPAD} cy={HH / 2} r="3.4" />
+      <circle class="end" cx={HW - HPAD} cy={HH / 2} r="3.4" />
+      {#each HUBS as h, i (h.code + i)}
+        {#if h.open}
+          <circle class="node open" cx={hubX[i]} cy={hubY[i]} r="3.2" />
+        {:else}
+          <circle class="node closed" cx={hubX[i]} cy={hubY[i]} r="3.2" />
+          <line
+            class="slash"
+            x1={hubX[i] - 3.4}
+            y1={hubY[i] - 3.4}
+            x2={hubX[i] + 3.4}
+            y2={hubY[i] + 3.4}
+          />
+        {/if}
+      {/each}
+    </svg>
+    {#each HUBS as h, i (h.code + i)}
+      <span
+        class="code"
+        class:closed={!h.open}
+        style="top:{(hubY[i] / HH) * 100}%; left:{(hubX[i] / HW) * 100}%"
+      >{h.code}</span>
+    {/each}
+  </div>
+  <figcaption class="cap">{copy.routes.hubsCaption(nf.format(DISCOVERY.byStops[2].routes), nf.format(DISCOVERY.noGulfAt3))}</figcaption>
+</figure>
 
 <figure class="priced">
   <figcaption><span class="eyebrow">{copy.routes.pricedEyebrow}</span> <span class="route">{ROUTE_EXAMPLE.route}</span></figcaption>
@@ -361,6 +441,63 @@ const diff = ROUTE_EXAMPLE.nonstop.price - ROUTE_EXAMPLE.alt.price
     max-width: var(--measure);
     font-size: 0.84rem;
     color: var(--color-muted);
+  }
+
+  .hubmap {
+    margin: var(--space-4) 0 0;
+    max-width: 30rem;
+    display: grid;
+    gap: 0.4rem;
+  }
+  .hubmap figcaption {
+    color: var(--color-muted);
+  }
+  .hubmap .cap {
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+  }
+  .hubgrid {
+    position: relative;
+  }
+  .hubsvg {
+    width: 100%;
+    height: 12.5rem;
+    display: block;
+  }
+  .hublines path {
+    fill: none;
+    stroke: var(--color-primary);
+    stroke-width: 1px;
+    stroke-opacity: 0.4;
+  }
+  .hublines path.closed {
+    stroke: var(--color-muted);
+    stroke-opacity: 0.35;
+    stroke-dasharray: 2 2.5;
+  }
+  .node.open {
+    fill: var(--color-primary);
+  }
+  .node.closed {
+    fill: var(--color-surface);
+    stroke: var(--color-muted);
+    stroke-width: 1px;
+  }
+  .slash {
+    stroke: var(--color-muted);
+    stroke-width: 1px;
+  }
+  .code {
+    position: absolute;
+    transform: translate(0.5rem, -50%);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--color-text);
+    white-space: nowrap;
+  }
+  .code.closed {
+    color: var(--color-muted);
+    text-decoration: line-through;
   }
 
   .priced {

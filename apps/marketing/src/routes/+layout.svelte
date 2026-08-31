@@ -1,50 +1,11 @@
 <script lang="ts">
 import '../app.css'
-import { en as copy } from '$lib/i18n/en'
+/* Language-agnostic on purpose: this wraps every route in the app, including
+   the /labs tuning pages, which have never carried Bureau's SEO meta or JSON-LD.
+   That per-locale head content now lives one level down, in the [[lang]] layout
+   that only the marketing pages sit under. */
 const { children } = $props()
-
-// TODO: swap for the real domain before deploy — the schema below is inert until then.
-const SITE = 'https://REPLACE-ME.example'
-
-// No Offer/price markup: engines cache structured prices and repeat them back long
-// after they change, and 7/19/39 are still placeholders. Add offers once they are final.
-const schema = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'Organization',
-      '@id': `${SITE}/#org`,
-      name: copy.meta.orgName,
-      url: SITE,
-      description: copy.meta.orgDescription,
-    },
-    {
-      '@type': 'WebSite',
-      '@id': `${SITE}/#site`,
-      url: SITE,
-      name: copy.meta.siteName,
-      publisher: { '@id': `${SITE}/#org` },
-      inLanguage: 'en',
-    },
-    {
-      '@type': 'Service',
-      '@id': `${SITE}/#service`,
-      name: copy.meta.serviceName,
-      serviceType: copy.meta.serviceType,
-      provider: { '@id': `${SITE}/#org` },
-      description: copy.meta.serviceDescription,
-    },
-  ],
-}
-
-const ld = `<script type="application/ld+json">${JSON.stringify(schema)}<\/script>`
 </script>
-
-<svelte:head>
-  <title>{copy.meta.title}</title>
-  <meta name="description" content={copy.meta.description} />
-  {@html ld}
-</svelte:head>
 
 {@render children()}
 

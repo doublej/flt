@@ -1,6 +1,6 @@
 <script lang="ts">
 import FlapText from '$lib/components/FlapText.svelte'
-import { en as copy } from '$lib/i18n/en'
+import { getCopy, getLocale } from '$lib/i18n/copy.svelte'
 import { AVOIDING, LAYOVER_TOP } from '$lib/scenarios'
 
 /** One dot per option that came back. The gold dots are the ones that connect
@@ -9,7 +9,8 @@ import { AVOIDING, LAYOVER_TOP } from '$lib/scenarios'
  *  the cheapest fare left is whatever survives. */
 let avoid = $state(false)
 
-const nf = new Intl.NumberFormat('en-GB')
+const copy = $derived(getCopy())
+const nf = $derived(new Intl.NumberFormat(getLocale() === 'nl' ? 'nl-NL' : 'en-GB'))
 const maxLayover = Math.max(...LAYOVER_TOP.map((l) => l.count))
 </script>
 

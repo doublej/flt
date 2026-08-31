@@ -1,5 +1,8 @@
 <script lang="ts">
-import { en as copy } from '$lib/i18n/en'
+import { getCopy, getLocale } from '$lib/i18n/copy.svelte'
+
+const copy = $derived(getCopy())
+const homeHref = $derived(getLocale() === 'nl' ? '/nl' : '/')
 
 type Job = {
   job: string
@@ -39,7 +42,7 @@ const pct = $derived(job ? Math.round((job.progress.done / job.progress.total) *
 <svelte:head><title>{copy.status.title}</title></svelte:head>
 
 <main>
-  <a class="mark" href="/">{copy.status.brand}</a>
+  <a class="mark" href={homeHref}>{copy.status.brand}</a>
 
   {#if missing}
     <p class="line">{copy.status.missing}</p>

@@ -152,6 +152,14 @@ export const LAYOVER_DISTINCT = 66
 /** Layover appearances across all 2,942 options — an option can stop more than once. */
 export const LAYOVER_APPEARANCES = 3314
 
+/** What ruling out a hub actually does, drawn as one small network: `open`
+ *  reuses `LAYOVER_TOP`'s busiest connecting airports, `closed` is the same
+ *  six Gulf hubs named throughout `AVOIDING`. */
+export const HUB_SAMPLE = {
+  open: LAYOVER_TOP.map((l) => l.code),
+  closed: ['DXB', 'DOH', 'AUH', 'BAH', 'MCT', 'KWI'],
+}
+
 /* ── Discovering possible routes ──────────────────────────────────────────
  * A local walk over a static route graph. No searching, no prices, nothing
  * bookable — a map of what connects to what, used before deciding what to

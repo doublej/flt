@@ -27,8 +27,8 @@
  *  object so `searchCount` can be built from the other two rather than
  *  restating them — a locale where the plural or the estimate mark differs
  *  changes it in one place. */
-const searchMark = (n: number) => (n === 1 ? '' : '~')
-const searchUnit = (n: number) => (n === 1 ? 'search' : 'searches')
+const searchMark = (n: number): string => (n === 1 ? '' : '~')
+const searchUnit = (n: number): string => (n === 1 ? 'search' : 'searches')
 
 export const en = {
   /** `app.html` and the `<svelte:head>` in `+layout.svelte`, including the
@@ -220,17 +220,14 @@ export const en = {
     webLabel: (routings: string, stops: number) =>
       `${routings} routings within ${stops} ${stops === 1 ? 'stop' : 'stops'}`,
     webUpTo: (stops: number) => `Up to ${stops} ${stops === 1 ? 'stop' : 'stops'}`,
-    webNote: (
-      airports: string,
-      connections: string,
-      seconds: number,
-      maxDetour: number,
-      routings: string,
-      withoutGulf: string,
-    ) =>
-      `Amsterdam to Hanoi, walked over a map of ${airports} airports and ${connections} direct connections in ${seconds} seconds. Nothing here is priced, timetabled or bookable; it is a static snapshot of what connects to what, capped at ${maxDetour}× the direct distance, and we use it to decide which routes are worth searching. Rule the Gulf hubs out and ${routings} routings become ${withoutGulf}.`,
+    webNote: (airports: string, connections: string, seconds: number, maxDetour: number) =>
+      `Amsterdam to Hanoi, walked over a map of ${airports} airports and ${connections} direct connections in ${seconds} seconds. Nothing here is priced, timetabled or bookable; it is a static snapshot of what connects to what, capped at ${maxDetour}× the direct distance, and we use it to decide which routes are worth searching.`,
     /** RouteWeb tab list: one live diagram, stepped through by stop budget. */
     tabsLabel: 'Choose a stop budget',
+    /** RouteWeb hub map: `HUB_SAMPLE`, six open and six ruled out. */
+    hubsEyebrow: 'What ruling one out actually does',
+    hubsCaption: (routings: string, withoutGulf: string) =>
+      `Close the six Gulf hubs and ${routings} routings become ${withoutGulf}. Everything else on the map reroutes around them or never needed them.`,
     /** RouteWeb priced strip: one pair from `ROUTE_EXAMPLE`, actually priced. */
     pricedEyebrow: 'One line, priced',
     nonstopTag: 'Nonstop',
