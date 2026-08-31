@@ -1,118 +1,229 @@
 <script lang="ts">
-import FlapText from '$lib/components/FlapText.svelte'
 import { en as copy } from '$lib/i18n/en'
 import { TIERS } from '$lib/tiers'
 
+/** A schedule of charges, not three cards to choose between. Three cards put
+ *  the prices next to each other, where the only scale on offer is €3 to €10;
+ *  the scale that matters is the one in FeeScale above, where €10 sits against
+ *  what a week of dates was worth. So this is a tariff: one row per tier, the
+ *  amount of searching set as the row's numeral because that is what is being
+ *  bought, and the charge in the column a tariff keeps it in, reached by a
+ *  leader so the name and the price stay paired at any width.
+ *
+ *  Radios rather than three toggle buttons: the three are mutually exclusive,
+ *  so the native control gives arrow-key selection, one tab stop and "1 of 3"
+ *  announced, for less markup than the buttons needed. */
 let { selected = $bindable('survey') }: { selected?: string } = $props()
-
-/* Every board the same width, with the figure right-aligned in it, so the three
-   cards read as one fixture rather than three differently sized ones. €3 and
-   €10 would otherwise build boards a whole flap apart. */
-const digits = Math.max(...TIERS.map((t) => t.price.replace('€', '').length))
-const fare = (price: string) => copy.pricing.boardFare(price.replace('€', '').padStart(digits, ' '))
 </script>
 
-<div class="tiers">
+<fieldset class="tariff">
+  <legend>{copy.pricing.tariffLegend}</legend>
+
   {#each TIERS as tier (tier.id)}
-    <button
-      class="tier"
-      class:on={selected === tier.id}
-      onclick={() => (selected = tier.id)}
-      aria-pressed={selected === tier.id}
-    >
-      <span class="name">{copy.pricing.tiers[tier.id].name}</span>
-      <span class="well"><FlapText text={fare(tier.price)} variant="night" size="1.35rem" /></span>
-      <span class="scope">{copy.pricing.tiers[tier.id].scope}</span>
-      <span class="meta">{copy.pricing.tiers[tier.id].searches} · {copy.pricing.tiers[tier.id].time}</span>
-    </button>
+    <label class="row">
+      <input type="radio" name="tier" value={tier.id} bind:group={selected} />
+
+      <span class="work" style:--n={tier.searches}>
+        <b>{copy.pricing.searchMark(tier.searches)}{tier.searches}</b>
+        <i>{copy.pricing.searchUnit(tier.searches)}</i>
+      </span>
+
+      <span class="what">
+        <span class="head">
+          <strong>{copy.pricing.tiers[tier.id].name}</strong>
+          <i class="leader"></i>
+          <b class="price">{tier.price}</b>
+        </span>
+        <span class="scope">{copy.pricing.tiers[tier.id].scope}</span>
+        <span class="time">{copy.pricing.tiers[tier.id].time}</span>
+      </span>
+    </label>
   {/each}
-</div>
+</fieldset>
 
 <p class="foot">{copy.pricing.tiersFoot}</p>
 
 <style>
-  .tiers {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: var(--space-3);
+  /* A fieldset will not shrink below its own min-content unless it is told to,
+     which pushed the charge column off the right edge at 390. */
+  .tariff {
+    border: 0;
+    min-width: 0;
+    max-width: var(--measure-heading);
     margin-top: var(--space-5);
   }
-  .tier {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    text-align: left;
-    /* a card lit from above rather than a flat fill */
-    background:
-      linear-gradient(180deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0) 40%),
-      var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    color: var(--color-text);
-    cursor: pointer;
-    box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
-    transition:
-      transform 0.2s ease,
-      box-shadow 0.2s ease,
-      border-color 0.2s ease;
-  }
-  .tier:hover {
-    transform: translateY(-2px);
-    border-color: var(--color-track);
-    box-shadow: 0 0.6rem 1.4rem rgb(0 0 0 / 0.09);
-  }
-  .tier:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 3px;
-  }
-  .tier.on {
-    border-color: var(--color-primary);
-    box-shadow:
-      0 0.6rem 1.6rem rgb(0 0 0 / 0.1),
-      0 0 28px var(--color-amber-glow);
-  }
-  .name {
+  .tariff legend {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--color-muted);
+    padding-bottom: var(--space-2);
   }
-  /* The board sits in a routed recess rather than on the surface: a dark floor,
-     a shadow cast down onto it and a lip catching the light at the top. That is
-     what gives a small board any body at this size. */
-  .well {
-    align-self: start;
-    margin: 0.55rem 0 0.35rem;
-    padding: 0.5rem 0.6rem;
-    border-radius: calc(var(--radius) * 0.9);
-    background: linear-gradient(180deg, rgb(0 0 0 / 0.09), rgb(0 0 0 / 0.03));
-    box-shadow:
-      inset 0 1px 3px rgb(0 0 0 / 0.22),
-      inset 0 -1px 0 rgb(255 255 255 / 0.55);
-    line-height: 0;
+
+  .row {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: var(--space-3);
+    padding: var(--space-3) var(--space-2);
+    margin-inline: calc(-1 * var(--space-2));
+    border-top: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .row:last-of-type {
+    border-bottom: 1px solid var(--color-border);
+  }
+  .row:hover {
+    background: color-mix(in oklab, var(--color-primary) 5%, transparent);
+  }
+  /* Three cues for the chosen row — the filled control, the numeral taking the
+     spot colour and the row taking a ground — so it is never colour alone. */
+  .row:has(:checked) {
+    background: var(--color-surface-raised);
+  }
+  .row:has(:focus-visible) {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .row input {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 1px solid var(--color-muted);
+    border-radius: 50%;
+    display: grid;
+    place-content: center;
+  }
+  .row input::after {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    scale: 0;
+    background: var(--color-primary);
+    transition: scale 0.15s ease;
+  }
+  .row input:checked {
+    border-color: var(--color-primary);
+  }
+  .row input:checked::after {
+    scale: 1;
+  }
+
+  /* The searching is the row's numeral, sized off the count the way the job
+     numerals in `#work` are, so one search and twenty-six are told apart before
+     either figure is read. It is the largest thing in the row on purpose: a
+     tariff whose biggest number is the charge argues against the heading. */
+  .work {
+    display: grid;
+    justify-items: end;
+    width: 6rem;
+  }
+  .work b {
+    font-family: var(--font-display);
+    font-stretch: var(--display-wide);
+    font-weight: 600;
+    font-size: calc(1.85rem + var(--n) * 0.055rem);
+    line-height: 0.86;
+    letter-spacing: -0.02em;
+    font-variant-numeric: lining-nums tabular-nums;
+    color: var(--color-muted);
+  }
+  .row:has(:checked) .work b {
+    color: var(--color-primary);
+  }
+  .work i {
+    font-family: var(--font-mono);
+    font-style: normal;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-top: 0.35rem;
+  }
+
+  .what {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--space-3);
+    row-gap: 0.2rem;
+    padding-left: var(--space-3);
+    border-left: 1px solid var(--color-border);
+  }
+  .head {
+    min-width: 0;
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  .head strong {
+    font-family: var(--font-display);
+    font-stretch: var(--display-wide);
+    font-weight: 600;
+    font-size: 1.15rem;
+    letter-spacing: 0.01em;
+  }
+  /* What carries the eye from the name to its charge across a row this wide,
+     the way a printed price list does. */
+  .leader {
+    flex: 1;
+    border-bottom: 1px dotted var(--color-border);
+    translate: 0 -0.22rem;
+  }
+  .price {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
   }
   .scope {
-    font-size: 0.95rem;
-    margin-top: 0.25rem;
-  }
-  .meta {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: var(--color-muted);
-    margin-top: auto;
-    padding-top: 0.75rem;
-  }
-  .foot {
-    margin-top: var(--space-4);
-    color: var(--color-muted);
+    grid-column: 1;
     font-size: 0.9rem;
-    max-width: var(--measure);
+    line-height: 1.4;
+    color: var(--color-muted);
   }
-  @media (prefers-reduced-motion: reduce) {
-    .tier:hover {
-      transform: none;
+  .time {
+    grid-column: 2;
+    align-self: end;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--color-muted);
+    white-space: nowrap;
+  }
+
+  /* Operational detail rather than another paragraph of argument, so it is set
+     finer than the kicker below it and kept to the tariff's own width. */
+  .foot {
+    margin-top: var(--space-3);
+    max-width: var(--measure-heading);
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+
+  /* Narrow: the numeral holds its column and the time drops under the scope,
+     which is the only pair that cannot share a line at this width. */
+  @media (max-width: 620px) {
+    .work {
+      width: 4.8rem;
+    }
+    .work b {
+      font-size: calc(1.5rem + var(--n) * 0.042rem);
+    }
+    .work i {
+      font-size: 0.58rem;
+    }
+    .what {
+      column-gap: var(--space-2);
+    }
+    .time {
+      grid-column: 1 / -1;
+      text-align: left;
     }
   }
 </style>

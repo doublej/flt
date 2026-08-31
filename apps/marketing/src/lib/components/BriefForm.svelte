@@ -178,7 +178,10 @@ async function pay(e: SubmitEvent) {
 
   <div class="total">
     <span class="label">
-      {copy.brief.total(copy.pricing.tiers[chosen.id].name, copy.pricing.tiers[chosen.id].searches)}
+      {copy.brief.total(
+        copy.pricing.tiers[chosen.id].name,
+        copy.pricing.searchCount(chosen.searches),
+      )}
     </span>
     <span class="amount">{chosen.price}</span>
   </div>

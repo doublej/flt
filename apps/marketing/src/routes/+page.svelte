@@ -4,6 +4,7 @@ import AvoidHubs from '$lib/components/AvoidHubs.svelte'
 import BriefForm from '$lib/components/BriefForm.svelte'
 import CompositeStage from '$lib/components/CompositeStage.svelte'
 import FareRange from '$lib/components/FareRange.svelte'
+import FeeScale from '$lib/components/FeeScale.svelte'
 import PriceTiers from '$lib/components/PriceTiers.svelte'
 import QueryGrid from '$lib/components/QueryGrid.svelte'
 import RouteWeb from '$lib/components/RouteWeb.svelte'
@@ -307,6 +308,10 @@ const LIMITS = copy.brief.limits
     <Airspace set={1} />
     <h2>{copy.pricing.heading}</h2>
     <p class="lead measure">{copy.pricing.lead}</p>
+    <!-- The argument, then the charge: the scale puts the fee and what a week
+         of dates was worth on one axis, so the tariff below is read against it
+         rather than against its own two neighbours. -->
+    <FeeScale />
     <PriceTiers bind:selected={tier} />
     <p class="measure kicker">{copy.pricing.kicker}</p>
   </section>
