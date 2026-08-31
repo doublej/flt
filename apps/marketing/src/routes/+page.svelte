@@ -252,7 +252,7 @@ const LIMITS = [
       <h2>Seven departure dates, up to €{FLEX.best} between the best one and the worst</h2>
       <p>
         Nine real routes, each priced on all seven departure dates in its window. Moving your dates
-        was worth €{FLEX.best} on New York and €{FLEX.worst} on Lyon, and nothing about either
+        was worth €{FLEX.best} on New&nbsp;York and €{FLEX.worst} on Lyon, and nothing about either
         route said which it would be in advance. The New York answer cost €10.
       </p>
       <div class="weekband-actions">
@@ -270,7 +270,7 @@ const LIMITS = [
 
 <main>
   <section class="band" id="evidence">
-    <h2>The right departure date was worth €{FLEX.best} on New York and €{FLEX.worst} on Lyon</h2>
+    <h2>The right departure date was worth €{FLEX.best} on New&nbsp;York and €{FLEX.worst} on Lyon</h2>
     <p class="lead measure">
       Every route here was searched on all seven of its departure dates, so the spread is exactly
       what moving your dates would have saved you. {FLEX.paidForItself} of the {FLEX.routes}
@@ -290,7 +290,7 @@ const LIMITS = [
   </section>
 
   <section class="band" id="work">
-    <h2>Seventy-five searches took us 200 seconds. By hand they take two hours.</h2>
+    <h2>Seventy-five searches took us 200 seconds. By&nbsp;hand they take two hours.</h2>
     <p class="lead measure">
       Four briefs, seventy-five searches. One search is one route priced on one date, so a brief
       that leaves both open is not one question but dozens — and dozens is exactly where a row of
@@ -848,10 +848,15 @@ const LIMITS = [
   section.band {
     padding-block: var(--section-y);
   }
-  /* holds the Airspace layer's negative z-index inside its own band */
+  /* holds the Airspace layer's negative z-index inside its own band, and
+     clips it to the band's own height — Airspace sizes itself to its own
+     aspect ratio at full viewport width, which is usually taller than the
+     band, so this crops the excess top and bottom instead of the artwork
+     squeezing or distorting to fit. */
   section.air {
     position: relative;
     isolation: isolate;
+    overflow: hidden;
   }
   .band + .band {
     border-top: 1px solid var(--color-border);
@@ -864,6 +869,7 @@ const LIMITS = [
     font-size: var(--text-h2);
     line-height: 1.08;
     letter-spacing: -0.02em;
+    max-width: var(--measure-heading);
     text-wrap: balance;
     margin-bottom: var(--space-3);
   }
@@ -923,6 +929,9 @@ const LIMITS = [
   .steps p {
     color: var(--color-muted);
     font-size: 0.95rem;
+    /* The three steps sit in a wide grid track, which left these running to about
+       ninety characters a line. Small text needs the cap more than large does. */
+    max-width: var(--measure);
   }
 
   .limits {

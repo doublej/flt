@@ -58,6 +58,14 @@
   --section-y: clamp(6.5rem, 13vw, 13rem);
   --gutter: clamp(1.5rem, 5vw, 4.5rem);
   --measure: 62ch;
+  /* Display type needs a narrower line than body copy, and uncapped it was running
+     wider: 1040px of headline over a 774px lead. A fixed cap and not a ch value,
+     because ch scales with the heading's own clamp while body copy barely moves —
+     one ch value cannot hold the relationship at both ends. 50rem is the narrowest
+     that still fits "By hand" on the line above without stranding a twelve-character
+     stub, and below 1024 the container is already narrower than this, so nothing
+     changes there. */
+  --measure-heading: 50rem;
 }
 
 html {
