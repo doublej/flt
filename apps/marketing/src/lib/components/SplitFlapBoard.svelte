@@ -472,7 +472,7 @@ const lensCss = $derived(
 	<div class="root" style:transform={pin ?? undefined} style:filter={rootCss}>
 		<div class="optics" style:filter={lensCss}>
 			{#if sign}
-				<div class="fixture" style:--gap="calc(var(--ch) * {signGap})">{@render sign()}</div>
+				<div class="fixture" style:--sign-gap="calc(var(--ch) * {signGap})">{@render sign()}</div>
 			{/if}
 			<div class="board" style:mask-image={composite?.mask} aria-hidden="true">
 				{#if hasLabels}
@@ -709,7 +709,7 @@ const lensCss = $derived(
 	   height still drives the pin, so adding one does not move the board */
 	.fixture {
 		position: absolute;
-		bottom: calc(100% + var(--gap));
+		bottom: calc(100% + var(--sign-gap));
 		left: 0;
 		right: 0;
 	}

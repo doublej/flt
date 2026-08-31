@@ -50,21 +50,22 @@ const look = $state({
   baseline: -0.013,
   rowgap: 0.07,
   grit: 0.05,
-  pins: true,
-  /* the lit header, measured off the same photograph as everything else */
+  pins: false,
+  /* JJ's tuning: the panel sits tight to the flaps with its spill off entirely,
+     so the glow in the photograph behind it is the only light on the wall. */
   signFace: '#fedf8e',
   signLip: '#ffc34e',
   signFrame: '#974716',
   signInk: '#cc6707',
   signGlow: '#ff5a0f',
-  signAspect: 24.1,
-  signGap: 1.05,
-  signGlyph: 0.5,
-  signLetter: 0.16,
-  signBloom: 0.55,
-  signUp: 1.2,
-  signDown: 0.45,
-  signIcon: true,
+  signAspect: 19.8,
+  signGap: 0.25,
+  signGlyph: 0.52,
+  signLetter: 0,
+  signBloom: 0.04,
+  signUp: 0,
+  signDown: 0,
+  signIcon: false,
 })
 </script>
 
