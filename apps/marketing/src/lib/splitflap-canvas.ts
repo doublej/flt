@@ -5,6 +5,8 @@
  *  That is what the DOM path's perspective is very nearly doing anyway, and it
  *  buys one draw surface instead of four DOM planes per cell. */
 
+import { FLAPS } from './splitflap'
+
 export type Skin = {
   /** mid tone of the flap; the rest of the gradient is derived from it */
   face: string
@@ -179,4 +181,21 @@ export function paintCell(
   ctx.fillStyle = 'rgb(118 125 134 / 0.55)'
   ctx.fillRect(x - w * 0.04, y + h / 2 - rod / 2, w * 0.13, rod)
   ctx.fillRect(x + w * 0.91, y + h / 2 - rod / 2, w * 0.13, rod)
+}
+
+/** Widest advance across the flap set for a font stack, in em. Measured rather
+ *  than remembered: the stack falls through to much wider faces when the
+ *  condensed one is missing, and the difference decides whether type clips. */
+const advances = new Map<string, number>()
+export function widestFlap(face: string): number {
+  const hit = advances.get(face)
+  if (hit !== undefined) return hit
+  const probe = document.createElement('canvas').getContext('2d')
+  if (!probe) return 0.944
+  probe.font = `700 1000px ${face}`
+  let max = 0
+  for (const ch of FLAPS) max = Math.max(max, probe.measureText(ch).width / 1000)
+  const em = max > 0 ? max : 0.944
+  advances.set(face, em)
+  return em
 }

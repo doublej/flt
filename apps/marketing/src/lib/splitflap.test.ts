@@ -4,6 +4,7 @@ import {
   REST,
   cornerPinMatrix,
   createDrum,
+  fitType,
   flapIndex,
   padCells,
   setTarget,
@@ -104,6 +105,31 @@ ok('padCells truncates', padCells('AMSTERDAM', 3, 'left') === 'AMS')
   ])
   ok('skewed quad has perspective terms', !!skew && /matrix3d\(/.test(skew))
   ok('degenerate quad is rejected', cornerPinMatrix(400, 200, rect.slice(0, 3)) === null)
+}
+
+// --- fitType ---------------------------------------------------------------
+{
+  // Arial Narrow: the designed pair already fits, so nothing is touched
+  const room = fitType(1.1, 0.7, 0.62, 0.774)
+  ok('a pair that fits is left alone', !room.clamped)
+  ok('untouched values pass through', room.glyph === 1.1 && room.squeeze === 0.7)
+
+  // Helvetica Neue: same pair overflows and must be pulled back to the edge
+  const tight = fitType(1.1, 0.7, 0.62, 0.944)
+  ok('a pair that overflows is clamped', tight.clamped)
+  ok(
+    'the clamped pair lands exactly on the flap edge',
+    Math.abs(tight.glyph * tight.squeeze * 0.944 - 0.62) < 1e-9,
+  )
+  ok('squeeze never gives up more than 10%', tight.squeeze >= 0.7 * 0.9 - 1e-9)
+  ok('the rest of the correction comes out of the glyph', tight.glyph < 1.1)
+
+  // a face wide enough that squeeze alone cannot save it
+  const huge = fitType(1.1, 0.7, 0.3, 0.944)
+  ok('squeeze stops at the floor', Math.abs(huge.squeeze - 0.63) < 1e-9)
+  ok('glyph absorbs the remainder', Math.abs(huge.glyph * huge.squeeze * 0.944 - 0.3) < 1e-9)
+
+  ok('an unmeasurable face is left alone', !fitType(1.1, 0.7, 0.62, 0).clamped)
 }
 
 console.log(`splitflap: ${n} assertions passed`)

@@ -46,7 +46,7 @@ const maxLayover = Math.max(...LAYOVER_TOP.map((l) => l.count))
 </div>
 
 <div class="hubs">
-  <h4>Where the connections actually happen</h4>
+  <h4 class="flap-cell">Where the connections actually happen</h4>
   <ul>
     {#each LAYOVER_TOP as l (l.code)}
       <li>
@@ -57,8 +57,8 @@ const maxLayover = Math.max(...LAYOVER_TOP.map((l) => l.count))
     {/each}
   </ul>
   <p class="note">
-    Connection counts across all 2,942 options; 66 different airports appeared in total. Excluding a
-    hub matches an option's connecting airports only — it never rules out your origin or your
+    Connection counts across all 2,942 options, in which 66 different airports appeared. Excluding
+    a hub matches an option's connecting airports only, so it never rules out your origin or your
     destination.
   </p>
 </div>
@@ -164,12 +164,10 @@ const maxLayover = Math.max(...LAYOVER_TOP.map((l) => l.count))
     max-width: 32rem;
   }
   h4 {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 500;
-    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--color-muted);
-    margin-bottom: var(--space-2);
+    margin-bottom: var(--space-3);
   }
   .hubs ul {
     list-style: none;

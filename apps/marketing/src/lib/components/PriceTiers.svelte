@@ -13,7 +13,7 @@ let { selected = $bindable('survey') }: { selected?: string } = $props()
       aria-pressed={selected === tier.id}
     >
       <span class="name">{tier.name}</span>
-      <span class="price">{tier.price}</span>
+      <span class="price flap-cell">{tier.price}</span>
       <span class="scope">{tier.scope}</span>
       <span class="meta">{tier.searches} · {tier.time}</span>
     </button>
@@ -21,9 +21,9 @@ let { selected = $bindable('survey') }: { selected?: string } = $props()
 </div>
 
 <p class="foot">
-  You pay for how much searching you ask for, because that's the part that takes time. A Survey is
-  split across several runs. Return-trip date grids are capped at 21 departure and return
-  combinations; everything else is a matter of how much work you want done.
+  You pay for how much searching you ask for, because that is the part that takes the time. A
+  Survey is split across several runs, and return-trip date grids are capped at 21 departure and
+  return combinations; everything else is a matter of how much work you want done.
 </p>
 
 <style>
@@ -60,10 +60,9 @@ let { selected = $bindable('survey') }: { selected?: string } = $props()
     color: var(--color-muted);
   }
   .price {
-    font-family: var(--font-mono);
-    font-size: 2.6rem;
-    line-height: 1;
-    color: var(--color-primary);
+    align-self: start;
+    font-size: 2.2rem;
+    line-height: 1.15;
   }
   .scope {
     font-size: 0.95rem;

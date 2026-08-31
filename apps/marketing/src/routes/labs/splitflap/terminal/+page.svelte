@@ -72,6 +72,7 @@ const look = $state({
 		bind:corners
 		{look}
 		editable
+		storageKey="lab-terminal"
 	/>
 </section>
 

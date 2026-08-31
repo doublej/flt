@@ -1,6 +1,7 @@
 <script lang="ts">
 import SplitFlapBoard, { type Column, type Point } from '$lib/components/SplitFlapBoard.svelte'
 import { shade } from '$lib/splitflap-canvas'
+import { loadTuning, saveTuning } from '$lib/tuning'
 import { onMount } from 'svelte'
 
 let {
@@ -14,6 +15,7 @@ let {
   corners = $bindable(),
   look,
   editable = false,
+  storageKey,
 }: {
   src: string
   /** intrinsic pixel size of the photograph */
@@ -30,6 +32,10 @@ let {
   look: Record<string, string | number | boolean>
   /** off: no pane, no handles, no tweakpane fetched. The page case. */
   editable?: boolean
+  /** Names the saved tuning. Defaults to `src`, so two stages editing the SAME
+   *  photograph in different places would trample each other's save — give them
+   *  separate keys. */
+  storageKey?: string
 } = $props()
 
 let stage = $state<HTMLElement | null>(null)
@@ -217,8 +223,10 @@ function zoom(e: WheelEvent) {
    Tuning a composite takes a while and a reload should not cost you it. The
    snapshot is per photograph, so the two pages never overwrite each other. */
 
-const KEY = $derived(`splitflap:${src}`)
+const KEY = $derived(`splitflap:${storageKey ?? src}`)
 const ui = $state({ saved: 'not saved' })
+/* set once the page's declared defaults are known; gates the auto-save */
+let baseHash = $state<unknown>(null)
 
 function snapshot() {
   return {
@@ -228,6 +236,20 @@ function snapshot() {
     view: $state.snapshot(view),
   }
 }
+
+/* Saved continuously rather than on a button, so a hot reload costs nothing —
+   which is what let hmr go back on for everyone else. */
+let saveTimer = 0
+$effect(() => {
+  if (!editable || !baseHash) return
+  const data = snapshot()
+  clearTimeout(saveTimer)
+  saveTimer = window.setTimeout(() => {
+    saveTuning(KEY, baseHash, data)
+    ui.saved = `saved ${stamp()}`
+  }, 400)
+  return () => clearTimeout(saveTimer)
+})
 
 function apply(data: ReturnType<typeof snapshot>) {
   for (const [k, v] of Object.entries(data.look ?? {})) if (k in look) look[k] = v
@@ -263,11 +285,14 @@ onMount(() => {
   const defaults = JSON.parse(
     JSON.stringify({ look: $state.snapshot(look), corners: $state.snapshot(corners) }),
   )
-  const stored = localStorage.getItem(KEY)
-  if (stored) {
-    apply(JSON.parse(stored))
+  const restored = loadTuning<ReturnType<typeof snapshot>>(KEY, defaults)
+  if (restored.value) {
+    apply(restored.value)
     ui.saved = 'restored'
+  } else if (restored.stale) {
+    ui.saved = 'defaults changed, save dropped'
   }
+  baseHash = defaults
 
   import('tweakpane').then(({ Pane }) => {
     if (cancelled || !panel) return
@@ -276,17 +301,13 @@ onMount(() => {
 
     const keep = p.addFolder({ title: 'Save' })
     keep.addBinding(ui, 'saved', { readonly: true, label: '' })
-    keep.addButton({ title: 'Save' }).on('click', () => {
-      localStorage.setItem(KEY, JSON.stringify(snapshot()))
-      ui.saved = `saved ${stamp()}`
-    })
     keep.addButton({ title: 'Restore' }).on('click', () => {
-      const raw = localStorage.getItem(KEY)
-      if (!raw) {
-        ui.saved = 'nothing saved'
+      const back = loadTuning<ReturnType<typeof snapshot>>(KEY, baseHash)
+      if (!back.value) {
+        ui.saved = back.stale ? 'defaults changed, save dropped' : 'nothing saved'
         return
       }
-      apply(JSON.parse(raw))
+      apply(back.value)
       p.refresh()
       ui.saved = 'restored'
     })

@@ -42,10 +42,10 @@ const ld = `<script type="application/ld+json">${JSON.stringify(schema)}<\/scrip
 </script>
 
 <svelte:head>
-  <title>Bureau — flight research reports for every route and date</title>
+  <title>Bureau — flight research for people with flexible dates</title>
   <meta
     name="description"
-    content="Bureau is a paid flight research service. Brief a route and rough dates; a report comes back with price charts, ranked options and booking links. €7–€39."
+    content="Tell us where you want to go and roughly when. Bureau prices every date you could fly, ranks what comes back and sends you one report with a link to book each option. From €7, and we never book or ticket anything."
   />
   {@html ld}
 </svelte:head>

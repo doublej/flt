@@ -129,3 +129,24 @@ export function cornerPinMatrix(w: number, h: number, corners: Corner[]): string
   const m = [a / w, d / w, 0, g / w, b / h, e / h, 0, hh / h, 0, 0, 1, 0, c, f, 0, 1]
   return `matrix3d(${m.map((n) => (Math.abs(n) < 1e-9 ? 0 : Number(n.toFixed(8)))).join(',')})`
 }
+
+/** Type squeezed past the flap edge is worse than type a size down, but a face
+ *  squashed to nothing is worse still — so an overflow is split: squeeze gives
+ *  up 10% at most, and the rest comes out of the glyph size. `widest` is the
+ *  widest advance in FLAPS for the resolved face, in em.
+ *
+ *  Fits iff glyph x squeeze x widest <= aspect. Pure so the board and the tuning
+ *  panel cannot disagree about what will actually be drawn. */
+const SQUEEZE_FLOOR = 0.9
+export function fitType(
+  glyph: number,
+  squeeze: number,
+  aspect: number,
+  widest: number,
+): { glyph: number; squeeze: number; clamped: boolean } {
+  const k = aspect / (glyph * squeeze * widest)
+  if (k >= 1 || !Number.isFinite(k)) return { glyph, squeeze, clamped: false }
+  const s = Math.max(squeeze * k, squeeze * SQUEEZE_FLOOR)
+  const rest = aspect / (glyph * s * widest)
+  return { glyph: rest < 1 ? glyph * rest : glyph, squeeze: s, clamped: true }
+}

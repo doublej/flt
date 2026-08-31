@@ -6,7 +6,7 @@ import FareRange from '$lib/components/FareRange.svelte'
 import PriceTiers from '$lib/components/PriceTiers.svelte'
 import QueryGrid from '$lib/components/QueryGrid.svelte'
 import RouteWeb from '$lib/components/RouteWeb.svelte'
-import SplitFlapBoard, { type Column, type Point } from '$lib/components/SplitFlapBoard.svelte'
+import type { Column, Point } from '$lib/components/SplitFlapBoard.svelte'
 import WeekBoard from '$lib/components/WeekBoard.svelte'
 import { CABIN, DISCOVERY, SPREADS, TOTALS } from '$lib/scenarios'
 import { onMount } from 'svelte'
@@ -40,12 +40,6 @@ const HEADLINES = [
 ]
 let held = $state(false)
 
-/* The kicker is a real split-flap row, so it turns over between headlines
- *  instead of cross-fading. It sits outside the {#key} block on purpose:
- *  only the drums whose character actually changes move. */
-const KICKER_COLS: Column[] = [{ id: 'k', width: 21 }]
-const kickerRows = $derived([{ k: HEADLINES[hi].kicker }])
-
 /* The board inside the photograph. Every row is the cheapest fare we actually
  *  found on that route, on the day it was cheapest — no gates, no statuses, no
  *  departure times, because we do not have those and will not invent them. */
@@ -58,8 +52,8 @@ const DEP_COLS: Column[] = [
 
 /* Solved on /labs/splitflap/terminal — fractions of the intrinsic 2000x853. */
 const CORNERS: Point[] = [
-  { x: 0.361, y: 0.381 },
-  { x: 0.649, y: 0.381 },
+  { x: 0.361, y: 0.44 },
+  { x: 0.649, y: 0.44 },
   { x: 0.649, y: 0.646 },
   { x: 0.361, y: 0.646 },
 ]
@@ -178,9 +172,6 @@ const LIMITS = [
     />
   </div>
   <div class="hero-inner">
-    <div class="flap" style="--sf-ink: #f0d489">
-      <SplitFlapBoard rows={kickerRows} columns={KICKER_COLS} variant="night" flapMs={78} />
-    </div>
     <div class="rotor" aria-live="polite">
       {#key hi}
         <div class="slab" in:fade={{ duration: 600 }} out:fade={{ duration: 300 }}>
@@ -467,12 +458,6 @@ const LIMITS = [
   }
   .slab {
     grid-area: 1 / 1;
-  }
-  .flap {
-    width: 24rem;
-    max-width: 100%;
-    padding-bottom: 0.9rem;
-    border-bottom: 1px solid rgb(240 212 137 / 0.35);
   }
   .rotor h1 {
     font-family: var(--font-display);

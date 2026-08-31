@@ -76,7 +76,7 @@ function confirm() {
 
   <p class="note">
     <strong>Mockup.</strong> Nothing is charged and no card is read. The brief and the price are
-    real; the checkout is a placeholder while billing is built.
+    real. The checkout is a placeholder while billing is built.
   </p>
 </form>
 
@@ -107,8 +107,8 @@ function confirm() {
           <span class="tick" aria-hidden="true">✓</span>
           <h3>Brief received</h3>
           <p>
-            The Bureau starts on {from || 'your route'} to {to || 'your destination'}. The report
-            lands in about {chosen.time}.
+            We are searching {from || 'your route'} to {to || 'your destination'} now, and the
+            report lands in about {chosen.time}.
           </p>
         </div>
       {/if}

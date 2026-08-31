@@ -39,8 +39,18 @@ function join(board: (now: number) => void) {
 </script>
 
 <script lang="ts">
-import { FLAPS, type Drum, cornerPinMatrix, createDrum, padCells, settle, setTarget, tick } from '$lib/splitflap'
-import { type Leaf, type Skin, paintCell } from '$lib/splitflap-canvas'
+import {
+  FLAPS,
+  type Drum,
+  cornerPinMatrix,
+  createDrum,
+  fitType,
+  padCells,
+  settle,
+  setTarget,
+  tick,
+} from '$lib/splitflap'
+import { type Leaf, type Skin, paintCell, widestFlap } from '$lib/splitflap-canvas'
 
 let {
   rows,
@@ -80,6 +90,9 @@ let cw = $state(0)
 let pad = $state(BEZEL)
 let aspect = $state(0.62)
 let rowGapRatio = $state(0.09)
+/* what the type actually gets to be after the fit check below */
+let fitGlyph = $state(0)
+let fitSqueeze = $state(0)
 let bw = $state(0)
 let bh = $state(0)
 let mirror = $state('')
@@ -149,8 +162,6 @@ let skin: Skin = {
 let phase: Uint8Array = new Uint8Array(0)
 let shown: Int16Array = new Int16Array(0)
 
-/** Canvas has no stylesheet, so the skin is read back off the element once a
- *  frame. Everything stays driven by the same --sf-* variables either way. */
 function readSkin() {
   if (!shell) return
   const cs = getComputedStyle(shell)
@@ -172,8 +183,12 @@ function readSkin() {
   skin.grain = num('--sf-grain', 0.06)
   skin.face = cs.getPropertyValue('--sf-face-mid').trim() || '#131a0d'
   skin.ink = cs.getPropertyValue('--sf-ink').trim() || '#fbf7ee'
-  skin.glyph = num('--sf-glyph', 1.1)
-  skin.squeeze = num('--sf-squeeze', 0.7)
+  const face = cs.getPropertyValue('--face').trim()
+  const f = fitType(num('--sf-glyph', 1.1), num('--sf-squeeze', 0.7), aspect, widestFlap(face))
+  fitGlyph = f.glyph
+  fitSqueeze = f.squeeze
+  skin.glyph = f.glyph
+  skin.squeeze = f.squeeze
 }
 
 function build(text: string) {
@@ -426,7 +441,13 @@ const lensCss = $derived(
 )
 </script>
 
-<div class="shell {variant}" bind:this={shell} style:--cw="{cw}px">
+<div
+	class="shell {variant}"
+	bind:this={shell}
+	style:--cw="{cw}px"
+	style:--fit-glyph={fitGlyph || null}
+	style:--fit-squeeze={fitSqueeze || null}
+>
 	<div class="root" style:transform={pin ?? undefined} style:filter={rootCss}>
 		<div class="optics" style:filter={lensCss}>
 			<div class="board" style:mask-image={composite?.mask} aria-hidden="true">
@@ -553,8 +574,8 @@ const lensCss = $derived(
 		/* Solari flaps were screen-printed in a condensed grotesque. The repo's
 		   pixel mono reads as a seven-segment display, which is the wrong machine. */
 		--face: 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-		--glyph: var(--sf-glyph, 1.1);
-		--squeeze: var(--sf-squeeze, 0.7);
+		--glyph: var(--fit-glyph, var(--sf-glyph, 1.1));
+		--squeeze: var(--fit-squeeze, var(--sf-squeeze, 0.7));
 		/* glyph sits a touch high in the em box; nudge so the seam bisects it */
 		--gy: calc(var(--ch) * var(--sf-gy, -0.013));
 	}

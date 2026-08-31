@@ -2,14 +2,23 @@
 import { SPREADS } from '$lib/scenarios'
 import { onMount } from 'svelte'
 
-/** The hero's argument, made touchable: pick a route, see what each of the
- *  seven departure days cost. Every figure is a real fare from the runs in
- *  `scenarios.ts`. Bars are scaled inside each route, because between routes
- *  the fares differ by an order of magnitude — the prices are printed, so the
- *  bar never has to carry a number on its own. */
-const routes = SPREADS.map((r) => ({
+/** The hero's argument on a loop: a route turns up, and you see what each of
+ *  its seven departure days cost. The fares and the destinations are real runs
+ *  from `scenarios.ts`; the departure airport cycles through the five we
+ *  actually searched from, so the board reads as indicative rather than as a
+ *  quote. Bars are scaled inside each route, because between routes the fares
+ *  differ by an order of magnitude — the prices are printed, so the bar never
+ *  has to carry a number on its own. */
+
+/** The gateway brief's five origins: 'any airport I can reach by train'. */
+const ORIGINS = ['Amsterdam', 'Brussels', 'Paris', 'Düsseldorf', 'Frankfurt']
+
+const routes = SPREADS.map((r, n) => ({
   ...r,
   short: r.route.replace('Amsterdam → ', ''),
+  /* Fixed per route, so the board is the same on the server and in the
+     browser and does not reshuffle under you between ticks. */
+  from: ORIGINS[(n * 7 + 3) % ORIGINS.length],
   spread: r.high - r.low,
   /* '19-25 Dec' -> ['19','20',...,'25'] — the seven dates actually searched. */
   labels: (() => {
@@ -21,37 +30,25 @@ const routes = SPREADS.map((r) => ({
 }))
 
 let i = $state(0)
-let touched = $state(false)
 const cur = $derived(routes[i])
 
 /** 40% floor so the cheapest day is still a bar, not a sliver. */
 const height = (v: number) =>
   cur.high === cur.low ? 100 : 40 + 60 * ((v - cur.low) / (cur.high - cur.low))
 
-function pick(n: number) {
-  touched = true
-  i = n
-}
-
 onMount(() => {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
   const t = setInterval(() => {
-    if (!touched) i = (i + 1) % routes.length
+    i = (i + 1) % routes.length
   }, 3600)
   return () => clearInterval(t)
 })
 </script>
 
 <div class="board">
-  <div class="chips" role="group" aria-label="Choose a route">
-    {#each routes as r, n}
-      <button type="button" aria-pressed={i === n} onclick={() => pick(n)}>{r.short}</button>
-    {/each}
-  </div>
-
   <p class="head">
-    <span class="route">Amsterdam → {cur.short}</span>
-    <span class="win">{cur.window} · every departure date</span>
+    <span class="route">{cur.from} → {cur.short}</span>
+    <span class="win flap-cell">{cur.window} · every departure date</span>
   </p>
 
   <ol class="week">
@@ -81,37 +78,6 @@ onMount(() => {
   /* All nine routes stay on one line. They only just fit at the widest the panel
      gets, so below that the row scrolls rather than wrapping to a second line
      and changing the panel's height. */
-  .chips {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 0.3rem;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .chips::-webkit-scrollbar {
-    display: none;
-  }
-  .chips button {
-    flex: none;
-    white-space: nowrap;
-    background: none;
-    border: 1px solid rgb(240 244 232 / 0.22);
-    border-radius: 999px;
-    padding: 0.28rem 0.46rem;
-    font-size: 0.62rem;
-    color: rgb(242 244 236 / 0.72);
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-  }
-  .chips button:hover {
-    color: #f2f4ec;
-    border-color: rgb(240 244 232 / 0.5);
-  }
-  .chips button[aria-pressed="true"] {
-    background: #f2f4ec;
-    border-color: #f2f4ec;
-    color: #10201a;
-  }
-
   /* Route and window each get their own line whatever the route is called.
      Sharing one wrapping line meant Lyon sat beside its dates and New York JFK
      pushed them below, so the panel changed height as the route cycled. */
@@ -126,9 +92,8 @@ onMount(() => {
     letter-spacing: -0.01em;
   }
   .win {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: rgb(242 244 236 / 0.6);
+    justify-self: start;
+    font-size: 0.72rem;
   }
 
   .week {

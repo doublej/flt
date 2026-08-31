@@ -5,7 +5,7 @@ import { DISCOVERY, GRAPH } from '$lib/scenarios'
  *  possible routing from Amsterdam to Hanoi within the stop budget, and each
  *  one changes planes at a real airport — so the lines meet where the hubs
  *  are, and a busy hub draws bigger. Past one stop there are far too many to
- *  draw, so each panel says how many are on screen and how many exist. */
+ *  draw, so each panel is a sample of the count printed under it. */
 const nf = new Intl.NumberFormat('en-GB')
 
 const W = 360
@@ -77,7 +77,7 @@ function panel(stops: number, routes: number, cap: number) {
     pts.push({ x: W - PAD, y: H / 2 })
     return curve(pts)
   })
-  return { stops, routes, drawn, cols, paths }
+  return { stops, routes, cols, paths }
 }
 
 const top = Math.max(...DISCOVERY.byStops.map((b) => b.routes))
@@ -131,10 +131,7 @@ const hubR = (load: number) => 1.1 + Math.sqrt(load) * 0.55
       <div class="mag" style="--f:{p.mag}"></div>
       <figcaption>
         <span class="k">Up to {p.stops} {p.stops === 1 ? 'stop' : 'stops'}</span>
-        <b>{nf.format(p.routes)}</b>
-        <span class="d">
-          {p.drawn === p.routes ? 'all drawn' : `${p.drawn} drawn`}
-        </span>
+        <b class="flap-cell">{nf.format(p.routes)}</b>
       </figcaption>
     </figure>
   {/each}
@@ -144,9 +141,9 @@ const hubR = (load: number) => 1.1 + Math.sqrt(load) * 0.55
   Amsterdam to Hanoi, walked over a map of {nf.format(GRAPH.airports)} airports and {nf.format(
     GRAPH.connections,
   )} direct connections in {DISCOVERY.seconds} seconds. Nothing here is priced, timetabled or
-  bookable — it is a static snapshot of what connects to what, capped at {DISCOVERY.maxDetour}×
-  the direct distance, and we use it to decide where the searching is worth doing. Rule the Gulf
-  hubs out and {nf.format(DISCOVERY.byStops[2].routes)} routings become {nf.format(
+  bookable; it is a static snapshot of what connects to what, capped at {DISCOVERY.maxDetour}× the
+  direct distance, and we use it to decide which routes are worth searching. Rule the Gulf hubs
+  out and {nf.format(DISCOVERY.byStops[2].routes)} routings become {nf.format(
     DISCOVERY.noGulfAt3,
   )}.
 </p>
@@ -167,9 +164,6 @@ const hubR = (load: number) => 1.1 + Math.sqrt(load) * 0.55
     width: 100%;
     height: auto;
     display: block;
-    background: linear-gradient(180deg, var(--color-surface), var(--color-bg));
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
   }
   .web path {
     fill: none;
@@ -216,18 +210,10 @@ const hubR = (load: number) => 1.1 + Math.sqrt(load) * 0.55
     font-size: 0.85rem;
   }
   figcaption b {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
     font-weight: 400;
     font-size: 1.05rem;
     color: var(--color-primary);
   }
-  .d {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: var(--color-muted);
-  }
-
   .note {
     margin-top: var(--space-4);
     max-width: var(--measure);

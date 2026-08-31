@@ -20,6 +20,8 @@
   --color-saving: #b8871f;
   --color-saving-soft: #f0e3bd;
   --color-border: #dcded6;
+  --color-flap-face: #16191a;
+  --color-flap-ink: #e6dcc4;
   --color-track: #e2e4dc;
   --radius: 3px;
   --radius-lg: 4px;
@@ -57,6 +59,25 @@ h1,
 h2,
 h3 {
   text-wrap: balance;
+}
+
+/* Departure-board hardware for one figure or one label: the flap's own face and
+   ink, and the seam that runs across the middle of every real flap. It is for
+   data and small labels — a heading that has to be read at speed stays type. */
+.flap-cell {
+  display: inline-block;
+  padding: 0.18em 0.5em 0.2em;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  color: var(--color-flap-ink);
+  background: linear-gradient(
+    var(--color-flap-face) 0 calc(50% - 1px),
+    rgb(0 0 0 / 0.5) calc(50% - 1px) calc(50% + 1px),
+    var(--color-flap-face) calc(50% + 1px) 100%
+  );
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 1px 1px rgb(23 33 29 / 0.16);
 }
 
 body {

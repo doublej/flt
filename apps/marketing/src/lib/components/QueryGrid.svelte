@@ -13,7 +13,7 @@ const hours = byHandHours(TOTALS.queries)
     <figure>
       <blockquote>{s.ask}</blockquote>
       <p class="route">{s.route}</p>
-      <p class="win">{s.window}</p>
+      <p class="win flap-cell">{s.window}</p>
 
       <div class="grid" style:--cols={s.grid.cols}>
         {#each Array(s.queries) as _, i (i)}
@@ -34,9 +34,9 @@ const hours = byHandHours(TOTALS.queries)
 <p class="total">
   <b>{TOTALS.queries} searches</b> in {TOTALS.searchingSeconds} seconds of actual searching, which
   returned {nf.format(TOTALS.options)} options across {TOTALS.carriers} airlines. Run by hand at a
-  generous {MANUAL_S} seconds each — type the route, wait, scan, write the price down — the same
-  {TOTALS.queries} searches take about {hours.toFixed(1)} hours. That estimate is the only number
-  on this page we did not measure.
+  generous {MANUAL_S} seconds each (type the route, wait for it, scan the results, write the price
+  down) the same {TOTALS.queries} searches take about {hours.toFixed(1)} hours. That estimate is
+  the only number on this page we did not measure.
 </p>
 
 <style>
@@ -75,9 +75,8 @@ const hours = byHandHours(TOTALS.queries)
     color: var(--color-muted);
   }
   .win {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: var(--color-muted);
+    justify-self: start;
+    font-size: 0.7rem;
   }
 
   .grid {
