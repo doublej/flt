@@ -22,6 +22,14 @@
  *  follow the section ids in `+page.svelte` rather than the components. A
  *  component used in exactly one band has its copy in that band's group.
  */
+
+/** One rule about counting searches, three views of it below. Kept out of the
+ *  object so `searchCount` can be built from the other two rather than
+ *  restating them — a locale where the plural or the estimate mark differs
+ *  changes it in one place. */
+const searchMark = (n: number) => (n === 1 ? '' : '~')
+const searchUnit = (n: number) => (n === 1 ? 'search' : 'searches')
+
 export const en = {
   /** `app.html` and the `<svelte:head>` in `+layout.svelte`, including the
    *  JSON-LD an answer engine reads back aloud. */
@@ -70,9 +78,17 @@ export const en = {
      *  route change, the claim does not. */
     clause: 'between the cheapest departure date and the dearest',
     /** No longer takes the spread: the headline above it now sets that figure in
-     *  156px of display type, and saying it again one line down read as a stutter. */
+     *  156px of display type, and saying it again one line down read as a stutter.
+     *
+     *  "A thousand" is prose and prospective, and it is the one round number on
+     *  the page — but it is not a round-up. It is what a Survey-sized brief
+     *  actually returned in the runs: 1,060 options on the Singapore job and
+     *  1,172 on the holidays job, both in `scenarios.ts`. Not `TOTALS.options`,
+     *  which is 2,942 across four finished briefs and would claim that per
+     *  brief. If those scenarios are ever re-run and the figure falls, this
+     *  sentence has to change with them. */
     pitch:
-      'We price every date you could fly, then send one report. Nine routes below, every departure date in each window. Reports from €3.',
+      'Let our agents compare a thousand flights and bring you the handful worth comparing and deciding on. Reports from €3.',
     ctaBrief: 'Start a brief',
     ctaHow: 'See how it works',
     /** The lit sign and the flap rows on the board inside the photograph. The
@@ -213,6 +229,20 @@ export const en = {
       withoutGulf: string,
     ) =>
       `Amsterdam to Hanoi, walked over a map of ${airports} airports and ${connections} direct connections in ${seconds} seconds. Nothing here is priced, timetabled or bookable; it is a static snapshot of what connects to what, capped at ${maxDetour}× the direct distance, and we use it to decide which routes are worth searching. Rule the Gulf hubs out and ${routings} routings become ${withoutGulf}.`,
+    /** One pair from `ROUTE_EXAMPLE`, actually priced. */
+    exampleLabel: 'One from the map, priced',
+    example: (
+      date: string,
+      nonstopCarrier: string,
+      nonstopPrice: number,
+      nonstopDuration: string,
+      altCarrier: string,
+      altVia: string,
+      altPrice: number,
+      altDuration: string,
+      diff: number,
+    ) =>
+      `On ${date}, ${nonstopCarrier}'s only nonstop to Bangkok is €${nonstopPrice} (${nonstopDuration}). ${altCarrier}'s cheapest routing through ${altVia}, from the same search, is €${altPrice} (${altDuration}) — €${diff} less for a stop. The graph does not pick one for you. It only makes sure both were on the list before either got priced.`,
   },
 
   report: {
