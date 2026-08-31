@@ -56,6 +56,7 @@ function join(board: (now: number) => void) {
 import {
   FLAPS,
   type Drum,
+  REST,
   cornerPinMatrix,
   createDrum,
   fitType,
@@ -337,6 +338,11 @@ function frame(now: number) {
     const p = tick(d, now, flapMs)
     if (p < 0) {
       if (shown[i] !== ~d.current) rest(i)
+      // A drum the hand knocked later in this same frame carries a start time
+      // the frame clock has not reached yet. It is not at rest, and if the loop
+      // stopped on it the drum would sit there until some other knock restarted
+      // it — and then turn with no hand anywhere near it.
+      if (d.stepStart !== REST) moving++
       continue
     }
     moving++
@@ -392,6 +398,81 @@ function frame(now: number) {
 function readout(): string {
   const head = hasLabels ? `${cols.map((c) => c.label ?? c.id).join(', ')}. ` : ''
   return head + rows.map((r) => cols.map((c) => r[c.id] ?? '').join(' ')).join('. ')
+}
+
+/* --- the hand ------------------------------------------------------------
+   A wall of loose plastic reacts to a hand passed over it, and it is the speed
+   that does it rather than the presence: rest a palm on a board and nothing
+   happens, sweep one across and drums let go all the way along. So the whole
+   gesture is measured in cells crossed per second, which makes it the same
+   gesture on the hero's 37 drums and on a word of inline type — a small board
+   is quicker to cross in its own units, and is duly more skittish, the way a
+   small board of light flaps would be.
+
+   A knocked drum is never handed a new character, only a start time. The rest
+   is the machine's own: a drum can only turn forwards, so it runs the whole way
+   round its forty flaps and arrives back on exactly the flap it was already
+   showing. There is no bookkeeping to get wrong and no path on which the board
+   is left lying about what we found. */
+
+/** cells per second at which the hand is going hard enough to take every drum
+ *  it passes over. A slow read of a board is a tenth of this. */
+const HAND_REF = 120
+
+const hand = { x: 0, y: 0, t: 0, speed: 0, owed: 0 }
+
+/** Triangular about zero: the patch is densest under the cursor and thins out,
+ *  rather than the flat disc a single random would give. */
+function scatter(radius: number): number {
+  return (Math.random() + Math.random() - 1) * radius
+}
+
+function clamp(v: number, hi: number): number {
+  return v < 0 ? 0 : v > hi ? hi : v
+}
+
+function knock(e: PointerEvent) {
+  // a coarse pointer has no hover at all: a finger only reports while it is
+  // dragging the page, and flipping the board under a scroll would be a glitch
+  if (reduced || !onscreen || !drums.length || e.pointerType === 'touch') return
+  // the hero's board is pinned into a photograph, so its box is wherever the
+  // homography put it. Measuring the transformed rect is what keeps the sums in
+  // the cell units the reader is actually looking at.
+  const box = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const cell = box.width / perRow
+  const dt = (e.timeStamp - hand.t) / 1000
+  const dist = Math.hypot(e.clientX - hand.x, e.clientY - hand.y) / cell
+  hand.x = e.clientX
+  hand.y = e.clientY
+  hand.t = e.timeStamp
+  // a long silence means the pointer arrived rather than travelled, and the
+  // jump from wherever it last was says nothing about how fast it is going
+  if (!(dt > 0) || dt > 0.1 || !(cell > 0)) return
+
+  hand.speed += (dist / dt - hand.speed) * 0.4 // mice report in bursts; smooth it
+  // Capped at one: the hardest sweep there is can set going every drum it went
+  // over and no more, so a board can never owe more flaps than it has.
+  const force = Math.min(hand.speed / HAND_REF, 1)
+  hand.owed += dist * force
+  if (hand.owed < 1) return
+
+  const k0 = (e.clientX - box.left) / cell
+  const r0 = ((e.clientY - box.top) / box.height) * rows.length
+  // the patch spreads with the same force: a drift takes the drums it touches,
+  // a sweep takes them either side as well. A row is a cell tall divided by the
+  // aspect, so the same radius reaches fewer rows than it does columns.
+  const radius = 1 + force * 3
+  const now = performance.now()
+  let woke = false
+  for (; hand.owed >= 1; hand.owed -= 1) {
+    const k = clamp(Math.round(k0 - 0.5 + scatter(radius)), perRow - 1)
+    const r = clamp(Math.round(r0 - 0.5 + scatter(radius * aspect)), rows.length - 1)
+    const d = drums[r * perRow + k]
+    if (d.stepStart !== REST) continue // already turning; it has been asked once
+    d.stepStart = now
+    woke = true
+  }
+  if (woke) join(frame)
 }
 
 $effect(() => {
@@ -496,7 +577,17 @@ const lensCss = $derived(
 	style:--fit-glyph={fitGlyph || null}
 	style:--fit-squeeze={fitSqueeze || null}
 >
-	<div class="root" style:transform={pin ?? undefined} style:filter={rootCss}>
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<!-- The hand hangs off .root rather than off the shell because .root is the
+	     element the corner pin moves: hit testing follows the transform, so this
+	     listens where the board is actually seen rather than where it was laid
+	     out. Decoration only — nothing here is a control. -->
+	<div
+		class="root"
+		style:transform={pin ?? undefined}
+		style:filter={rootCss}
+		onpointermove={knock}
+	>
 		<div class="optics" style:filter={lensCss}>
 			{#if sign}
 				<div
@@ -754,6 +845,11 @@ const lensCss = $derived(
 	}
 	.root {
 		transform-origin: 0 0;
+		/* The composite stage switches pointer events off across the whole photo,
+		   so that the board's untransformed box — which sits in the top corner of
+		   the picture with nothing drawn in it — cannot swallow the photograph.
+		   This claims them back for the one element that is hit where it is seen. */
+		pointer-events: auto;
 	}
 	.board {
 		position: relative;

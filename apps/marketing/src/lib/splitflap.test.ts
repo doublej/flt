@@ -74,6 +74,21 @@ ok('unknown char is blank', flapIndex('€') === 0)
   ok('a full revolution, not a reverse', steps === 40 && d.current === 0)
 }
 
+// the hover knock: a drum already on its target, handed nothing but a start
+// time, runs the whole way round and comes back to the character it was showing
+{
+  const d = createDrum('K', 0)
+  d.stepStart = 0
+  let steps = 0
+  for (let t = 0; t <= 62 * 45; t += 4) {
+    const before = d.current
+    tick(d, t, 62)
+    if (d.current !== before) steps++
+  }
+  ok('knock: a full revolution', steps === 40)
+  ok('knock: lands back on its own flap', d.current === flapIndex('K') && d.stepStart === REST)
+}
+
 // motor tolerance stretches the step, it does not skip one
 {
   const slow = createDrum(' ', 0.04)
