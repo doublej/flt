@@ -1,4 +1,5 @@
 <script lang="ts">
+import Airspace from '$lib/components/Airspace.svelte'
 import AvoidHubs from '$lib/components/AvoidHubs.svelte'
 import BriefForm from '$lib/components/BriefForm.svelte'
 import CompositeStage from '$lib/components/CompositeStage.svelte'
@@ -72,7 +73,7 @@ let LOOK = $state({
   warmth: -0.17,
   angle: 180,
   multiply: '#00000000',
-  screen: '#ffca0030',
+  screen: '#ffca0018',
   grain: 0.03,
   aberration: 0.2,
   vignette: 0.13,
@@ -321,7 +322,8 @@ const LIMITS = [
     <RouteWeb />
   </section>
 
-  <section class="band" id="report">
+  <section class="band air" id="report">
+    <Airspace set={0} />
     <h2>How it works</h2>
     <ol class="steps">
       {#each STEPS as step, i}
@@ -336,7 +338,8 @@ const LIMITS = [
     </ol>
   </section>
 
-  <section class="band" id="pricing">
+  <section class="band air" id="pricing">
+    <Airspace set={1} />
     <h2>You pay for the searching, not the seat</h2>
     <p class="lead measure">
       One date is cheap to answer. Five destinations across a fortnight in two cabins is not,
@@ -353,7 +356,8 @@ const LIMITS = [
     </p>
   </section>
 
-  <section class="band" id="brief">
+  <section class="band air" id="brief">
+    <Airspace set={2} />
     <h2>Send a brief</h2>
     <p class="lead measure">
       Only the destination is required. Everything else is a tap, or leave it and we will use our
@@ -836,6 +840,11 @@ const LIMITS = [
   }
   section.band {
     padding-block: var(--section-y);
+  }
+  /* holds the Airspace layer's negative z-index inside its own band */
+  section.air {
+    position: relative;
+    isolation: isolate;
   }
   .band + .band {
     border-top: 1px solid var(--color-border);

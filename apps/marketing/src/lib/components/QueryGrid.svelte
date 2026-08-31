@@ -1,4 +1,5 @@
 <script lang="ts">
+import { BLOBS as BLOB } from '$lib/blobs'
 import { MANUAL_S, SCENARIOS, TOTALS, byHandHours } from '$lib/scenarios'
 import { onMount } from 'svelte'
 
@@ -16,13 +17,63 @@ const hours = byHandHours(TOTALS.queries)
  *  date is a tall narrow search, two cabins across a week is a wide one. The
  *  crops are composed at these ratios in the source files rather than squeezed
  *  from one master, so no one is cut through the chin to make a shape. */
+/*  align — where the copy sits against its photograph, so the four rows are
+ *          not all centred on the same line
+ *  pull  — how far the copy laps over the blob. The outline is curved, so
+ *          there is always slack at its edge for a line of type to sit in.
+ *  meas  — the copy's own measure, which narrows as its photograph widens */
 const SHAPE = {
-  gateway: { ar: '2 / 3', w: '20rem', rot: '-1.6deg', iw: 640, ih: 960 },
-  ski: { ar: '1 / 1', w: '25rem', rot: '1.1deg', iw: 800, ih: 800 },
-  cabin: { ar: '5 / 4', w: '30rem', rot: '-0.7deg', iw: 900, ih: 720 },
-  holidays: { ar: '4 / 5', w: '23rem', rot: '1.9deg', iw: 720, ih: 900 },
+  gateway: {
+    ar: '2 / 3',
+    w: '20rem',
+    rot: '-1.6deg',
+    align: 'start',
+    pull: '3.5rem',
+    meas: '33rem',
+    iw: 640,
+    ih: 960,
+  },
+  ski: {
+    ar: '1 / 1',
+    w: '25rem',
+    rot: '1.1deg',
+    align: 'end',
+    pull: '5.5rem',
+    meas: '30rem',
+    iw: 800,
+    ih: 800,
+  },
+  cabin: {
+    ar: '5 / 4',
+    w: '30rem',
+    rot: '-0.7deg',
+    align: 'center',
+    pull: '2rem',
+    meas: '27rem',
+    iw: 900,
+    ih: 720,
+  },
+  holidays: {
+    ar: '4 / 5',
+    w: '23rem',
+    rot: '1.9deg',
+    align: 'start',
+    pull: '6rem',
+    meas: '31rem',
+    iw: 720,
+    ih: 900,
+  },
 } as const
-const FALLBACK = { ar: '4 / 5', w: '23rem', rot: '0deg', iw: 720, ih: 900 }
+const FALLBACK = {
+  ar: '4 / 5',
+  w: '23rem',
+  rot: '0deg',
+  align: 'center',
+  pull: '0rem',
+  meas: '34rem',
+  iw: 720,
+  ih: 900,
+}
 const shapeOf = (id: string) => SHAPE[id as keyof typeof SHAPE] ?? FALLBACK
 
 /** Each photograph sits on a wash cut to its neighbour's blob, so the two
@@ -44,13 +95,21 @@ onMount(() => {
 
     ctx = gsap.context(() => {
       for (const job of gsap.utils.toArray<HTMLElement>('.job')) {
-        gsap.from(job, {
-          opacity: 0,
-          y: 48,
-          duration: 0.7,
-          ease: 'power2.out',
-          scrollTrigger: { trigger: job, start: 'top 88%', once: true },
-        })
+        /* fromTo with immediateRender off, never `from`: a reveal that hides
+           its own content up front leaves the row blank for good if the
+           trigger is ever computed against a stale layout. */
+        gsap.fromTo(
+          job,
+          { opacity: 0, y: 48 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.7,
+            ease: 'power2.out',
+            immediateRender: false,
+            scrollTrigger: { trigger: job, start: 'top 92%', once: true },
+          },
+        )
 
         const scrub = { trigger: job, start: 'top bottom', end: 'bottom top', scrub: 0.6 }
         gsap.fromTo(
@@ -70,23 +129,19 @@ onMount(() => {
         )
       }
     }, list)
+
+    /* the prints are lazy, so their boxes can land after the triggers were
+       measured; one refresh once they are all in puts the marks back */
+    const imgs = [...list.querySelectorAll('img')].filter((i) => !i.complete)
+    if (imgs.length) {
+      Promise.all(
+        imgs.map((i) => new Promise((done) => i.addEventListener('load', done, { once: true }))),
+      ).then(() => ScrollTrigger.refresh())
+    }
   })()
 
   return () => ctx?.revert()
 })
-
-/** One closed bezier per job, drawn round an eight-point ring with the radius
- *  jittered off a fixed seed, then normalised to fill its box. In
- *  objectBoundingBox units, so one path serves any size or proportion. */
-const BLOB: Record<string, string> = {
-  gateway:
-    'M0.9998,0.4711C0.9969,0.5980 0.9530,0.7556 0.8635,0.8436C0.7739,0.9317 0.5863,1.0085 0.4625,0.9993C0.3387,0.9901 0.1977,0.8767 0.1207,0.7887C0.0437,0.7007 0.0050,0.5811 0.0006,0.4711C-0.0039,0.3611 0.0171,0.2069 0.0941,0.1288C0.1711,0.0506 0.3314,0.0099 0.4625,0.0022C0.5937,-0.0056 0.7915,0.0041 0.8810,0.0823C0.9706,0.1605 1.0027,0.3442 0.9998,0.4711Z',
-  ski: 'M1.0000,0.5258C0.9973,0.6407 0.9227,0.7844 0.8419,0.8620C0.7611,0.9396 0.6361,0.9787 0.5150,0.9912C0.3939,1.0037 0.2010,1.0145 0.1152,0.9370C0.0294,0.8594 -0.0037,0.6588 0.0003,0.5258C0.0043,0.3929 0.0533,0.2268 0.1391,0.1392C0.2249,0.0517 0.3952,-0.0052 0.5150,0.0004C0.6349,0.0060 0.7774,0.0853 0.8582,0.1729C0.9391,0.2605 1.0027,0.4110 1.0000,0.5258Z',
-  cabin:
-    'M0.9995,0.4537C0.9930,0.5706 0.9197,0.6935 0.8392,0.7845C0.7586,0.8756 0.6223,1.0014 0.5161,1.0000C0.4098,0.9986 0.2874,0.8669 0.2015,0.7759C0.1155,0.6848 0.0055,0.5665 0.0002,0.4537C-0.0051,0.3409 0.0837,0.1746 0.1697,0.0990C0.2557,0.0235 0.3981,0.0030 0.5161,0.0004C0.6341,-0.0023 0.7972,0.0078 0.8778,0.0833C0.9583,0.1589 1.0059,0.3368 0.9995,0.4537Z',
-  holidays:
-    'M0.9985,0.4737C1.0119,0.5856 0.9349,0.7628 0.8479,0.8502C0.7608,0.9376 0.5859,1.0126 0.4762,0.9982C0.3665,0.9839 0.2690,0.8515 0.1896,0.7641C0.1103,0.6767 0.0058,0.5761 0.0002,0.4737C-0.0053,0.3713 0.0769,0.2284 0.1562,0.1495C0.2355,0.0706 0.3744,-0.0047 0.4762,0.0002C0.5781,0.0051 0.6804,0.0998 0.7674,0.1787C0.8545,0.2576 0.9851,0.3618 0.9985,0.4737Z',
-}
 </script>
 
 <svg class="defs" aria-hidden="true" focusable="false">
@@ -109,6 +164,9 @@ const BLOB: Record<string, string> = {
       style:--ar={sh.ar}
       style:--w={sh.w}
       style:--rot={sh.rot}
+      style:--align={sh.align}
+      style:--pull={sh.pull}
+      style:--meas={sh.meas}
     >
       <div class="frame">
         <span class="wash" aria-hidden="true" style:clip-path="url(#blob-{wash})"></span>
@@ -119,7 +177,7 @@ const BLOB: Record<string, string> = {
           width={sh.iw}
           height={sh.ih}
           loading="lazy"
-          style:clip-path={BLOB[s.id] ? `url(#blob-${s.id})` : undefined}
+          style:clip-path={BLOB[s.id as keyof typeof BLOB] ? `url(#blob-${s.id})` : undefined}
         />
       </div>
 
@@ -181,10 +239,15 @@ const BLOB: Record<string, string> = {
     display: grid;
     grid-template-columns: var(--w) minmax(0, 1fr);
     gap: var(--space-5);
-    align-items: center;
+    align-items: var(--align);
   }
   .job.flip {
     grid-template-columns: minmax(0, 1fr) var(--w);
+  }
+  /* every other row is pulled tighter into the list so the four do not fall on
+     an even beat */
+  .job:nth-child(even) {
+    margin-block: calc(-1 * var(--space-4));
   }
   .frame {
     grid-column: 1;
@@ -211,11 +274,16 @@ const BLOB: Record<string, string> = {
     object-position: 50% 42%;
     rotate: var(--rot);
   }
+  /* the copy laps back over the photograph's column; the blob's curve leaves
+     the room, and z-index keeps the type off the print itself */
   .body {
+    position: relative;
+    z-index: 2;
     grid-column: 2;
     grid-row: 1;
     align-content: center;
-    max-width: 34rem;
+    max-width: var(--meas);
+    margin-inline-start: calc(-1 * var(--pull));
   }
   .flip .frame {
     grid-column: 2;
@@ -223,6 +291,8 @@ const BLOB: Record<string, string> = {
   .flip .body {
     grid-column: 1;
     justify-self: end;
+    margin-inline-start: 0;
+    margin-inline-end: calc(-1 * var(--pull));
   }
 
   .when {
@@ -263,12 +333,16 @@ const BLOB: Record<string, string> = {
      what the searches were made of, then what they came back with. The unit
      sits under the numeral in the same caps as the date at the top, so the
      block is bracketed by the utility face at both ends. */
+  /* the numeral hangs out past the copy's own left edge on every row — the one
+     thing all four do the same way, so the varied alignment above reads as
+     composition rather than drift */
   .tally {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     column-gap: var(--space-3);
     align-items: center;
     margin-top: var(--space-4);
+    margin-inline-start: -2.75rem;
   }
   .count {
     display: grid;
