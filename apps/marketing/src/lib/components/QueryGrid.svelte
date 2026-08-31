@@ -6,17 +6,40 @@ import { MANUAL_S, SCENARIOS, TOTALS, byHandHours } from '$lib/scenarios'
  *  apart before either number is read. */
 const nf = new Intl.NumberFormat('en-GB')
 const hours = byHandHours(TOTALS.queries)
+
+/** No two photographs are the same size or proportion, and each sits at its
+ *  own angle, the way prints do when they have been put down on a desk rather
+ *  than mounted. Proportion follows the job behind it: five airports on one
+ *  date is a tall narrow search, two cabins across a week is a wide one. The
+ *  crops are composed at these ratios in the source files rather than squeezed
+ *  from one master, so no one is cut through the chin to make a shape. */
+const SHAPE = {
+  gateway: { ar: '2 / 3', w: '17rem', rot: '-1.6deg', iw: 640, ih: 960 },
+  ski: { ar: '1 / 1', w: '21rem', rot: '1.1deg', iw: 800, ih: 800 },
+  cabin: { ar: '5 / 4', w: '24rem', rot: '-0.7deg', iw: 900, ih: 720 },
+  holidays: { ar: '4 / 5', w: '19rem', rot: '1.9deg', iw: 720, ih: 900 },
+} as const
+const FALLBACK = { ar: '4 / 5', w: '19rem', rot: '0deg', iw: 720, ih: 900 }
+const shapeOf = (id: string) => SHAPE[id as keyof typeof SHAPE] ?? FALLBACK
 </script>
 
 <div class="jobs">
   {#each SCENARIOS as s, i (s.id)}
-    <article class="job" class:flip={i % 2 === 1} style:--n={s.queries}>
+    {@const sh = shapeOf(s.id)}
+    <article
+      class="job"
+      class:flip={i % 2 === 1}
+      style:--n={s.queries}
+      style:--ar={sh.ar}
+      style:--w={sh.w}
+      style:--rot={sh.rot}
+    >
       <img
         class="who"
         src="/img/people/{s.id}.webp"
         alt=""
-        width="720"
-        height="900"
+        width={sh.iw}
+        height={sh.ih}
         loading="lazy"
       />
 
@@ -25,15 +48,20 @@ const hours = byHandHours(TOTALS.queries)
         <blockquote>{s.ask}</blockquote>
         <p class="route">{s.route}</p>
 
-        <p class="tally">
-          <b>{s.queries}</b>
-          <span>searches</span>
-        </p>
-        <p class="sub">
-          {s.grid.rows}
-          {s.grid.rowKind} × {s.grid.cols}
-          {s.grid.cols === 1 ? 'date' : 'dates'} · {nf.format(s.options)} options · {s.seconds} seconds
-        </p>
+        <div class="tally">
+          <p class="count">
+            <b>{s.queries}</b>
+            <span>searches</span>
+          </p>
+          <div class="of">
+            <p class="shape">
+              {s.grid.rows}
+              {s.grid.rowKind} × {s.grid.cols}
+              {s.grid.cols === 1 ? 'date' : 'dates'}
+            </p>
+            <p class="sub">{nf.format(s.options)} options · {s.seconds} seconds</p>
+          </div>
+        </div>
       </div>
     </article>
   {/each}
@@ -58,12 +86,12 @@ const hours = byHandHours(TOTALS.queries)
      rather than four of the same thing. */
   .job {
     display: grid;
-    grid-template-columns: 19rem minmax(0, 1fr);
+    grid-template-columns: var(--w) minmax(0, 1fr);
     gap: var(--space-5);
     align-items: center;
   }
   .job.flip {
-    grid-template-columns: minmax(0, 1fr) 19rem;
+    grid-template-columns: minmax(0, 1fr) var(--w);
   }
   .who {
     grid-column: 1;
@@ -71,15 +99,16 @@ const hours = byHandHours(TOTALS.queries)
     display: block;
     width: 100%;
     height: auto;
-    aspect-ratio: 4 / 5;
+    aspect-ratio: var(--ar);
     object-fit: cover;
+    object-position: 50% 42%;
     border-radius: var(--radius);
+    rotate: var(--rot);
+    box-shadow: var(--shadow-lg);
   }
   .body {
     grid-column: 2;
     grid-row: 1;
-    display: grid;
-    gap: var(--space-2);
     align-content: center;
     max-width: 34rem;
   }
@@ -99,12 +128,15 @@ const hours = byHandHours(TOTALS.queries)
     color: var(--color-muted);
   }
   blockquote {
-    margin: 0;
+    margin: 0.5rem 0 0;
     font-family: var(--font-display);
     font-size: clamp(1.35rem, 2.2vw, 1.9rem);
     line-height: 1.28;
     letter-spacing: -0.012em;
     text-wrap: pretty;
+    /* hang the opening quote in the margin so the first word starts on the
+       same line as the date above it and the route below */
+    text-indent: -0.42em;
   }
   blockquote::before {
     content: "“";
@@ -113,6 +145,7 @@ const hours = byHandHours(TOTALS.queries)
     content: "”";
   }
   .route {
+    margin-top: 0.7rem;
     font-size: 0.92rem;
     line-height: 1.5;
     color: var(--color-muted);
@@ -121,24 +154,47 @@ const hours = byHandHours(TOTALS.queries)
   /* The numeral carries the work: its size comes off the search count, so the
      five-search job and the twenty-eight-search job are different weights on
      the page before you read either figure. */
+  /* The number is the subject and the two lines beside it are its predicate:
+     what the searches were made of, then what they came back with. The unit
+     sits under the numeral in the same caps as the date at the top, so the
+     block is bracketed by the utility face at both ends. */
   .tally {
-    display: flex;
-    align-items: baseline;
-    gap: 0.6rem;
-    margin-top: var(--space-2);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--space-3);
+    align-items: center;
+    margin-top: var(--space-4);
   }
-  .tally b {
+  .count {
+    display: grid;
+    justify-items: start;
+    gap: 0.3rem;
+  }
+  .count b {
     font-family: var(--font-display);
     font-stretch: var(--display-wide);
     font-weight: 600;
     font-size: calc(3.2rem + var(--n) * 0.13rem);
-    line-height: 0.8;
+    line-height: 0.78;
     color: var(--color-primary);
     font-variant-numeric: lining-nums tabular-nums;
   }
-  .tally span {
-    font-size: 1rem;
+  .count span {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
     color: var(--color-muted);
+  }
+  .of {
+    display: grid;
+    gap: 0.3rem;
+    border-left: 1px solid var(--color-border);
+    padding-left: var(--space-3);
+  }
+  .shape {
+    font-size: 0.95rem;
+    color: var(--color-text);
   }
   .sub {
     font-family: var(--font-mono);
