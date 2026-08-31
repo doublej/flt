@@ -45,6 +45,10 @@ let {
 
 let stage = $state<HTMLElement | null>(null)
 let panel = $state<HTMLElement | null>(null)
+/** the pane, once it has been fetched. Bindings are one-way in practice, so
+ *  anything that writes a bound value from code has to refresh it by hand or
+ *  the operator reads a stale number off a slider. */
+let pane: { dispose(): void; refresh(): void } | null = null
 let pw = $state(0)
 let ph = $state(0)
 
@@ -87,6 +91,26 @@ const pins = $derived.by(() => {
   })
 })
 
+/** Fold the camera back into the corner points and leave it at identity.
+ *
+ *  `place` is a handle for shifting the whole board at once, but the four pins
+ *  are the only geometry a page is ever handed — so a move that stays in `place`
+ *  is a move the copied source silently drops, and the board lands somewhere
+ *  else once it is pasted in. Baking on every release means the pins are the one
+ *  thing that says where the board sits, and the export is complete because
+ *  there is nothing else left to export. */
+function bake() {
+  if (!fit.dw || !fit.dh) return
+  if (!place.x && !place.y && place.scale === 1 && !place.rotate) return
+  // read the placed pins before zeroing what placed them
+  corners = pins.map((p) => ({ x: (p.x - fit.ox) / fit.dw, y: (p.y - fit.oy) / fit.dh }))
+  place.x = 0
+  place.y = 0
+  place.scale = 1
+  place.rotate = 0
+  pane?.refresh()
+}
+
 /** Stage point back into base-quad space, so a pin drag lands under the cursor
  *  even when the board has been moved, scaled or turned. */
 function unplace(p: Point): Point {
@@ -104,9 +128,17 @@ const n = (k: string, d: number) => (typeof look[k] === 'number' ? (look[k] as n
 const str = (k: string, d: string) => (typeof look[k] === 'string' ? (look[k] as string) : d)
 
 /* render at supersample × the size it occupies; the homography scales it back
-   down, so the lens filter and the defocus rasterise at that resolution */
+   down, so the lens filter and the defocus rasterise at that resolution.
+   The top edge's own length, not how much of the width it spans: a turned board
+   projects shorter than it is, and now that a turn is baked into the pins rather
+   than held in the camera, the difference would show up as the board quietly
+   changing resolution as it is rotated. */
 const width = $derived(
-  Math.max((corners[1].x - corners[0].x) * fit.dw * place.scale, 40) * n('supersample', 2),
+  Math.max(
+    Math.hypot((corners[1].x - corners[0].x) * fit.dw, (corners[1].y - corners[0].y) * fit.dh) *
+      place.scale,
+    40,
+  ) * n('supersample', 2),
 )
 
 /** One picker gives the flap's mid tone; the flap still needs its shading. */
@@ -279,6 +311,8 @@ function apply(data: ReturnType<typeof snapshot>) {
   if (data.corners?.length === 4) corners = data.corners
   if (data.place) Object.assign(place, data.place)
   if (data.view) Object.assign(view, data.view)
+  // a snapshot saved before the camera was baked still carries one; fold it in
+  bake()
 }
 
 function stamp() {
@@ -329,7 +363,6 @@ function seedSign() {
 
 onMount(() => {
   if (!editable) return
-  let pane: { dispose(): void; refresh(): void } | null = null
   let cancelled = false
 
   if (sign) seedSign()
@@ -435,11 +468,18 @@ onMount(() => {
       lit.addBinding(look, 'signIcon', { label: 'pictogram' })
     }
 
+    /* The sliders move the board exactly as dragging it does, so they settle the
+       same way: on release the nudge becomes corner points and the slider comes
+       back to its neutral. `last` is what tells a release from a drag in
+       progress — baking mid-drag would fight the operator's own hand. */
+    const settle = (e: { last: boolean }) => {
+      if (e.last) bake()
+    }
     const put = p.addFolder({ title: 'Place' })
-    put.addBinding(place, 'x', { min: -1400, max: 1400, step: 1 })
-    put.addBinding(place, 'y', { min: -1400, max: 1400, step: 1 })
-    put.addBinding(place, 'scale', { min: 0.1, max: 6, step: 0.01 })
-    put.addBinding(place, 'rotate', { min: -45, max: 45, step: 0.1 })
+    put.addBinding(place, 'x', { min: -1400, max: 1400, step: 1 }).on('change', settle)
+    put.addBinding(place, 'y', { min: -1400, max: 1400, step: 1 }).on('change', settle)
+    put.addBinding(place, 'scale', { min: 0.1, max: 6, step: 0.01 }).on('change', settle)
+    put.addBinding(place, 'rotate', { min: -45, max: 45, step: 0.1 }).on('change', settle)
     put.addButton({ title: 'Reset placement' }).on('click', () => {
       place.x = 0
       place.y = 0
@@ -531,6 +571,7 @@ onMount(() => {
 					onpointermove={moveBoard}
 					onpointerup={() => {
 						shifting = null
+						bake()
 					}}
 				/>
 				{#if look.pins !== false}
