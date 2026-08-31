@@ -18,3 +18,7 @@ packages/partner/
 docs/.claude/
 session.md
 logo/preview.html
+
+# Paid customer briefs and the reports generated from them: PII, never in git.
+.bureau/
+apps/marketing/static/report/*.pdf
