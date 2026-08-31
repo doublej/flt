@@ -58,8 +58,8 @@ const DEP_COLS: Column[] = [
 
 /* Solved on /labs/splitflap/terminal — fractions of the intrinsic 2000x853. */
 const CORNERS: Point[] = [
-  { x: 0.361, y: 0.44 },
-  { x: 0.649, y: 0.44 },
+  { x: 0.361, y: 0.381 },
+  { x: 0.649, y: 0.381 },
   { x: 0.649, y: 0.646 },
   { x: 0.361, y: 0.646 },
 ]
@@ -220,7 +220,7 @@ const LIMITS = [
 <section class="weekband">
   <div class="weekband-inner">
     <div class="weekband-copy">
-      <h2>The same seat, priced on every day of its week</h2>
+      <h2>The same seat, priced on every day of the week</h2>
       <p>
         Nine real briefs, each priced on all seven departure dates in its window. Moving your dates
         was worth €147 on New York and €9 on Lyon, and nothing about either route said so in
@@ -244,8 +244,8 @@ const LIMITS = [
     <h2>Being flexible is worth €147 on New York and €9 on Lyon</h2>
     <p class="lead measure">
       Every route here was searched on all seven of its departure dates, so the spread is exactly
-      what moving your dates would have saved you. Nothing about a route tells you in advance which
-      kind it is going to be.
+      what moving your dates would have saved you. You cannot tell which kind of route you have
+      until someone checks.
     </p>
     <FareRange />
     <p class="measure kicker">
@@ -270,9 +270,9 @@ const LIMITS = [
   <section class="band" id="avoid">
     <h2>You can rule an airport out and still see what it cost you</h2>
     <p class="lead measure">
-      Say you will not change planes in the Gulf. We read every option first and then take away the
-      ones that connect there, so the question is never what we are able to search, but what is
-      left afterwards and what the cheapest survivor costs.
+      Say you will not change planes in the Gulf. We read every option first, then take away the
+      ones that connect there. What matters is what is left, and what the cheapest one that
+      survives costs you.
     </p>
     <AvoidHubs />
   </section>
@@ -283,9 +283,9 @@ const LIMITS = [
       before we price anything
     </h2>
     <p class="lead measure">
-      Every line is one way of getting from Amsterdam to Hanoi within a stop budget. These are
-      routes rather than fares, and knowing which ones exist is how we work out which are worth
-      going out and pricing.
+      Every line is one way of getting from Amsterdam to Hanoi within a stop budget. Nothing here
+      has a price on it yet. We look at what connects to what first, and then go and price the
+      routes worth pricing.
     </p>
     <RouteWeb />
   </section>
@@ -309,14 +309,14 @@ const LIMITS = [
     <h2>You pay for the searching, not the seat</h2>
     <p class="lead measure">
       One date is cheap to answer. Five destinations across a fortnight in two cabins is not,
-      because it is that much more work: the New York job above took 28 searches to find the €147
-      between its best day and its worst.
+      because it is far more work: the New York job above took 28 searches to find the €147 between
+      its best day and its worst.
     </p>
     <PriceTiers bind:selected={tier} />
     <p class="measure kicker">
       One route on one fixed date? Do not pay us for that, because Google Flights does it free in
-      ninety seconds. We start earning the money at several destinations across a spread of dates,
-      which is the point where tabs stop being any help.
+      ninety seconds. We are worth paying once you have several destinations and a spread of dates,
+      which is where tabs stop being any help.
     </p>
   </section>
 
@@ -451,7 +451,7 @@ const LIMITS = [
     padding: 6rem var(--gutter) var(--space-5)
       min(
         max(var(--gutter), calc((100vw - 74rem) / 2 + var(--gutter))),
-        calc(var(--board-x) - 24rem)
+        calc(var(--board-x) - 27rem)
       );
     min-height: max(30rem, min(82vh, 48vw));
     display: grid;
@@ -463,13 +463,13 @@ const LIMITS = [
      of the board — about 22rem once the container gutter is taken off. */
   .rotor {
     display: grid;
-    max-width: 21rem;
+    max-width: 24rem;
   }
   .slab {
     grid-area: 1 / 1;
   }
   .flap {
-    width: 21rem;
+    width: 24rem;
     max-width: 100%;
     padding-bottom: 0.9rem;
     border-bottom: 1px solid rgb(240 212 137 / 0.35);
@@ -477,7 +477,7 @@ const LIMITS = [
   .rotor h1 {
     font-family: var(--font-display);
     font-weight: 300;
-    font-size: clamp(1.95rem, 3.2vw, 2.75rem);
+    font-size: clamp(2.1rem, 3.4vw, 3rem);
     line-height: 1.04;
     letter-spacing: -0.025em;
     color: #f2f4ec;
@@ -500,7 +500,7 @@ const LIMITS = [
 
   /* The hero says what the thing is, once, in the same glass as the headline. */
   .pitch {
-    max-width: 21rem;
+    max-width: 24rem;
     color: rgb(242 244 236 / 0.82);
     font-size: 1.02rem;
     line-height: 1.5;

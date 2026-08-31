@@ -28,28 +28,35 @@
   --font-body: "IBM Plex Sans", system-ui, sans-serif;
   --font-display: "Newsreader", Georgia, serif;
 
-  --text-display: clamp(2.4rem, 6.5vw, 4.5rem);
-  --text-h2: clamp(1.6rem, 3.2vw, 2.4rem);
-  --text-h3: clamp(1.1rem, 1.7vw, 1.35rem);
-  --text-lead: clamp(1.05rem, 1.5vw, 1.22rem);
+  --text-display: clamp(3rem, 8vw, 6.25rem);
+  --text-h2: clamp(2.1rem, 4.8vw, 3.75rem);
+  --text-h3: clamp(1.2rem, 2vw, 1.6rem);
+  --text-lead: clamp(1.08rem, 1.6vw, 1.3rem);
 
-  /* One spacing scale. Everything on the page steps through these, so vertical
-     rhythm stays the same whichever section you are in. */
-  --space-1: 0.5rem;
-  --space-2: 0.75rem;
-  --space-3: 1.25rem;
+  /* One spacing scale, deliberately uneven: the first steps stay tight so a
+     label sits close to what it labels, and the last ones open right up so the
+     eye reads a gap as a section break rather than as more of the same. */
+  --space-1: 0.4rem;
+  --space-2: 0.7rem;
+  --space-3: 1.15rem;
   --space-4: 2rem;
-  --space-5: 3rem;
-  --space-6: 4.5rem;
-  --space-7: 6.5rem;
+  --space-5: 3.5rem;
+  --space-6: 6rem;
+  --space-7: 10rem;
 
-  --section-y: clamp(5rem, 10vw, 8.5rem);
+  --section-y: clamp(6.5rem, 13vw, 13rem);
   --gutter: clamp(1.5rem, 5vw, 4.5rem);
   --measure: 62ch;
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
 }
 
 body {
