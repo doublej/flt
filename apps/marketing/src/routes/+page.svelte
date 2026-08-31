@@ -641,6 +641,17 @@ const LIMITS = [
     max-height: calc(100vh - 2rem);
     overflow: auto;
   }
+  /* The copy box spans the whole hero, so it lies over the board and swallows
+     every pointer event aimed at it — which is what kept the flap board from
+     being hoverable. Children get their events back rather than just the links,
+     so the headline and pitch stay selectable; they are narrow left-column
+     blocks, so handing them back does not re-cover the board. */
+  .hero-inner {
+    pointer-events: none;
+  }
+  .hero-inner > * {
+    pointer-events: auto;
+  }
   .hero-inner {
     /* The photograph is left-anchored and `cover`, so it is never narrower than
        the viewport and the concourse board always begins at 36.1% of whatever
