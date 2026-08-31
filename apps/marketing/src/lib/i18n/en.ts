@@ -192,6 +192,52 @@ export const en = {
       `in ${seconds} seconds of actual searching, which returned ${options} options across ${carriers} airlines. Run by hand at a generous ${manualSeconds} seconds each (type the route, wait for it, scan the results, write the price down) the same ${queries} searches take about ${hours} hours. The largest of the four — twenty-eight searches across four American cities — is a €10 Survey. That by-hand estimate is the only number on this page we did not measure.`,
   },
 
+  /** The five jobs in `STORIES`, and the one group here that is not named after
+   *  a section — because these are not in one. Each story is dropped into the
+   *  band whose argument it happens to be evidence for, so `lisbon` sits under
+   *  the fare charts, `bali` under the hub filter, and so on down the page.
+   *
+   *  Each is a photograph, what the traveller asked for, and the two fares the
+   *  job turned on. `point` is the sentence that says what those two fares
+   *  were; it takes all three figures — both fares and the gap between them —
+   *  so a translation can rearrange the claim but never restate a number. What
+   *  the two mean is different every time, which is why the sentence cannot be
+   *  shared. The counting line underneath is `work.shape`, `work.jobTally` and
+   *  `work.countUnit`: a story is the same object as a row of that grid, so it
+   *  counts itself in the same words rather than in its own. */
+  stories: {
+    lisbon: {
+      ask: "Lisbon sometime in October. I'm not tied to a date, so if there's a cheaper day in there I'll take it.",
+      rowKind: 'route',
+      point: (low: number, high: number, gap: number) =>
+        `€${low} on the cheapest of the seven dates, €${high} on the dearest. €${gap} for moving a short flight by a few days — and the cheapest of the seven was a nonstop, which is not how that usually goes.`,
+    },
+    bali: {
+      ask: "Bali in February. One stop is fine, but not in the Gulf — I've done Doha at four in the morning and I'm not doing it again.",
+      rowKind: 'route',
+      point: (low: number, high: number, gap: number) =>
+        `€${low} was the cheapest of everything, and it changes planes in the Gulf. Rule the Gulf out and the cheapest becomes €${high}: €${gap} is what that one refusal costs on this route, in this week. Nothing flies it nonstop, so the only question was where you would rather be at 3am.`,
+    },
+    chiangmai: {
+      ask: 'Chiang Mai in November. Nobody seems to fly there, so I have no idea what a sensible price even looks like.',
+      rowKind: 'route',
+      point: (low: number, high: number, gap: number) =>
+        `No airline flies it nonstop, so every option is a connection and the only question is which. €${low} was the cheapest, at two stops; €${high} was the quickest, at one. €${gap} is what buying the short way costs — and neither of them is the flight you would have found by typing the route in once.`,
+    },
+    warm: {
+      ask: "Somewhere warm for a long weekend in February. Canaries, Portugal, Morocco, I don't mind which — cheapest wins.",
+      rowKind: 'destinations',
+      point: (low: number, high: number, gap: number) =>
+        `€${low} to the cheapest of the four and €${high} to the dearest, each priced on all three dates. €${gap} between two places that were both just "somewhere warm" when the brief came in. This is the shape a Survey is for.`,
+    },
+    istanbul: {
+      ask: 'Istanbul, first week of December. Cheap is good, but not if it costs me a whole day getting there.',
+      rowKind: 'route',
+      point: (low: number, high: number, gap: number) =>
+        `€${low} was the cheapest and it changes planes; €${high} was the quickest and it does not. €${gap} is the price of the afternoon that buys back. Both are in the report, ranked by price and by journey time, and the choice is yours rather than ours.`,
+    },
+  },
+
   avoid: {
     /** €73, 113, 1,060, 50 and 135 are all in `AVOIDING`, written out here. */
     heading: 'Ruling out the Gulf cost €73 on Singapore and nothing at all on Hanoi',
@@ -215,25 +261,15 @@ export const en = {
   routes: {
     heading: (routings: string, seconds: number) =>
       `There are ${routings} ways to reach Hanoi, and we read the map in ${seconds} seconds before pricing one of them`,
-    lead: 'Every line is one way of getting from Amsterdam to Hanoi within a stop budget. Nothing here has a price on it yet. We look at what connects to what first, and then go and price the routes worth pricing.',
+    lead: 'Every line is one way of getting from Amsterdam to Hanoi within a stop budget — we look at what connects to what first, and then go and price the routes worth pricing.',
     /** RouteWeb. The plural rule lives with the language, not at the call site. */
     webLabel: (routings: string, stops: number) =>
       `${routings} routings within ${stops} ${stops === 1 ? 'stop' : 'stops'}`,
     webUpTo: (stops: number) => `Up to ${stops} ${stops === 1 ? 'stop' : 'stops'}`,
-    webNote: (airports: string, connections: string, seconds: number, maxDetour: number) =>
-      `Amsterdam to Hanoi, walked over a map of ${airports} airports and ${connections} direct connections in ${seconds} seconds. Nothing here is priced, timetabled or bookable; it is a static snapshot of what connects to what, capped at ${maxDetour}× the direct distance, and we use it to decide which routes are worth searching.`,
+    webNote: (airports: string, connections: string, seconds: number) =>
+      `Amsterdam to Hanoi, walked over a map of ${airports} airports and ${connections} direct connections in ${seconds} seconds.`,
     /** RouteWeb tab list: one live diagram, stepped through by stop budget. */
     tabsLabel: 'Choose a stop budget',
-    /** RouteWeb hub map: `HUB_SAMPLE`, six open and six ruled out. */
-    hubsEyebrow: 'What ruling one out actually does',
-    hubsCaption: (routings: string, withoutGulf: string) =>
-      `Close the six Gulf hubs and ${routings} routings become ${withoutGulf}. Everything else on the map reroutes around them or never needed them.`,
-    /** RouteWeb priced strip: one pair from `ROUTE_EXAMPLE`, actually priced. */
-    pricedEyebrow: 'One line, priced',
-    nonstopTag: 'Nonstop',
-    viaTag: (via: string) => `via ${via}`,
-    lessBy: (diff: number) => `€${diff} less`,
-    pricedCaption: (date: string) => `Same search, ${date}.`,
   },
 
   report: {

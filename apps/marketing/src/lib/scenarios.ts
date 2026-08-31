@@ -108,6 +108,104 @@ export const MANUAL_S = 90
 
 export const byHandHours = (queries: number) => (queries * MANUAL_S) / 3600
 
+/* ── Five more jobs, one to a band ────────────────────────────────────────
+ * The same work as the four above and measured the same way: one search is one
+ * route on one date, one-way economy, every figure off disk after the run. What
+ * is different is where they are shown. These five are not a list — each one
+ * sits in the band whose argument it happens to be evidence for, and
+ * `Story.svelte` renders one at a time.
+ *
+ * `low` and `high` are the two fares the job turned on, and they mean something
+ * different in every one of them: the cheapest departure date against the
+ * dearest, the cheapest option against the cheapest that avoids the Gulf, the
+ * cheapest against the quickest, the cheapest destination against the dearest.
+ * The words that say which are in `i18n/en.ts` under the same id, so the number
+ * is here and only the sentence around it is translated. */
+
+export type Story = {
+  /** Also the key its prose is filed under in `i18n/en.ts`, and the name of its
+   *  photograph in `static/img/people`. */
+  id: keyof typeof en.stories
+  route: string
+  window: string
+  /** One square per search, same as `Scenario`: rows x cols equals queries. */
+  grid: { rows: number; cols: number }
+  queries: number
+  options: number
+  seconds: number
+  /** The fare the job found, and the fare the other choice cost. */
+  low: number
+  high: number
+}
+
+export const STORIES: Story[] = [
+  {
+    id: 'lisbon',
+    route: 'Amsterdam → Lisbon',
+    window: '12–18 October',
+    grid: { rows: 1, cols: 7 },
+    queries: 7,
+    options: 251,
+    seconds: 18,
+    /** Cheapest fare on the best of the seven dates, against the cheapest on
+     *  the worst of them. The €118 was a nonstop. */
+    low: 118,
+    high: 153,
+  },
+  {
+    id: 'bali',
+    route: 'Amsterdam → Denpasar',
+    window: '8–12 February',
+    grid: { rows: 1, cols: 5 },
+    queries: 5,
+    options: 145,
+    seconds: 12,
+    /** Cheapest of everything (Etihad, via Abu Dhabi), against the cheapest
+     *  once every option connecting in a Gulf hub is thrown out. 48 of the 145
+     *  went that way; none of the 145 was a nonstop. */
+    low: 483,
+    high: 614,
+  },
+  {
+    id: 'chiangmai',
+    route: 'Amsterdam → Chiang Mai',
+    window: '16–18 November',
+    grid: { rows: 1, cols: 3 },
+    queries: 3,
+    options: 93,
+    seconds: 6,
+    /** Cheapest (two stops, 17h) against quickest (one stop, 13h45). Nothing
+     *  flies it nonstop, and 85 of the 93 options changed planes in Bangkok. */
+    low: 526,
+    high: 583,
+  },
+  {
+    id: 'warm',
+    route: 'Amsterdam → Marrakesh · Tenerife · Las Palmas · Faro',
+    window: '12–14 February',
+    grid: { rows: 4, cols: 3 },
+    queries: 12,
+    options: 243,
+    seconds: 29,
+    /** Cheapest destination of the four against the dearest, each priced on all
+     *  three dates: Marrakesh €92, Tenerife €93, Las Palmas €143, Faro €149. */
+    low: 92,
+    high: 149,
+  },
+  {
+    id: 'istanbul',
+    route: 'Amsterdam → Istanbul',
+    window: '1–5 December',
+    grid: { rows: 1, cols: 5 },
+    queries: 5,
+    options: 223,
+    seconds: 12,
+    /** Cheapest (one stop, 5h) against quickest (KLM nonstop, 3h20). */
+    low: 129,
+    high: 231,
+  },
+]
+
 /* ── Avoiding hubs, airlines and regions ──────────────────────────────────
  * A filter applied to the options that came back, matching on each option's
  * layover airports. Not a constraint sent to Google — we read everything, then
@@ -152,30 +250,12 @@ export const LAYOVER_DISTINCT = 66
 /** Layover appearances across all 2,942 options — an option can stop more than once. */
 export const LAYOVER_APPEARANCES = 3314
 
-/** What ruling out a hub actually does, drawn as one small network: `open`
- *  reuses `LAYOVER_TOP`'s busiest connecting airports, `closed` is the same
- *  six Gulf hubs named throughout `AVOIDING`. */
-export const HUB_SAMPLE = {
-  open: LAYOVER_TOP.map((l) => l.code),
-  closed: ['DXB', 'DOH', 'AUH', 'BAH', 'MCT', 'KWI'],
-}
-
 /* ── Discovering possible routes ──────────────────────────────────────────
  * A local walk over a static route graph. No searching, no prices, nothing
  * bookable — a map of what connects to what, used before deciding what to
  * search. Built from OpenFlights and OurAirports. */
 
 export const GRAPH = { airports: 3425, connections: 19257 }
-
-/** One pair pulled out of the graph above and actually priced: the nonstop
- *  everyone assumes is the only option, and the cheapest one-stop sitting
- *  next to it in the same search. `flt search AMS BKK 2026-11-10`. */
-export const ROUTE_EXAMPLE = {
-  route: 'Amsterdam → Bangkok',
-  date: '10 November',
-  nonstop: { carrier: 'THAI', price: 476, duration: '11h 5m' },
-  alt: { carrier: 'China Southern', via: 'Guangzhou', price: 322, duration: '18h 50m' },
-}
 
 export const DISCOVERY = {
   route: 'Amsterdam → Hanoi',
@@ -185,11 +265,7 @@ export const DISCOVERY = {
     { stops: 2, routes: 1034 },
     { stops: 3, routes: 62425 },
   ],
-  /** Same query with Gulf hubs excluded, at up to 3 stops. */
-  noGulfAt3: 57035,
   seconds: 0.16,
-  /** Routes capped at three times the direct great-circle distance (connections.ts). */
-  maxDetour: 3,
 }
 
 /* ── What a flexible week is worth ────────────────────────────────────────

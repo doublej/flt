@@ -1,6 +1,6 @@
 <script lang="ts">
 import { getCopy, getLocale } from '$lib/i18n/copy.svelte'
-import { DISCOVERY, GRAPH, HUB_SAMPLE, ROUTE_EXAMPLE } from '$lib/scenarios'
+import { DISCOVERY, GRAPH } from '$lib/scenarios'
 import { cubicOut } from 'svelte/easing'
 import { draw } from 'svelte/transition'
 
@@ -11,8 +11,7 @@ import { draw } from 'svelte/transition'
  *  sit at fixed positions and the stop budget decides how many are in play,
  *  so raising it reads as the mesh filling in, never as a new picture. A
  *  faint haze behind the drawn sample stands in for the routes we did not
- *  draw — depth for the count printed under it, not more lines to follow.
- *  Underneath, the one pair from that mesh we actually priced. */
+ *  draw — depth for the count printed under it, not more lines to follow. */
 const copy = $derived(getCopy())
 const nf = $derived(new Intl.NumberFormat(getLocale() === 'nl' ? 'nl-NL' : 'en-GB'))
 
@@ -118,12 +117,11 @@ function scene(stops: number) {
 }
 
 const scenes = [1, 2, 3].map(scene)
-const top = Math.max(...DISCOVERY.byStops.map((b) => b.routes))
 
-let active = $state(1)
+/* Open on 3 stops so the first paint shows the number the heading claims. */
+let active = $state(3)
 let hold = $state(false)
 const current = $derived(scenes[active - 1])
-const mag = $derived(Math.log(current.routes) / Math.log(top))
 const reduceMotion =
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -133,55 +131,6 @@ $effect(() => {
     active = active === 3 ? 1 : active + 1
   }, 3600)
   return () => clearInterval(t)
-})
-
-const diff = ROUTE_EXAMPLE.nonstop.price - ROUTE_EXAMPLE.alt.price
-
-/* ── Hub map: six real hubs left open, six real hubs ruled out ───────────
- * Scattered like waypoints jotted on a route plan, not sorted into a grid:
- * shuffled order, uneven spacing, each sitting at its own distance along the
- * trip. An open hub's line carries on to the far side; a closed one just
- * stops there. */
-const HW = 640
-const HH = 210
-const HPAD = 22
-const hr = seeded(4242)
-
-function shuffled<T>(items: T[], r: () => number) {
-  const a = [...items]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(r() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
-
-const HUBS = shuffled(
-  [
-    ...HUB_SAMPLE.open.map((code) => ({ code, open: true })),
-    ...HUB_SAMPLE.closed.map((code) => ({ code, open: false })),
-  ],
-  hr,
-)
-
-/* Uneven gaps down the column, and each hub sits its own distance out from
- * Amsterdam — a scatter of waypoints, not a ruler. */
-const gaps = HUBS.map(() => 0.55 + hr())
-const gapSpan = gaps.reduce((a, b) => a + b, 0)
-let hubRun = 0
-const hubY = gaps.map((g) => {
-  hubRun += g
-  return HPAD + ((hubRun - g / 2) / gapSpan) * (HH - 2 * HPAD)
-})
-const hubX = HUBS.map(() => HW * 0.36 + hr() * HW * 0.3)
-
-const hubPaths = HUBS.map((h, i) => {
-  const pts = [
-    { x: HPAD, y: HH / 2 },
-    { x: hubX[i], y: hubY[i] },
-  ]
-  if (h.open) pts.push({ x: HW - HPAD, y: HH / 2 })
-  return curve(pts)
 })
 </script>
 
@@ -234,7 +183,6 @@ const hubPaths = HUBS.map((h, i) => {
     <b class="n">{nf.format(current.routes)}</b>
     <span class="k">{copy.routes.webUpTo(current.stops)}</span>
   </div>
-  <div class="mag" style="--f:{mag}"></div>
 
   <div class="tabs" role="tablist" aria-label={copy.routes.tabsLabel}>
     {#each DISCOVERY.byStops as b (b.stops)}
@@ -253,78 +201,8 @@ const hubPaths = HUBS.map((h, i) => {
 </div>
 
 <p class="note">
-  {copy.routes.webNote(nf.format(GRAPH.airports), nf.format(GRAPH.connections), DISCOVERY.seconds, DISCOVERY.maxDetour)}
+  {copy.routes.webNote(nf.format(GRAPH.airports), nf.format(GRAPH.connections), DISCOVERY.seconds)}
 </p>
-
-<figure class="hubmap">
-  <figcaption><span class="eyebrow">{copy.routes.hubsEyebrow}</span></figcaption>
-  <div class="hubgrid">
-    <svg viewBox="0 0 {HW} {HH}" class="hubsvg" preserveAspectRatio="none">
-      <g class="hublines">
-        {#each hubPaths as d, i (i)}
-          <path {d} class:closed={!HUBS[i].open} />
-        {/each}
-      </g>
-      <circle class="halo" cx={HPAD} cy={HH / 2} r="8" />
-      <circle class="halo" cx={HW - HPAD} cy={HH / 2} r="8" />
-      <circle class="end" cx={HPAD} cy={HH / 2} r="3.4" />
-      <circle class="end" cx={HW - HPAD} cy={HH / 2} r="3.4" />
-      {#each HUBS as h, i (h.code + i)}
-        {#if h.open}
-          <circle class="node open" cx={hubX[i]} cy={hubY[i]} r="3.2" />
-        {:else}
-          <circle class="node closed" cx={hubX[i]} cy={hubY[i]} r="3.2" />
-          <line
-            class="slash"
-            x1={hubX[i] - 3.4}
-            y1={hubY[i] - 3.4}
-            x2={hubX[i] + 3.4}
-            y2={hubY[i] + 3.4}
-          />
-        {/if}
-      {/each}
-    </svg>
-    {#each HUBS as h, i (h.code + i)}
-      <span
-        class="code"
-        class:closed={!h.open}
-        style="top:{(hubY[i] / HH) * 100}%; left:{(hubX[i] / HW) * 100}%"
-      >{h.code}</span>
-    {/each}
-  </div>
-  <figcaption class="cap">{copy.routes.hubsCaption(nf.format(DISCOVERY.byStops[2].routes), nf.format(DISCOVERY.noGulfAt3))}</figcaption>
-</figure>
-
-<figure class="priced">
-  <figcaption><span class="eyebrow">{copy.routes.pricedEyebrow}</span> <span class="route">{ROUTE_EXAMPLE.route}</span></figcaption>
-  <div class="line">
-    <svg viewBox="0 0 220 20" class="mini" preserveAspectRatio="none">
-      <line x1="6" y1="10" x2="214" y2="10" />
-      <circle class="halo" cx="6" cy="10" r="6" />
-      <circle class="halo" cx="214" cy="10" r="6" />
-      <circle class="end" cx="6" cy="10" r="2.6" />
-      <circle class="end" cx="214" cy="10" r="2.6" />
-    </svg>
-    <span class="tag">{ROUTE_EXAMPLE.nonstop.carrier} · {copy.routes.nonstopTag} · {ROUTE_EXAMPLE.nonstop.duration}</span>
-    <b class="price">€{ROUTE_EXAMPLE.nonstop.price}</b>
-  </div>
-  <div class="line alt">
-    <svg viewBox="0 0 220 20" class="mini" preserveAspectRatio="none">
-      <line x1="6" y1="10" x2="214" y2="10" />
-      <circle class="hub" cx="92" cy="10" r="3.4" />
-      <circle class="halo" cx="6" cy="10" r="6" />
-      <circle class="halo" cx="214" cy="10" r="6" />
-      <circle class="end" cx="6" cy="10" r="2.6" />
-      <circle class="end" cx="214" cy="10" r="2.6" />
-    </svg>
-    <span class="tag"
-      >{ROUTE_EXAMPLE.alt.carrier} · {copy.routes.viaTag(ROUTE_EXAMPLE.alt.via)} · {ROUTE_EXAMPLE.alt.duration}</span
-    >
-    <b class="price">€{ROUTE_EXAMPLE.alt.price}</b>
-    <em class="save">{copy.routes.lessBy(diff)}</em>
-  </div>
-  <figcaption class="cap">{copy.routes.pricedCaption(ROUTE_EXAMPLE.date)}</figcaption>
-</figure>
 
 <style>
   .stage {
@@ -386,24 +264,6 @@ const hubPaths = HUBS.map((h, i) => {
     color: var(--color-muted);
   }
 
-  /* How much of the whole map this stop budget reaches, on a log scale — the
-     three counts are three orders of magnitude apart. */
-  .mag {
-    height: 2px;
-    border-radius: 2px;
-    background: var(--color-border);
-    margin-top: var(--space-2);
-  }
-  .mag::before {
-    content: '';
-    display: block;
-    height: 100%;
-    width: calc(var(--f) * 100%);
-    border-radius: inherit;
-    background: var(--color-primary);
-    transition: width 0.6s ease;
-  }
-
   .tabs {
     display: flex;
     flex-wrap: wrap;
@@ -441,145 +301,5 @@ const hubPaths = HUBS.map((h, i) => {
     max-width: var(--measure);
     font-size: 0.84rem;
     color: var(--color-muted);
-  }
-
-  .hubmap {
-    margin: var(--space-4) 0 0;
-    max-width: 30rem;
-    display: grid;
-    gap: 0.4rem;
-  }
-  .hubmap figcaption {
-    color: var(--color-muted);
-  }
-  .hubmap .cap {
-    margin-top: 0.2rem;
-    font-size: 0.78rem;
-  }
-  .hubgrid {
-    position: relative;
-  }
-  .hubsvg {
-    width: 100%;
-    height: 12.5rem;
-    display: block;
-  }
-  .hublines path {
-    fill: none;
-    stroke: var(--color-primary);
-    stroke-width: 1px;
-    stroke-opacity: 0.4;
-  }
-  .hublines path.closed {
-    stroke: var(--color-muted);
-    stroke-opacity: 0.35;
-    stroke-dasharray: 2 2.5;
-  }
-  .node.open {
-    fill: var(--color-primary);
-  }
-  .node.closed {
-    fill: var(--color-surface);
-    stroke: var(--color-muted);
-    stroke-width: 1px;
-  }
-  .slash {
-    stroke: var(--color-muted);
-    stroke-width: 1px;
-  }
-  .code {
-    position: absolute;
-    transform: translate(0.5rem, -50%);
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: var(--color-text);
-    white-space: nowrap;
-  }
-  .code.closed {
-    color: var(--color-muted);
-    text-decoration: line-through;
-  }
-
-  .priced {
-    margin: var(--space-4) 0 0;
-    max-width: 30rem;
-    display: grid;
-    gap: 0.55rem;
-  }
-  .priced figcaption {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    color: var(--color-muted);
-  }
-  .eyebrow {
-    font-size: 0.68rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-muted);
-  }
-  .priced .route {
-    font-size: 0.82rem;
-  }
-  .priced .cap {
-    margin-top: 0.1rem;
-    font-size: 0.78rem;
-  }
-  .line {
-    display: grid;
-    grid-template-columns: 5.5rem 1fr auto auto;
-    align-items: center;
-    gap: 0.7rem;
-  }
-  .mini {
-    grid-column: 1;
-    width: 100%;
-    height: 0.9rem;
-    display: block;
-  }
-  .mini line {
-    stroke: var(--color-border);
-    stroke-width: 2;
-  }
-  .alt .mini line {
-    stroke: var(--color-saving);
-    stroke-width: 2.6;
-  }
-  .tag {
-    font-size: 0.82rem;
-    color: var(--color-muted);
-  }
-  .price {
-    font-family: var(--font-mono);
-    font-weight: 400;
-    font-size: 1rem;
-    color: var(--color-text);
-    text-align: right;
-  }
-  .alt .price {
-    color: var(--color-saving-ink);
-  }
-  .save {
-    font-style: normal;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    color: var(--color-saving-ink);
-    background: var(--color-saving-soft);
-    padding: 0.12rem 0.4rem;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-
-  @media (max-width: 30rem) {
-    .line {
-      grid-template-columns: 3.5rem 1fr;
-      row-gap: 0.2rem;
-    }
-    .price,
-    .save {
-      grid-column: 2;
-      text-align: left;
-      justify-self: start;
-    }
   }
 </style>

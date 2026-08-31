@@ -150,6 +150,43 @@ export const nl: Messages = {
       `in ${seconds} seconden daadwerkelijk zoeken, wat ${options} opties opleverde bij ${carriers} maatschappijen. Met de hand, aan een royale ${manualSeconds} seconden per stuk (route intypen, wachten, resultaten scannen, prijs noteren), kosten diezelfde ${queries} zoekopdrachten ongeveer ${hours} uur. De grootste van de vier — achtentwintig zoekopdrachten over vier Amerikaanse steden — is een Verkenning van €10. Die met-de-hand-schatting is het enige cijfer op deze pagina dat we niet hebben gemeten.`,
   },
 
+  /** De vijf verhalen uit `STORIES`, elk in de band waar het bewijs voor is.
+   *  `point` krijgt beide tarieven en het verschil ertussen als parameters, dus
+   *  de zin eromheen mag hier anders lopen dan in het Engels, maar de cijfers
+   *  liggen vast. De regel met de telling eronder komt uit `work`. */
+  stories: {
+    lisbon: {
+      ask: 'Lissabon ergens in oktober. Ik zit niet vast aan een datum, dus als er een goedkopere dag tussen zit neem ik die.',
+      rowKind: 'route',
+      point: (low: number, high: number, gap: number) =>
+        `€${low} op de goedkoopste van de zeven data, €${high} op de duurste. €${gap} voor het verschuiven van een korte vlucht met een paar dagen — en de goedkoopste van de zeven was een directe vlucht, wat meestal niet zo uitpakt.`,
+    },
+    bali: {
+      ask: "Bali in februari. Eén tussenstop is prima, maar niet in de Golf — ik heb Doha om vier uur 's nachts gedaan en dat doe ik niet nog eens.",
+      rowKind: 'route',
+      point: (low: number, high: number, gap: number) =>
+        `€${low} was de goedkoopste van alles, en die stapt over in de Golf. Sluit je de Golf uit, dan wordt de goedkoopste €${high}: €${gap} is wat die ene weigering kost op deze route, in deze week. Er vliegt niemand direct, dus de enige vraag was waar je om 3 uur 's nachts liever staat.`,
+    },
+    chiangmai: {
+      ask: 'Chiang Mai in november. Er lijkt niemand heen te vliegen, dus ik heb geen idee wat een normale prijs is.',
+      rowKind: 'route',
+      point: (low: number, high: number, gap: number) =>
+        `Geen enkele maatschappij vliegt er direct heen, dus elke optie is een overstap en de vraag is alleen welke. €${low} was de goedkoopste, met twee tussenstops; €${high} was de snelste, met één. €${gap} is wat de korte weg kost — en geen van beide is de vlucht die je had gevonden door de route één keer in te typen.`,
+    },
+    warm: {
+      ask: 'Ergens warm voor een lang weekend in februari. Canarische Eilanden, Portugal, Marokko, maakt me niet uit — de goedkoopste wint.',
+      rowKind: 'bestemmingen',
+      point: (low: number, high: number, gap: number) =>
+        `€${low} naar de goedkoopste van de vier en €${high} naar de duurste, elk geprijsd op alle drie de data. €${gap} tussen twee plekken die in de briefing allebei gewoon "ergens warm" waren. Dit is precies de vorm waar een Verkenning voor is.`,
+    },
+    istanbul: {
+      ask: 'Istanbul, eerste week van december. Goedkoop is mooi, maar niet als het me een hele dag reizen kost.',
+      rowKind: 'route',
+      point: (low: number, high: number, gap: number) =>
+        `€${low} was de goedkoopste en die stapt over; €${high} was de snelste en die doet dat niet. €${gap} is de prijs van de middag die je daarmee terugkoopt. Beide staan in het rapport, gerangschikt op prijs en op reisduur, en de keuze is aan jou en niet aan ons.`,
+    },
+  },
+
   avoid: {
     heading: 'De Golf uitsluiten kostte €73 op Singapore en helemaal niets op Hanoi',
     lead: 'Stel dat je niet wilt overstappen in de Golf. We lezen eerst alle opties, en halen daarna de opties weg die daar overstappen. Op Singapore verdwenen zo 113 van de 1.060 opties, en steeg de goedkoopste prijs met €73; op Hanoi verdwenen er 50 van de 135, zonder dat de prijs veranderde. Je weet pas welke van de twee het is als je allebei hebt geprijsd.',
@@ -170,21 +207,13 @@ export const nl: Messages = {
   routes: {
     heading: (routings: string, seconds: number) =>
       `Er zijn ${routings} manieren om Hanoi te bereiken, en we lazen de kaart in ${seconds} seconden voor we er één gingen prijzen`,
-    lead: 'Elke lijn is één manier om van Amsterdam naar Hanoi te komen binnen een tussenstopbudget. Hier staat nog geen prijs op. We kijken eerst wat met wat verbonden is, en gaan dan de routes prijzen die het waard zijn.',
+    lead: 'Elke lijn is één manier om van Amsterdam naar Hanoi te komen binnen een tussenstopbudget — we kijken eerst wat met wat verbonden is, en gaan dan de routes prijzen die het waard zijn.',
     webLabel: (routings: string, stops: number) =>
       `${routings} routeringen binnen ${stops} ${stops === 1 ? 'tussenstop' : 'tussenstops'}`,
     webUpTo: (stops: number) => `Tot ${stops} ${stops === 1 ? 'tussenstop' : 'tussenstops'}`,
-    webNote: (airports: string, connections: string, seconds: number, maxDetour: number) =>
-      `Amsterdam naar Hanoi, doorlopen over een kaart van ${airports} luchthavens en ${connections} directe verbindingen in ${seconds} seconden. Hier is niets geprijsd, geen dienstregeling, niets boekbaar; het is een statische momentopname van wat met wat verbonden is, met een maximum van ${maxDetour}× de directe afstand, en we gebruiken het om te bepalen welke routes het zoeken waard zijn.`,
+    webNote: (airports: string, connections: string, seconds: number) =>
+      `Amsterdam naar Hanoi, doorlopen over een kaart van ${airports} luchthavens en ${connections} directe verbindingen in ${seconds} seconden.`,
     tabsLabel: 'Kies een tussenstopbudget',
-    hubsEyebrow: 'Wat een hub uitsluiten echt doet',
-    hubsCaption: (routings: string, withoutGulf: string) =>
-      `Sluit de zes Golf-hubs uit en ${routings} routeringen worden ${withoutGulf}. Al het andere op de kaart gaat eromheen of had ze nooit nodig.`,
-    pricedEyebrow: 'Eén lijn, geprijsd',
-    nonstopTag: 'Non-stop',
-    viaTag: (via: string) => `via ${via}`,
-    lessBy: (diff: number) => `€${diff} goedkoper`,
-    pricedCaption: (date: string) => `Dezelfde zoekopdracht, ${date}.`,
   },
 
   report: {
