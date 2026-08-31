@@ -77,6 +77,8 @@ let {
   skinKey,
   sign,
   signGap = 1,
+  signWidth = 1,
+  signShift = 0,
   signHead = 5,
 }: {
   rows: Record<string, string>[]
@@ -96,6 +98,10 @@ let {
   sign?: Snippet
   /** clearance between that fixture and the top row, in cell heights */
   signGap?: number
+  /** fixture width as a fraction of the board's, and how far it is shifted
+   *  across, likewise as a fraction of the board's width */
+  signWidth?: number
+  signShift?: number
   /** How much room the fixture needs above the board, in cell heights, INCLUDING
    *  anything it spills past its own box. The lens filter region is grown to
    *  match; a fixture taller than this keeps its geometry but loses grain and
@@ -486,7 +492,14 @@ const lensCss = $derived(
 	<div class="root" style:transform={pin ?? undefined} style:filter={rootCss}>
 		<div class="optics" style:filter={lensCss}>
 			{#if sign}
-				<div class="fixture" style:--sign-gap="calc(var(--ch) * {signGap})">{@render sign()}</div>
+				<div
+					class="fixture"
+					style:--sign-gap="calc(var(--ch) * {signGap})"
+					style:--sign-w="{signWidth * 100}%"
+					style:--sign-x="{signShift * 100}%"
+				>
+					{@render sign()}
+				</div>
 			{/if}
 			<div class="board" style:mask-image={composite?.mask} aria-hidden="true">
 				{#if hasLabels}
@@ -724,8 +737,8 @@ const lensCss = $derived(
 	.fixture {
 		position: absolute;
 		bottom: calc(100% + var(--sign-gap));
-		left: 0;
-		right: 0;
+		left: var(--sign-x, 0);
+		width: var(--sign-w, 100%);
 	}
 	.root {
 		transform-origin: 0 0;

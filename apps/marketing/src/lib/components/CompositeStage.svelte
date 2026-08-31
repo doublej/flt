@@ -1,7 +1,7 @@
 <script lang="ts">
 import LightBox from '$lib/components/LightBox.svelte'
 import SplitFlapBoard, { type Column, type Point } from '$lib/components/SplitFlapBoard.svelte'
-import { SIGN_ASPECT } from '$lib/lightbox-canvas'
+import { SIGN, SIGN_ASPECT } from '$lib/lightbox-canvas'
 import { shade } from '$lib/splitflap-canvas'
 import { loadTuning, saveTuning } from '$lib/tuning'
 import { onMount } from 'svelte'
@@ -15,7 +15,7 @@ let {
   rows,
   columns,
   corners = $bindable(),
-  look,
+  look = $bindable(),
   sign,
   editable = false,
   storageKey,
@@ -146,6 +146,8 @@ const SIGNSKIN = $derived({
   glyph: n('signGlyph', 0.5),
   letter: n('signLetter', 0.16),
   bloom: n('signBloom', 0.55),
+  pad: n('signPad', 0.55),
+  textY: n('signTextY', 0.42),
   icon: look.signIcon !== false,
 })
 
@@ -297,10 +299,40 @@ function asSource() {
 
 /* --- panel --------------------------------------------------------------- */
 
+/* A page declares the look it cares about. The pane cannot bind a key that is
+   not there, so the rest are filled in from the painter's own defaults before
+   the defaults snapshot is taken — which keeps "Reset to defaults" honest about
+   the sign as well. */
+function seedSign() {
+  const fill: Record<string, string | number | boolean> = {
+    signFace: SIGN.face,
+    signLip: SIGN.lip,
+    signFrame: SIGN.frame,
+    signInk: SIGN.ink,
+    signGlow: SIGN.glow,
+    signUp: SIGN.up,
+    signDown: SIGN.down,
+    signGlyph: SIGN.glyph,
+    signLetter: SIGN.letter,
+    signBloom: SIGN.bloom,
+    signPad: SIGN.pad,
+    signTextY: SIGN.textY,
+    signIcon: SIGN.icon,
+    signAspect: SIGN_ASPECT,
+    signWidth: 1,
+    signHeight: 0,
+    signShift: 0,
+    signGap: 1,
+  }
+  for (const [k, v] of Object.entries(fill)) if (!(k in look)) look[k] = v
+}
+
 onMount(() => {
   if (!editable) return
   let pane: { dispose(): void; refresh(): void } | null = null
   let cancelled = false
+
+  if (sign) seedSign()
 
   // captured before anything is restored, so Reset means the page's own values
   const defaults = JSON.parse(
@@ -383,8 +415,18 @@ onMount(() => {
       lit.addBinding(look, 'signGlow', { view: 'color', label: 'spill' })
       lit.addBinding(look, 'signLip', { view: 'color', label: 'lip' })
       lit.addBinding(look, 'signFrame', { view: 'color', label: 'frame' })
-      lit.addBinding(look, 'signAspect', { min: 6, max: 60, step: 0.1, label: 'w : h' })
-      lit.addBinding(look, 'signGap', { min: 0, max: 4, step: 0.05, label: 'gap (cells)' })
+      lit.addBinding(look, 'signAspect', { min: 4, max: 60, step: 0.1, label: 'w : h' })
+      lit.addBinding(look, 'signWidth', { min: 0.1, max: 1.5, step: 0.005, label: 'width' })
+      lit.addBinding(look, 'signHeight', {
+        min: 0,
+        max: 6,
+        step: 0.01,
+        label: 'height (0 = w:h)',
+      })
+      lit.addBinding(look, 'signShift', { min: -0.5, max: 0.5, step: 0.005, label: 'shift across' })
+      lit.addBinding(look, 'signGap', { min: -1, max: 4, step: 0.01, label: 'gap (cells)' })
+      lit.addBinding(look, 'signPad', { min: 0, max: 3, step: 0.01, label: 'inner pad' })
+      lit.addBinding(look, 'signTextY', { min: 0.1, max: 0.9, step: 0.005, label: 'text y' })
       lit.addBinding(look, 'signGlyph', { min: 0.2, max: 0.9, step: 0.01, label: 'cap height' })
       lit.addBinding(look, 'signLetter', { min: 0, max: 0.6, step: 0.01, label: 'tracking' })
       lit.addBinding(look, 'signBloom', { min: 0, max: 1.4, step: 0.01, label: 'light bleed' })
@@ -463,6 +505,9 @@ onMount(() => {
 					<LightBox
 						text={sign}
 						aspect={n('signAspect', SIGN_ASPECT)}
+						height={n('signHeight', 0) > 0
+							? `calc(var(--ch) * ${n('signHeight', 0)})`
+							: undefined}
 						sign={SIGNSKIN}
 						scale={n('supersample', 2)}
 					/>
@@ -476,6 +521,8 @@ onMount(() => {
 					composite={COMPOSITE}
 					sign={sign ? lit : undefined}
 					signGap={n('signGap', 1)}
+					signWidth={n('signWidth', 1)}
+					signShift={n('signShift', 0)}
 				/>
 			</div>
 			{#if editable}

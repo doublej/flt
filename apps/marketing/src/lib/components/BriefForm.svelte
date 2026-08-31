@@ -117,30 +117,40 @@ function confirm() {
 
   {@render row('Which month', MONTHS, [month], (v) => (month = only(month, v)), false)}
   {@render row('How long', LENGTHS, [length], (v) => (length = only(length, v)), false)}
-  {@render row('Your dates', DATES, [dates], (v) => (dates = only(dates, v)), false)}
-  {@render row('Cabin', CABINS, [cabin], (v) => (cabin = only(cabin, v)), false)}
 
-  {@render row(
-    'What matters most, in the order you tap them',
-    PRIORITIES,
-    priorities,
-    (v) => (priorities = also(priorities, v)),
-    true,
-  )}
-  {@render row('Rather not', DISLIKES, dislikes, (v) => (dislikes = also(dislikes, v)), false)}
-  {@render row(
-    'Dealbreakers',
-    DEALBREAKERS,
-    dealbreakers,
-    (v) => (dealbreakers = also(dealbreakers, v)),
-    false,
-  )}
+  <!-- Everything below has a sane default, so it stays folded away. Opening it
+       is a choice, not a step: the brief is complete without ever touching it. -->
+  <details>
+    <summary>
+      Fussy about anything?
+      <span>Optional — {dates.toLowerCase()}, {cabin.toLowerCase()}, no other rules</span>
+    </summary>
+    <div class="more">
+      {@render row('Your dates', DATES, [dates], (v) => (dates = only(dates, v)), false)}
+      {@render row('Cabin', CABINS, [cabin], (v) => (cabin = only(cabin, v)), false)}
+      {@render row(
+        'What matters most, in the order you tap them',
+        PRIORITIES,
+        priorities,
+        (v) => (priorities = also(priorities, v)),
+        true,
+      )}
+      {@render row('Rather not', DISLIKES, dislikes, (v) => (dislikes = also(dislikes, v)), false)}
+      {@render row(
+        'Dealbreakers',
+        DEALBREAKERS,
+        dealbreakers,
+        (v) => (dealbreakers = also(dealbreakers, v)),
+        false,
+      )}
 
-  <label>
-    <span>Anything else</span>
-    <textarea bind:value={notes} rows="2" placeholder="Optional. We read every word of it."
-    ></textarea>
-  </label>
+      <label>
+        <span>Anything else</span>
+        <textarea bind:value={notes} rows="2" placeholder="Optional. We read every word of it."
+        ></textarea>
+      </label>
+    </div>
+  </details>
 
   <div class="total">
     <span class="label">{chosen.name} · {chosen.searches}</span>
@@ -465,5 +475,42 @@ function confirm() {
   }
   .tuck {
     max-width: 18rem;
+  }
+
+  /* The optional half of the brief, folded. */
+  details {
+    border-top: 1px solid var(--color-border);
+    padding-top: 1rem;
+  }
+  summary {
+    cursor: pointer;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.6rem;
+    list-style: none;
+    color: var(--color-text);
+    font-size: 0.95rem;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary::before {
+    content: '+';
+    font-family: var(--font-mono);
+    color: var(--color-primary);
+  }
+  details[open] summary::before {
+    content: '\2212';
+  }
+  summary span {
+    color: var(--color-muted);
+    font-size: 0.85rem;
+  }
+  .more {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-top: 1rem;
   }
 </style>

@@ -33,6 +33,10 @@ export type Sign = {
   letter: number
   /** how hard the light eats into the letters, 0..1 */
   bloom: number
+  /** inner inset at each end, and between pictogram and text, in panel heights */
+  pad: number
+  /** vertical centre of the cap band, 0 the panel's top edge … 1 its bottom */
+  textY: number
   font: string
   icon: boolean
 }
@@ -50,6 +54,8 @@ export const SIGN: Sign = {
   glyph: 0.5,
   letter: 0.16,
   bloom: 0.55,
+  pad: 0.55,
+  textY: 0.42,
   font: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   icon: true,
 }
@@ -166,11 +172,11 @@ export function paintSign(
   ctx.fillRect(x, y, rail, h)
   ctx.fillRect(x + w - rail, y, rail, h)
 
-  const inset = h * 0.55
+  const inset = h * s.pad
   let cursor = x + rail + inset
   if (s.icon) {
     icon(ctx, cursor, y, h, s)
-    cursor += h * 0.62 + h * 0.5
+    cursor += h * (0.62 + s.pad)
   }
   if (!s.text) return
 
@@ -200,7 +206,7 @@ export function paintSign(
     [cap * 0.3 * s.bloom, mix(s.face, s.ink, 0.3)],
     [cap * 0.13 * s.bloom, mix(s.face, s.ink, 0.7)],
   ]
-  const base = y + h * 0.42 + cap * 0.5
+  const base = y + h * s.textY + cap * 0.5
   for (const [ch, i] of chars.map((c, n) => [c, n] as const)) {
     const at = cursor
     for (const [width, colour] of passes) {

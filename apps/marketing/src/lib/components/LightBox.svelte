@@ -9,23 +9,30 @@ import { SIGN, SIGN_ASPECT, type Sign, paintSign } from '$lib/lightbox-canvas'
 
 let {
   text = '',
-  /** panel width : height. The photograph's fixture is 24:1. */
+  /** panel width : height. The photograph's fixture is 24:1. Ignored when
+   *  `height` is set. */
   aspect = SIGN_ASPECT,
+  /** A CSS length, when the height should be stated rather than derived from
+   *  the width — `calc(var(--ch) * 2)` to size against a board's own cells.
+   *  Height is measured off the laid-out box either way, so CSS decides and the
+   *  painter simply follows. */
+  height,
   sign,
   /** draw above device resolution: the composite homography scales it down */
   scale = 2,
 }: {
   text?: string
   aspect?: number
+  height?: string
   sign?: Partial<Sign>
   scale?: number
 } = $props()
 
 let canvas = $state<HTMLCanvasElement | null>(null)
 let w = $state(0)
+let h = $state(0)
 
 const s = $derived({ ...SIGN, ...sign, text })
-const h = $derived(aspect > 0 ? w / aspect : 0)
 const up = $derived(h * s.up)
 const down = $derived(h * s.down)
 
@@ -44,7 +51,16 @@ $effect(() => {
 })
 </script>
 
-<div class="sign" bind:clientWidth={w} style:--h="{h}px" style:--up="{up}px" style:--down="{down}px">
+<div
+	class="sign"
+	bind:clientWidth={w}
+	bind:clientHeight={h}
+	style:aspect-ratio={height ? null : `${aspect}`}
+	style:height={height ?? null}
+	style:--h="{h}px"
+	style:--up="{up}px"
+	style:--down="{down}px"
+>
 	<canvas bind:this={canvas} aria-hidden="true"></canvas>
 	{#if text}<span class="sr">{text}</span>{/if}
 </div>
@@ -52,7 +68,6 @@ $effect(() => {
 <style>
 	.sign {
 		position: relative;
-		height: var(--h);
 	}
 	canvas {
 		position: absolute;

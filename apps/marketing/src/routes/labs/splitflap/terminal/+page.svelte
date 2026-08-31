@@ -26,7 +26,8 @@ let corners = $state<Point[]>([
 ])
 
 /* sampled off the photograph: field #07130e, ink #ffc95e, room #041a1c */
-const look = $state({
+// `let`, not `const`: CompositeStage binds this back so its pane can write to it
+let look = $state({
   renderer: 'canvas',
   exposure: 1.02,
   contrast: 1.22,
@@ -66,6 +67,11 @@ const look = $state({
   signUp: 0,
   signDown: 0,
   signIcon: false,
+  signWidth: 1,
+  signHeight: 0,
+  signShift: 0,
+  signPad: 0.55,
+  signTextY: 0.42,
 })
 </script>
 
@@ -87,7 +93,7 @@ const look = $state({
 		{rows}
 		columns={COLS}
 		bind:corners
-		{look}
+		bind:look
 		sign="Terminal 3 — all departures"
 		editable
 		storageKey="lab-terminal"
