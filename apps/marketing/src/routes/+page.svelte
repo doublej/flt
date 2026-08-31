@@ -590,16 +590,21 @@ const LIMITS = [
   .hero.tune .stage {
     z-index: 0;
   }
+  /* The copy box spans the whole hero, so it sits over the fixed pane in the
+     top-right corner and swallows every click aimed at it. In tune mode it is
+     there to be looked at, not used. */
   .hero.tune .hero-inner {
     position: relative;
     z-index: 1;
+    pointer-events: none;
   }
   .hero.tune .stage :global(.work) {
     display: block;
   }
   .hero.tune .stage :global(.panel) {
     position: fixed;
-    top: 1rem;
+    pointer-events: auto;
+    top: 5rem;
     right: 1rem;
     z-index: 2;
     width: 21rem;
