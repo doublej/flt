@@ -163,7 +163,7 @@ const LIMITS = [
   </div>
 </header>
 
-<section class="hero" id="top" bind:this={hero}>
+<section class="hero" class:tune={tuning} id="top" bind:this={hero}>
   <div class="stage">
     <CompositeStage
       src="/img/terminal.jpg"
@@ -436,6 +436,34 @@ const LIMITS = [
   .stage :global(.work),
   .stage :global(.photo) {
     height: 100%;
+  }
+
+  /* ?tune only. The stage normally sits at z-index -2, behind the whole page,
+     which is exactly where the tuning pane would end up too. In tune mode the
+     hero is lifted over the sections below it, the pane is pulled out of the
+     stage's two-column grid and floated, and the copy stays on top so the
+     headline can still be judged against the photograph. */
+  .hero.tune {
+    z-index: 50;
+  }
+  .hero.tune .stage {
+    z-index: 0;
+  }
+  .hero.tune .hero-inner {
+    position: relative;
+    z-index: 1;
+  }
+  .hero.tune .stage :global(.work) {
+    display: block;
+  }
+  .hero.tune .stage :global(.panel) {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 2;
+    width: 21rem;
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
   }
   .hero-inner {
     /* The photograph is left-anchored and `cover`, so it is never narrower than
