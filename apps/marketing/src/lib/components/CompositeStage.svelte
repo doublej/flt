@@ -414,16 +414,24 @@ function stamp() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+/** A look value as source. Sliders quantise in floating point, so a step of
+ *  0.05 lands on 0.15000000000000002 as often as on 0.15 — and the operator is
+ *  pasting this block into the page by hand. Four places is finer than the
+ *  smallest step any slider here uses; Number() then drops what toFixed pads. */
+function lit(v: string | number | boolean): string {
+  if (typeof v === 'string') return `'${v}'`
+  if (typeof v === 'number') return String(Number(v.toFixed(4)))
+  return String(v)
+}
+
 /** The values as the page would declare them, ready to paste over the defaults. */
 function asSource() {
   const body = Object.entries($state.snapshot(look))
-    .map(([k, v]) => `  ${k}: ${typeof v === 'string' ? `'${v}'` : v},`)
+    .map(([k, v]) => `  ${k}: ${lit(v)},`)
     .join('\n')
   const pts = $state
     .snapshot(corners)
-    // Number() drops the trailing zeros toFixed leaves behind, which the
-    // formatter would otherwise strip out of the pasted block by hand.
-    .map((c) => `  { x: ${Number(c.x.toFixed(4))}, y: ${Number(c.y.toFixed(4))} },`)
+    .map((c) => `  { x: ${lit(c.x)}, y: ${lit(c.y)} },`)
     .join('\n')
   return `const look = $state({\n${body}\n})\n\nlet corners = $state<Point[]>([\n${pts}\n])\n`
 }
