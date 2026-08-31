@@ -859,15 +859,13 @@ const LIMITS = [
   section.band {
     padding-block: var(--section-y);
   }
-  /* holds the Airspace layer's negative z-index inside its own band, and
-     clips it to the band's own height — Airspace sizes itself to its own
-     aspect ratio at full viewport width, which is usually taller than the
-     band, so this crops the excess top and bottom instead of the artwork
-     squeezing or distorting to fit. */
+  /* holds the Airspace layer's negative z-index inside its own band. No
+     overflow here on purpose: the layer spans the viewport, so clipping it to
+     this box is what cut a straight edge through a cloud. It sizes itself to
+     the band and lets the SVG crop its own artwork instead. */
   section.air {
     position: relative;
     isolation: isolate;
-    overflow: hidden;
   }
   .band + .band {
     border-top: 1px solid var(--color-border);

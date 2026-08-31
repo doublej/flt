@@ -81,7 +81,7 @@ onMount(() => {
 </script>
 
 <div class="airspace" aria-hidden="true" bind:this={root}>
-  <svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
+  <svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
     {#each plan.clouds as c, i (i)}
       <path
         class="cloud"
@@ -97,12 +97,28 @@ onMount(() => {
 </div>
 
 <style>
+  /* Explicit user instruction, twice: no top/bottom crop, full stop. "slice"
+     always crops vertically once the band is shorter than the box scaled to
+     this artwork's 1000:600 ratio — true at most desktop widths — no matter
+     whether the box is sized by aspect-ratio or by height:100%. "meet" is the
+     only mode that never crops: it fits the whole artwork inside its box,
+     letterboxed instead. The box itself still needs to be viewport-width, not
+     the section's own 74rem column — inset:0 alone re-confines the artwork
+     to the narrow reading column, the original complaint this whole thing
+     started from. Full viewport width + the section's own height as the box,
+     "meet" fit inside it: a short band lets the artwork spill past the
+     reading column into the margins (still centered, not edge-to-edge); a
+     tall band lets it reach the true viewport edges on its own. Either way,
+     never cropped. */
   .airspace {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 50%;
+    width: 100vw;
+    height: 100%;
+    margin-left: -50vw;
     z-index: -1;
     pointer-events: none;
-    overflow: clip;
   }
   svg {
     width: 100%;
