@@ -63,9 +63,12 @@ export function parseBrief(raw: unknown): Brief {
   const tier = required(o, 'tier') as Brief['tier']
   if (!TIERS.includes(tier)) throw new Error(`brief.tier must be one of ${TIERS.join(', ')}`)
 
+  // Zero is a real amount, not a missing one: a 100%-off promotion code takes the Stripe
+  // session to zero and the voucher brief is as valid as any other. It is kept as 0 rather
+  // than filled in from the tier price, so a voucher job stays tellable from a paid one.
   const amount = o.amount
-  if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0)
-    throw new Error('brief.amount must be a positive integer of cents')
+  if (typeof amount !== 'number' || !Number.isInteger(amount) || amount < 0)
+    throw new Error('brief.amount must be a whole number of cents, zero or more')
 
   if (o.currency !== 'eur') throw new Error("brief.currency must be 'eur'")
 

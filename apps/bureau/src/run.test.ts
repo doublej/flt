@@ -75,9 +75,18 @@ describe('parseBrief', () => {
     expect(() => parseBrief(null)).toThrow('JSON object')
     expect(() => parseBrief({ ...BRIEF, job: 'nope!' })).toThrow('4 hex chars')
     expect(() => parseBrief({ ...BRIEF, tier: 'deluxe' })).toThrow('brief.tier')
-    expect(() => parseBrief({ ...BRIEF, amount: 0 })).toThrow('brief.amount')
+    expect(() => parseBrief({ ...BRIEF, amount: -1 })).toThrow('brief.amount')
     expect(() => parseBrief({ ...BRIEF, currency: 'usd' })).toThrow('brief.currency')
     expect(() => parseBrief({ ...BRIEF, priorities: 'price' })).toThrow('array of strings')
+  })
+
+  test('takes a voucher at zero and keeps it at zero', () => {
+    // A 100%-off promotion code is a real job, and the amount stays 0 so it can still be
+    // told apart from a paid one afterwards.
+    const voucher = parseBrief({ ...BRIEF, amount: 0 })
+    expect(voucher.amount).toBe(0)
+    // A voucher buys the same tier it redeemed, so the budget is unaffected by the price.
+    expect(budgetFor(voucher.tier)).toBe(26)
   })
 
   test('lets vague prose through — judging it is the desk’s job, not the parser’s', () => {
