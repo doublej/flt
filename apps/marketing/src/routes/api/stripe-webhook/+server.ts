@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/private'
-import { unpackBrief } from '$lib/brief'
+import { isSettled, unpackBrief } from '$lib/brief'
 import { enqueueBrief } from '$lib/server/queue'
 import { stripeClient } from '$lib/server/stripe'
 import { error } from '@sveltejs/kit'
@@ -34,7 +34,11 @@ export const POST: RequestHandler = async ({ request }) => {
     const job = session.metadata?.job
 
     // A session without our job id was not started by this site; leave it be.
-    if (job) {
+    // ponytail: a session that completes still unpaid is a delayed payment
+    // method that has not settled, and we drop it — nothing here listens for
+    // checkout.session.async_payment_succeeded. Enable one of those methods in
+    // the dashboard and this needs that event too.
+    if (job && isSettled(session.payment_status)) {
       await enqueueBrief({
         job,
         ...unpackBrief(session.metadata ?? {}),

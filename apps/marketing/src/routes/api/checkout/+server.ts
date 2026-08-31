@@ -50,6 +50,11 @@ export const POST: RequestHandler = async ({ request, url }) => {
   const session = await stripeClient().checkout.sessions.create({
     mode: 'payment',
     customer_email: email,
+    // Vouchers are Stripe's promotion codes, redeemed in Checkout's own field.
+    // The operator creates them in the dashboard, which already does expiry,
+    // redemption limits and reporting. Mutually exclusive with `discounts`, so
+    // a pre-applied code from a link would have to replace this, not join it.
+    allow_promotion_codes: true,
     // No payment_method_types: Checkout then offers everything enabled on the
     // account, which is how Apple Pay and Google Pay turn up without any work
     // here. Naming card explicitly would switch the others off.

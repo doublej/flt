@@ -50,6 +50,13 @@ export function unpackBrief(metadata: Record<string, string>): BriefFields {
   return JSON.parse(json)
 }
 
+/** A voucher can take the total to zero, and Stripe then completes the session
+ *  without collecting anything: no_payment_required is as good as paid, and a
+ *  gate that only accepts 'paid' silently drops every free brief. */
+export function isSettled(status: string): boolean {
+  return status === 'paid' || status === 'no_payment_required'
+}
+
 /** The price on the tier is display copy ("€10"); Stripe wants cents. Deriving
  *  it here keeps tiers.ts the only place a price is written down. */
 export function briefAmount(tier: Tier): number {

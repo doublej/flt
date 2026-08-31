@@ -1,5 +1,5 @@
 /** bun run src/lib/brief.test.ts */
-import { type BriefFields, briefAmount, newJob, packBrief, unpackBrief } from './brief'
+import { type BriefFields, briefAmount, isSettled, newJob, packBrief, unpackBrief } from './brief'
 import { TIERS } from './tiers'
 
 let n = 0
@@ -58,6 +58,12 @@ ok(
 ok('enquiry is 300 cents', briefAmount(TIERS[0]) === 300)
 ok('flexible is 500 cents', briefAmount(TIERS[1]) === 500)
 ok('survey is 1000 cents', briefAmount(TIERS[2]) === 1000)
+
+// A 100%-off voucher completes the session without a payment method. Narrowing
+// this back to 'paid' would drop every free brief on the floor.
+ok('a paid session settles', isSettled('paid'))
+ok('a voucher session settles', isSettled('no_payment_required'))
+ok('an unpaid session does not', !isSettled('unpaid'))
 
 ok('a job id is four hex characters', /^[0-9a-f]{4}$/.test(newJob()))
 ok('job ids are not all the same', new Set(Array.from({ length: 50 }, newJob)).size > 1)

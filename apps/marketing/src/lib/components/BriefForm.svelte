@@ -205,8 +205,8 @@ async function pay(e: SubmitEvent) {
   {/if}
 
   <p class="note">
-    You finish on Stripe's checkout — card, Apple Pay or Google Pay. We never see the card. The
-    report lands in your inbox in about {chosen.time}.
+    You finish on Stripe's checkout — card, Apple Pay or Google Pay, and a voucher code if you have
+    one. We never see the card. The report lands in your inbox in about {chosen.time}.
   </p>
 </form>
 

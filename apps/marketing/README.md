@@ -32,6 +32,20 @@ onenv set bureau STRIPE_WEBHOOK_SECRET
 onenv export bureau -- bun run dev          # or onenv init once, then onenv run -- bun run dev
 ```
 
+### Vouchers
+
+Free searches are Stripe promotion codes, not a table in this repo. In the dashboard:
+Product catalogue → Coupons → a 100%-off coupon, then a promotion code on it
+(`BUREAU100`). Redemption limits, expiry and per-customer caps live there. The customer
+types the code into Checkout's own "Add promotion code" field — the brief form has no
+voucher input, and does not need one.
+
+A 100%-off code takes the session to zero, and Stripe then completes it **without
+collecting a payment method**: `payment_status` comes back `no_payment_required`, not
+`paid`, and `amount_total` is `0`. Both are handled — see `isSettled` in `src/lib/brief.ts`
+— and the Brief records the amount actually charged, so a voucher job stays tellable from
+a paid one afterwards.
+
 ### Testing the whole loop
 
 Test mode only — use Stripe's `4242 4242 4242 4242`, never a real card.
