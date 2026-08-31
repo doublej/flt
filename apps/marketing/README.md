@@ -8,7 +8,7 @@ SvelteKit 2 + Svelte 5, prerendered, deployed to Cloudflare Pages.
 The brief form posts to `/api/checkout`, which prices the tier server-side and opens a
 Stripe Checkout session; the customer pays on Stripe's page and lands back on
 `/status?job=<id>`. Stripe then calls `/api/stripe-webhook`, which verifies the signature
-and hands the paid brief to the desk.
+and logs it. Fulfilment is a **pull**, not a push — see below.
 
 The whole site is prerendered, so both endpoints set `export const prerender = false`.
 
@@ -51,16 +51,32 @@ a paid one afterwards.
 Test mode only — use Stripe's `4242 4242 4242 4242`, never a real card.
 
 ```bash
-stripe listen --forward-to localhost:5173/api/stripe-webhook   # prints the whsec_…
+stripe listen --forward-to localhost:3848/api/stripe-webhook   # prints the whsec_…
 # in another shell, with both variables in the environment:
 bun run dev
 ```
 
-Fill in the brief, pay on Stripe's page, and a file appears at `.bureau/queue/<job>.json`
-in the repo root. `stripe trigger checkout.session.completed` exercises the endpoint but
-writes nothing: the session it invents carries no job id, and the webhook ignores anything
-it did not start.
+Fill in the brief and pay on Stripe's page. Then, from the repo root:
 
-The queue is a directory of JSON files, which only works because dev runs in Node. A
-Worker has no filesystem, so the deployed site logs the paid brief and drops it —
-production needs CF Queues or KV before this takes real money.
+```bash
+just pull
+```
+
+and the brief appears at `.bureau/queue/<job>.json`, where `apps/bureau` picks it up.
+`stripe trigger checkout.session.completed` is no use here: the session it invents carries
+no job id, and nothing downstream will touch a session this site did not start.
+
+### Why fulfilment pulls
+
+The whole brief is written into the Checkout session's metadata **before the customer
+pays** (`packBrief`, called from `api/checkout/+server.ts`), so Stripe is already a durable
+record of every order placed. `scripts/pull-briefs.ts` reads it back out: it lists complete
+sessions, keeps the settled ones, unpacks the metadata, and writes the queue file — skipping
+any job already in `queue/`, `done/`, or parked as `.bad`, so running it twice is free.
+
+That is why the deployed Worker needs no queue, no KV and no D1. A push-based webhook would
+have to hand the brief to something with a filesystem, and the only such thing is the desk
+on the operator's machine — which is where `just pull` already runs. Delivery also writes
+into `static/status/` and `static/report/` and needs a redeploy, so "whenever the operator
+runs `just pull`" was already the binding constraint on latency. If it stops being one, the
+upgrade is a cron on that machine, not a Cloudflare binding.

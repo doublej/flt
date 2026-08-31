@@ -1,6 +1,4 @@
 import { env } from '$env/dynamic/private'
-import { isSettled, unpackBrief } from '$lib/brief'
-import { enqueueBrief } from '$lib/server/queue'
 import { stripeClient } from '$lib/server/stripe'
 import { error } from '@sveltejs/kit'
 import Stripe from 'stripe'
@@ -9,7 +7,13 @@ import type { RequestHandler } from './$types'
 export const prerender = false
 
 /** Stripe telling us the money arrived. Everything downstream of the signature
- *  check is trusted, so nothing above it may have a side effect. */
+ *  check is trusted, so nothing above it may have a side effect.
+ *
+ *  This endpoint does not fulfil anything, and does not need to: the whole brief
+ *  is already in the session's metadata, written there before the customer paid,
+ *  and `just pull` reads it back out on the machine that runs the desk. What is
+ *  left is an audit line and a 200 — kept rather than deleted, because deleting
+ *  the route makes Stripe retry it and then alert on a failing endpoint. */
 export const POST: RequestHandler = async ({ request }) => {
   if (!env.STRIPE_WEBHOOK_SECRET) error(500, 'Payments are not configured on this deployment.')
 
@@ -31,22 +35,9 @@ export const POST: RequestHandler = async ({ request }) => {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
-    const job = session.metadata?.job
-
     // A session without our job id was not started by this site; leave it be.
-    // ponytail: a session that completes still unpaid is a delayed payment
-    // method that has not settled, and we drop it — nothing here listens for
-    // checkout.session.async_payment_succeeded. Enable one of those methods in
-    // the dashboard and this needs that event too.
-    if (job && isSettled(session.payment_status)) {
-      await enqueueBrief({
-        job,
-        ...unpackBrief(session.metadata ?? {}),
-        amount: session.amount_total ?? 0,
-        currency: 'eur',
-        email: session.customer_details?.email ?? session.customer_email ?? '',
-        paidAt: new Date(event.created * 1000).toISOString(),
-      })
+    if (session.metadata?.job) {
+      console.log(`checkout complete ${session.metadata.job} (${session.payment_status})`)
     }
   }
 
