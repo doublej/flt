@@ -404,10 +404,10 @@ function readout(): string {
    A wall of loose plastic reacts to a hand passed over it, and it is the speed
    that does it rather than the presence: rest a palm on a board and nothing
    happens, sweep one across and drums let go all the way along. So the whole
-   gesture is measured in cells crossed per second, which makes it the same
-   gesture on the hero's 37 drums and on a word of inline type — a small board
-   is quicker to cross in its own units, and is duly more skittish, the way a
-   small board of light flaps would be.
+   gesture is measured in cells crossed per second, which makes it one gesture
+   on the hero's nine rows and on a word of inline type — a small board is
+   quicker to cross in its own units, and is duly more skittish, the way a small
+   board of light flaps would be.
 
    A knocked drum is never handed a new character, only a start time. The rest
    is the machine's own: a drum can only turn forwards, so it runs the whole way
