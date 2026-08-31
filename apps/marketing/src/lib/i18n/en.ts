@@ -271,10 +271,10 @@ export const en = {
 
   pricing: {
     heading: 'You pay for the searching, not the seat',
-    /** 28, €147 and €10 are all measured, written out. */
-    lead: 'One date is cheap to answer. Five destinations across a fortnight in two cabins is not, because it is far more work: the New York job above took 28 searches to find the €147 between its best day and its worst. That is a €10 report returning fourteen times its price, on one leg, for one traveller.',
+    /** €10 and €147 are both measured, written out. */
+    lead: 'More dates and destinations mean more searching, and the searching is what you pay for. The New York report above cost €10 and found €147 between the best day in its window and the worst.',
     kicker:
-      'One route on one fixed date? Do not pay us for that, because Google Flights does it free in ninety seconds. We are worth paying once you have several destinations and a spread of dates — which is where tabs stop being any help, and where the spread is usually worth more than the fee.',
+      'One route on one fixed date? Google Flights does that free in ninety seconds — do not pay us for it. We are worth it once you have several destinations and flexible dates, where the spread is usually worth more than the fee.',
     /** PriceTiers. Keyed by the tier id in `tiers.ts`, which keeps the two
      *  figures — the price, parsed into cents by `briefAmount`, and the search
      *  count the tariff sizes its numeral off. Neither is a figure a
@@ -315,10 +315,10 @@ export const en = {
        *  each end is already told by the hero board, the weekband and the
        *  evidence heading, so naming them again here would be the fourth. */
       caption: (routes: number, paidForItself: number) =>
-        `Every ring is one of the ${routes} routes above, set at what moving your departure date inside its week was worth. The block at the left is every fee we charge, on the same scale — ${paidForItself} of the ${routes} rings clear it.`,
+        `Every ring is one of the ${routes} routes above, placed at what shifting its departure date within one week saved. The block at the left is everything we charge, on the same scale — ${paidForItself} of the ${routes} rings clear it.`,
     },
     tiersFoot:
-      'You pay for how much searching you ask for, because that is the part that takes the time. A Survey is split across several runs, and return-trip date grids are capped at 21 departure and return combinations; everything else is a matter of how much work you want done.',
+      'Every tier is the same work at a different size. Return-trip date grids are capped at 21 date combinations.',
   },
 
   brief: {

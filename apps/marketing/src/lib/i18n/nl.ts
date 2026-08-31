@@ -220,9 +220,9 @@ export const nl: Messages = {
 
   pricing: {
     heading: 'Je betaalt voor het zoeken, niet voor de stoel',
-    lead: 'Eén datum beantwoorden is goedkoop. Vijf bestemmingen over twee weken in twee klassen niet, want dat is veel meer werk: de New York-klus hierboven kostte 28 zoekopdrachten om de €147 tussen de beste en de slechtste dag te vinden. Dat is een rapport van €10 dat veertien keer zijn prijs teruggeeft, voor één traject, voor één reiziger.',
+    lead: 'Meer data en bestemmingen betekent meer zoekwerk, en dat zoekwerk is wat je betaalt. Het New York-rapport hierboven kostte €10 en vond €147 tussen de beste en de slechtste dag in zijn venster.',
     kicker:
-      'Eén route op één vaste datum? Betaal ons daar niet voor, want Google Flights doet dat gratis in negentig seconden. We zijn het waard zodra je meerdere bestemmingen hebt en een spreiding van data — precies waar tabbladen ophouden te helpen, en waar de spreiding meestal meer waard is dan de kosten.',
+      'Eén route op één vaste datum? Google Flights doet dat gratis in negentig seconden — betaal ons daar niet voor. We zijn het waard zodra je meerdere bestemmingen en flexibele data hebt, waar de spreiding meestal meer waard is dan de kosten.',
     tiers: {
       enquiry: {
         name: 'Aanvraag',
@@ -248,10 +248,10 @@ export const nl: Messages = {
       charged: (cheapest: string, dearest: string) => `${cheapest}–${dearest} · wat wij rekenen`,
       worth: (best: number, route: string) => `€${best} · ${route}`,
       caption: (routes: number, paidForItself: number) =>
-        `Elke ring is een van de ${routes} routes hierboven, gezet op wat het verschuiven van je vertrekdatum binnen die week waard was. Het blok links is alles wat we in rekening brengen, op dezelfde schaal — ${paidForItself} van de ${routes} ringen komt daar overheen.`,
+        `Elke ring is een van de ${routes} routes hierboven, gezet op wat het verschuiven van de vertrekdatum binnen één week opleverde. Het blok links is alles wat we rekenen, op dezelfde schaal — ${paidForItself} van de ${routes} ringen komt daar overheen.`,
     },
     tiersFoot:
-      'Je betaalt voor hoeveel er gezocht wordt, want dat is het deel dat tijd kost. Een Verkenning wordt over meerdere runs verdeeld, en heen-en-terug-datumgrids zijn beperkt tot 21 combinaties van heen- en terugreis; de rest is een kwestie van hoeveel werk je wilt laten doen.',
+      'Elk tarief is hetzelfde werk in een ander formaat. Heen-en-terug-datumgrids zijn beperkt tot 21 datumcombinaties.',
   },
 
   brief: {
