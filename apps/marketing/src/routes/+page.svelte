@@ -16,7 +16,6 @@ import { fade } from 'svelte/transition'
 
 let tier = $state('survey')
 let scrolled = $state(false)
-let hero: HTMLElement
 /** ?tune opens the hero's tuning pane. Read from location rather than from
  *  $app/state because the page is prerendered and has no searchParams then. */
 let tuning = $state(false)
@@ -28,7 +27,16 @@ let tuning = $state(false)
  *  EUR 547 on the 19th. Innsbruck's EUR 84 against EUR 121 is 44% of the
  *  cheaper fare. Seventy-five searches by hand at 90s each is 1.9 hours. */
 let hi = $state(0)
-const HEADLINES = copy.hero.headlines
+/* The headline's figure is what a flexible week was worth on that route, read
+   off SPREADS rather than written down, so the display type and the flap board
+   below it are quoting the same row. A headline naming a route that is not on
+   the board is a copy bug, and it throws at module load rather than rendering
+   a blank. */
+const HEADLINES = copy.hero.headlines.map((h) => {
+  const i = SPREADS.findIndex((r) => r.route === h.route)
+  if (i < 0) throw new Error(`hero headline names a route that is not in SPREADS: ${h.route}`)
+  return { ...h, row: i, spread: SPREADS[i].high - SPREADS[i].low }
+})
 let held = $state(false)
 
 /* The board inside the photograph. Every row is the cheapest fare we actually
@@ -43,10 +51,10 @@ const DEP_COLS: Column[] = [
 
 /* Solved on /labs/splitflap/terminal — fractions of the intrinsic 2000x853. */
 let CORNERS = $state<Point[]>([
-  { x: 0.361, y: 0.44 },
-  { x: 0.649, y: 0.44 },
-  { x: 0.649, y: 0.646 },
-  { x: 0.361, y: 0.646 },
+  { x: 0.3565, y: 0.427 },
+  { x: 0.6445, y: 0.427 },
+  { x: 0.6445, y: 0.633 },
+  { x: 0.3565, y: 0.633 },
 ])
 
 /* Grade tuned against the photograph itself, at full size, on the page. */
@@ -62,18 +70,18 @@ let LOOK = $state({
   aberration: 1.3,
   vignette: 0.13,
   blur: 0.9,
-  supersample: 1,
+  supersample: 4,
   glass: false,
   bg: '#000000ff',
-  pad: 0.52,
+  pad: 0.42000000000000004,
   face: '#131313',
   ink: '#dfd6c4',
   aspect: 0.495,
   glyph: 1.07,
   squeeze: 0.66,
-  baseline: -0.04,
-  rowgap: 0.19,
-  grit: 0,
+  baseline: 0.014,
+  rowgap: 0.125,
+  grit: 0.3,
   pins: false,
   /* the lit header. Its tones are the photograph's own, so it stays amber even
      though the flaps beside it were graded cool. */
@@ -97,7 +105,7 @@ let LOOK = $state({
   signSqueeze: 1,
 })
 
-const DEPARTURES = SPREADS.map((r) => {
+const DEP_ROWS = SPREADS.map((r) => {
   const i = r.days.indexOf(r.low)
   const m = r.window.match(/^(\d+)\D+\d+\s+(\w+)$/)
   const day = m ? String(Number(m[1]) + i) : ''
@@ -110,29 +118,40 @@ const DEPARTURES = SPREADS.map((r) => {
   }
 })
 
+/* The board leads with whatever route the headline is naming. A swap and not a
+   reorder: two rows flap on each rotation instead of all nine, which reads as
+   the board answering the headline rather than as the whole thing churning. */
+const DEPARTURES = $derived.by(() => {
+  const rows = DEP_ROWS.slice()
+  const i = HEADLINES[hi].row
+  if (i > 0) [rows[0], rows[i]] = [rows[i], rows[0]]
+  return rows
+})
+
 const nf = new Intl.NumberFormat('en-GB')
 
-/** The header sits on the photograph until you have scrolled past it, then
- *  takes the page background so the links stay readable. */
+/** The bar's type is dark, because at rest it stands on the page's own ground
+ *  above the hero panel rather than on the photograph. It is sticky, though, so
+ *  the moment the page moves it is over that black panel — which is why it takes
+ *  its background on the first pixel of scroll and not, as it used to, only once
+ *  the whole hero had gone past. */
 onMount(() => {
   tuning = new URLSearchParams(location.search).has('tune')
 
-  const io = new IntersectionObserver(
-    (e) => {
-      scrolled = !e[0].isIntersecting
-    },
-    { rootMargin: '-68px 0px 0px 0px' },
-  )
-  io.observe(hero)
+  const onScroll = () => {
+    scrolled = window.scrollY > 8
+  }
+  onScroll()
+  window.addEventListener('scroll', onScroll, { passive: true })
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    return () => io.disconnect()
+    return () => window.removeEventListener('scroll', onScroll)
   }
   const t = setInterval(() => {
     if (!held) hi = (hi + 1) % HEADLINES.length
   }, 5200)
   return () => {
-    io.disconnect()
+    window.removeEventListener('scroll', onScroll)
     clearInterval(t)
   }
 })
@@ -153,7 +172,7 @@ const LIMITS = copy.brief.limits
   </div>
 </header>
 
-<section class="hero" class:tune={tuning} id="top" bind:this={hero}>
+<section class="hero" class:tune={tuning} id="top">
   <div class="stage">
     <!-- ?tune is only known after mount, and CompositeStage builds its pane in
          its own onMount. Keying on it remounts the stage once, with editable
@@ -178,15 +197,15 @@ const LIMITS = copy.brief.limits
     <div class="rotor" aria-live="polite">
       {#key hi}
         <div class="slab" in:fade={{ duration: 600 }} out:fade={{ duration: 300 }}>
+          <p class="route">{HEADLINES[hi].kicker}</p>
           <h1>
-            {#each HEADLINES[hi].lines as line, n (n)}
-              <span style:--n={n} class:last={n === 2}>{line}</span>
-            {/each}
+            <em>€{HEADLINES[hi].spread}</em>
+            <span class="clause">{copy.hero.clause}</span>
           </h1>
         </div>
       {/key}
     </div>
-    <p class="pitch">{copy.hero.pitch(FLEX.best)}</p>
+    <p class="pitch">{copy.hero.pitch}</p>
     <div class="hero-actions">
       <a class="btn" href="#brief">{copy.hero.ctaBrief}</a>
       <a class="quiet" href="#report">{copy.hero.ctaHow}</a>
@@ -342,7 +361,8 @@ const LIMITS = copy.brief.limits
     font-weight: 600;
     letter-spacing: 0.01em;
     font-size: 1.3rem;
-    color: #f0f5f1;
+    /* the bar stands on the page now, not on the photograph */
+    color: var(--color-text);
     text-decoration: none;
     transition: color 0.25s ease;
   }
@@ -353,16 +373,16 @@ const LIMITS = copy.brief.limits
     font-size: 0.88rem;
   }
   header nav a {
-    color: rgb(240 245 241 / 0.8);
+    color: var(--color-muted);
     text-decoration: none;
     transition: color 0.25s ease;
   }
   header nav a:hover {
-    color: #fff;
+    color: var(--color-text);
   }
   header nav .cta {
-    color: #12211c;
-    background: #f0f5f1;
+    color: var(--color-surface);
+    background: var(--color-primary);
     padding: 0.45rem 0.9rem;
     border-radius: var(--radius);
   }
@@ -395,10 +415,15 @@ const LIMITS = copy.brief.limits
      be and the copy stays in the dark glass on the left, clear of the board. */
   .hero {
     position: relative;
-    margin-top: -5.5rem;
+    /* The hero is a panel laid on the page rather than a band bled to its
+       edges: inset by the gutter and rounded hard, so the photograph reads as
+       a held object and the page's own ground frames it. */
+    margin: 0 var(--gutter) var(--gutter);
+    border-radius: clamp(1.5rem, 3vw, 2.75rem);
     isolation: isolate;
-    background: #08120f;
-    /* the camera moves, so the stage is oversized and the hero clips it */
+    background: #000;
+    /* the camera moves, so the stage is oversized and the hero clips it — and
+       the same clip is what keeps the photograph inside the rounded corners */
     overflow: hidden;
   }
   /* CompositeStage maps the corners through the same object-position as the
@@ -605,31 +630,60 @@ const LIMITS = copy.brief.limits
     gap: var(--space-3);
   }
   /* Only the headline sits on the photograph, in the clear glass to the left
-     of the board — about 22rem once the container gutter is taken off. */
+     of the board — about 30rem once the container gutter is taken off.
+
+     The headline used to be three lines of prose quoting two fares and their
+     difference, set beside a flap board already showing all three numbers one
+     column over. So it is now one figure and one clause: the board carries the
+     evidence, the type carries the claim, and the figure gets the room that
+     buys. Everything in here is sized off that figure. */
   .rotor {
     display: grid;
-    max-width: 27rem;
+    max-width: 30rem;
   }
   .slab {
     grid-area: 1 / 1;
+  }
+  /* The route, in the board's own idiom — mono, letterspaced, amber — so the
+     eye ties this line to the row that just flapped to the top. */
+  .route {
+    font-family: var(--font-mono);
+    font-size: clamp(0.68rem, 0.85vw, 0.78rem);
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: #f0d489;
+    margin-bottom: 1.1em;
+    animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
   .rotor h1 {
     font-family: var(--font-display);
     font-stretch: var(--display-wide);
     font-weight: 500;
-    font-size: clamp(2rem, 3.1vw, 2.75rem);
-    line-height: 1.04;
-    letter-spacing: -0.015em;
     color: #edf3ef;
   }
-  .rotor h1 span {
+  /* The one piece of type on this page allowed to be this big. Three digits and
+     a currency mark at worst, so it cannot wrap; the cap is set by the clear
+     glass to the left of the board, not by the text. */
+  .rotor h1 em {
     display: block;
+    font-style: normal;
+    font-size: clamp(4.25rem, 10.4vw, 9.75rem);
+    line-height: 0.8;
+    letter-spacing: -0.055em;
     animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-    animation-delay: calc(var(--n) * 110ms);
+    animation-delay: 90ms;
   }
-  .rotor h1 span.last {
-    font-style: italic;
-    color: #f0d489;
+  .rotor h1 .clause {
+    display: block;
+    max-width: 17em;
+    margin-top: 0.8rem;
+    font-size: clamp(1.05rem, 1.45vw, 1.3rem);
+    font-weight: 400;
+    line-height: 1.22;
+    letter-spacing: -0.012em;
+    color: rgb(237 243 239 / 0.72);
+    animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: 190ms;
   }
   @keyframes rise {
     from {
@@ -706,15 +760,20 @@ const LIMITS = copy.brief.limits
   }
 
   /* ---- the week board, still in the photograph's world ------------------ */
+  /* The hero is a black panel inset by the gutter, so this one is too: the two
+     read as a stacked pair rather than as a card followed by a full-width band.
+     Same radius, same inset, one notch off black so the seam between them is
+     still legible. */
   .weekband {
+    margin: 0 var(--gutter) var(--gutter);
+    border-radius: clamp(1.5rem, 3vw, 2.75rem);
     background: #0c1512;
-    border-top: 1px solid rgb(240 244 232 / 0.1);
     color: #edf3ef;
   }
   .weekband-inner {
     max-width: 74rem;
     margin: 0 auto;
-    padding: var(--space-6) var(--gutter);
+    padding: clamp(var(--space-6), 9vw, var(--space-7)) clamp(var(--gutter), 4vw, var(--space-5));
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
     align-items: center;
@@ -732,16 +791,17 @@ const LIMITS = copy.brief.limits
     font-family: var(--font-display);
     font-stretch: var(--display-wide);
     font-weight: 500;
-    font-size: clamp(1.85rem, 2.7vw, 2.3rem);
-    line-height: 1.1;
-    letter-spacing: -0.02em;
+    font-size: clamp(2.15rem, 3.4vw, 3.05rem);
+    line-height: 1.05;
+    letter-spacing: -0.028em;
     text-wrap: balance;
-    margin-bottom: var(--space-3);
+    margin-bottom: var(--space-4);
   }
   .weekband-copy p {
     color: rgb(237 243 239 / 0.76);
-    font-size: var(--text-lead);
-    max-width: 38ch;
+    font-size: clamp(1.05rem, 1.35vw, 1.2rem);
+    line-height: 1.55;
+    max-width: 42ch;
   }
   .weekband-actions {
     display: flex;

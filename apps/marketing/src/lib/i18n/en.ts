@@ -47,30 +47,32 @@ export const en = {
   },
 
   hero: {
-    /** Four ways of saying the same thing. These figures are written out rather
-     *  than derived — they are quoted to the exact fare and day, and spelled
-     *  out in words in the fourth. See the note above `HEADLINES` in
-     *  `+page.svelte` for which run each one came off. */
+    /** Each headline names one route that is also a row on the flap board, and
+     *  the board swaps that row to the top while its headline is up. The figure
+     *  is deliberately not written here: it is that route's own high - low out
+     *  of `scenarios.ts`, so the number set in display type and the number on
+     *  the board cannot drift apart. Same reasoning as `tiers.ts`.
+     *
+     *  `route` is a lookup key into SPREADS, not display copy — it must stay
+     *  byte-identical to the `route` strings in `scenarios.ts`, arrow and all.
+     *  Do not translate it. `kicker` and `clause` are translatable.
+     *
+     *  Ordered big, small, big, small on purpose: what a flexible week is worth
+     *  swings from €147 to €37 across these four, and the rotation is the only
+     *  place on the page that argument is made by rhythm rather than by prose. */
     headlines: [
-      {
-        kicker: 'FIVE AIRPORTS ONE DAY',
-        lines: ['€320 to Hanoi.', '€2,312 to Hanoi.', 'The same day.'],
-      },
-      {
-        kicker: 'AMSTERDAM-NEW YORK',
-        lines: ['€400 on the 22nd.', '€547 on the 19th.', '€147 apart.'],
-      },
-      {
-        kicker: 'AMSTERDAM-INNSBRUCK',
-        lines: ['€84 on the 17th.', '€121 on the 16th.', '44% for one day.'],
-      },
-      {
-        kicker: 'SEVENTY-FIVE SEARCHES',
-        lines: ['75 searches.', 'Two hours in tabs.', '200 seconds here.'],
-      },
+      { route: 'Amsterdam → New York JFK', kicker: 'Amsterdam · New York' },
+      { route: 'Amsterdam → Innsbruck', kicker: 'Amsterdam · Innsbruck' },
+      { route: 'Amsterdam → Singapore', kicker: 'Amsterdam · Singapore' },
+      { route: 'Amsterdam → Turin', kicker: 'Amsterdam · Turin' },
     ],
-    pitch: (best: number) =>
-      `We price every date you could fly, then send one report. On the nine routes below, the right day was worth up to €${best}. Reports from €3.`,
+    /** Follows the figure, and is the same for all four — the number and the
+     *  route change, the claim does not. */
+    clause: 'between the cheapest departure date and the dearest',
+    /** No longer takes the spread: the headline above it now sets that figure in
+     *  156px of display type, and saying it again one line down read as a stutter. */
+    pitch:
+      'We price every date you could fly, then send one report. Nine routes below, every departure date in each window. Reports from €3.',
     ctaBrief: 'Start a brief',
     ctaHow: 'See how it works',
     /** The lit sign and the flap rows on the board inside the photograph. The
@@ -252,31 +254,52 @@ export const en = {
     lead: 'One date is cheap to answer. Five destinations across a fortnight in two cabins is not, because it is far more work: the New York job above took 28 searches to find the €147 between its best day and its worst. That is a €10 report returning fourteen times its price, on one leg, for one traveller.',
     kicker:
       'One route on one fixed date? Do not pay us for that, because Google Flights does it free in ninety seconds. We are worth paying once you have several destinations and a spread of dates — which is where tabs stop being any help, and where the spread is usually worth more than the fee.',
-    /** PriceTiers. Keyed by the tier id in `tiers.ts`, which keeps only the id
-     *  and the price: the price is parsed into cents by `briefAmount`, so it is
-     *  the one figure a translation must not be able to touch. */
+    /** PriceTiers. Keyed by the tier id in `tiers.ts`, which keeps the two
+     *  figures — the price, parsed into cents by `briefAmount`, and the search
+     *  count the tariff sizes its numeral off. Neither is a figure a
+     *  translation may touch, so neither is written out here. */
     tiers: {
       enquiry: {
         name: 'Enquiry',
         scope: 'One route, one date.',
-        searches: '1 search',
         time: 'under a minute',
       },
       flexible: {
         name: 'Flexible',
         scope: 'One route, up to 9 departure dates.',
-        searches: '~9 searches',
         time: '1–2 minutes',
       },
       survey: {
         name: 'Survey',
         scope: 'Up to 5 destinations across a date window, economy and premium.',
-        searches: '~26 searches',
         time: '3–5 minutes',
       },
     },
-    /** Same drum alphabet as the hero board. */
-    boardFare: (amount: string) => `EUR ${amount}`,
+    tariffLegend: 'What a report costs',
+    /** How English writes a search count out. One is exact and anything above
+     *  it is an estimate, which is a rule about the words and not about the
+     *  figure — the figure is `Tier.searches`, and none of these can change it.
+     *  The tariff sets the digits apart from the word and so wants the two
+     *  halves; the brief's total wants the phrase whole. */
+    searchMark: searchMark,
+    searchUnit: searchUnit,
+    searchCount: (n: number) => `${searchMark(n)}${n} ${searchUnit(n)}`,
+    /** FeeScale. One euro axis with everything we charge at its origin and each
+     *  route's week spread further along it, so the fee and what the searching
+     *  gave back are read off the same scale. */
+    scale: {
+      charged: (cheapest: string, dearest: string) => `${cheapest}–${dearest} · what we charge`,
+      worth: (best: number, route: string) => `€${best} · ${route}`,
+      caption: (
+        routes: number,
+        paidForItself: number,
+        worst: number,
+        worstRoute: string,
+        best: number,
+        bestRoute: string,
+      ) =>
+        `Every ring is one of the ${routes} routes on this page, set at what moving your departure date inside its own week was worth: €${worst} on ${worstRoute} at one end, €${best} on ${bestRoute} at the other. ${paidForItself} of the ${routes} came back with more than a Survey costs — the block at the left is every fee we charge, on the same scale.`,
+    },
     tiersFoot:
       'You pay for how much searching you ask for, because that is the part that takes the time. A Survey is split across several runs, and return-trip date grids are capped at 21 departure and return combinations; everything else is a matter of how much work you want done.',
   },
