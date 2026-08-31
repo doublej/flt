@@ -9,6 +9,7 @@ import QueryGrid from '$lib/components/QueryGrid.svelte'
 import RouteWeb from '$lib/components/RouteWeb.svelte'
 import type { Column, Point } from '$lib/components/SplitFlapBoard.svelte'
 import WeekBoard from '$lib/components/WeekBoard.svelte'
+import { en as copy } from '$lib/i18n/en'
 import { CABIN, DISCOVERY, FLEX, SPREADS, TOTALS } from '$lib/scenarios'
 import { onMount } from 'svelte'
 import { fade } from 'svelte/transition'
@@ -27,24 +28,7 @@ let tuning = $state(false)
  *  EUR 547 on the 19th. Innsbruck's EUR 84 against EUR 121 is 44% of the
  *  cheaper fare. Seventy-five searches by hand at 90s each is 1.9 hours. */
 let hi = $state(0)
-const HEADLINES = [
-  {
-    kicker: 'FIVE AIRPORTS ONE DAY',
-    lines: ['€320 to Hanoi.', '€2,312 to Hanoi.', 'The same day.'],
-  },
-  {
-    kicker: 'AMSTERDAM-NEW YORK',
-    lines: ['€400 on the 22nd.', '€547 on the 19th.', '€147 apart.'],
-  },
-  {
-    kicker: 'AMSTERDAM-INNSBRUCK',
-    lines: ['€84 on the 17th.', '€121 on the 16th.', '44% for one day.'],
-  },
-  {
-    kicker: 'SEVENTY-FIVE SEARCHES',
-    lines: ['75 searches.', 'Two hours in tabs.', '200 seconds here.'],
-  },
-]
+const HEADLINES = copy.hero.headlines
 let held = $state(false)
 
 /* The board inside the photograph. Every row is the cheapest fare we actually
@@ -121,8 +105,8 @@ const DEPARTURES = SPREADS.map((r) => {
   return {
     day: `${day.padStart(2, '0')} ${mon}`,
     to: r.route.replace('Amsterdam → ', '').toUpperCase(),
-    fare: `EUR ${r.low}`,
-    save: `SAVE ${r.high - r.low}`,
+    fare: copy.hero.boardFare(r.low),
+    save: copy.hero.boardSave(r.high - r.low),
   }
 })
 
@@ -153,36 +137,18 @@ onMount(() => {
   }
 })
 
-const STEPS = [
-  {
-    h: 'Send a rough brief',
-    p: 'Where from, where to and roughly when. Several destinations is fine, and so is vague, because vague is the part we are good at.',
-  },
-  {
-    h: 'We price every date',
-    p: 'One search at a time, a few seconds apart, because a flight site that gets too many requests at once stops answering. It takes minutes, and you do not have to sit through them.',
-  },
-  {
-    h: 'The report lands',
-    p: 'A PDF with the prices day by day, every option ranked by price and journey time, and a link to book each one. The last one of these found €147 between the best departure date and the worst. You book in the same place you always did.',
-  },
-]
+const STEPS = copy.report.steps
 
-const LIMITS = [
-  'We do not book or ticket anything. We find the options and hand you the links.',
-  'Prices come from public flight search results rather than from the airlines, so they are what was showing when we looked and they can move before you book.',
-  'Display price only, with no baggage rules, fare conditions or tax breakdown.',
-  'The engine is a public command-line tool called flt. It is on GitHub, and you are welcome to run it yourself and skip us entirely.',
-]
+const LIMITS = copy.brief.limits
 </script>
 
 <header class:solid={scrolled}>
   <div class="bar">
-    <a class="mark" href="#top">Bureau</a>
+    <a class="mark" href="#top">{copy.nav.brand}</a>
     <nav>
-      <a href="#report">How it works</a>
-      <a href="#pricing">Pricing</a>
-      <a class="cta" href="#brief">Start a brief</a>
+      <a href="#report">{copy.nav.howItWorks}</a>
+      <a href="#pricing">{copy.nav.pricing}</a>
+      <a class="cta" href="#brief">{copy.nav.brief}</a>
     </nav>
   </div>
 </header>
@@ -202,7 +168,7 @@ const LIMITS = [
         columns={DEP_COLS}
         bind:corners={CORNERS}
         bind:look={LOOK}
-        sign="Cheapest day by route"
+        sign={copy.hero.boardSign}
         editable={tuning}
         storageKey="hero"
       />
@@ -220,13 +186,10 @@ const LIMITS = [
         </div>
       {/key}
     </div>
-    <p class="pitch">
-      We price every date you could fly, then send one report. On the nine routes below, the
-      right day was worth up to €{FLEX.best}. Reports from €3.
-    </p>
+    <p class="pitch">{copy.hero.pitch(FLEX.best)}</p>
     <div class="hero-actions">
-      <a class="btn" href="#brief">Start a brief</a>
-      <a class="quiet" href="#report">See how it works</a>
+      <a class="btn" href="#brief">{copy.hero.ctaBrief}</a>
+      <a class="quiet" href="#report">{copy.hero.ctaHow}</a>
     </div>
     <ol class="ticks">
       {#each HEADLINES as h, n (h.kicker)}
@@ -249,19 +212,19 @@ const LIMITS = [
 <section class="weekband">
   <div class="weekband-inner">
     <div class="weekband-copy">
-      <h2>Seven departure dates, up to €{FLEX.best} between the best one and the worst</h2>
-      <p>
-        Nine real routes, each priced on all seven departure dates in its window. Moving your dates
-        was worth €{FLEX.best} on New&nbsp;York and €{FLEX.worst} on Lyon, and nothing about either
-        route said which it would be in advance. The New York answer cost €10.
-      </p>
+      <h2>{copy.weekband.heading(FLEX.best)}</h2>
+      <p>{copy.weekband.body(FLEX.best, FLEX.worst)}</p>
       <div class="weekband-actions">
-        <a class="btn" href="#brief">Start a brief, from €3</a>
-        <a class="quiet" href="#report">See how it works</a>
+        <a class="btn" href="#brief">{copy.weekband.ctaBrief}</a>
+        <a class="quiet" href="#report">{copy.weekband.ctaHow}</a>
       </div>
       <p class="proof">
-        {TOTALS.queries} searches · {nf.format(TOTALS.options)} options · {TOTALS.carriers} airlines
-        · {TOTALS.searchingSeconds} seconds
+        {copy.weekband.proof(
+          TOTALS.queries,
+          nf.format(TOTALS.options),
+          TOTALS.carriers,
+          TOTALS.searchingSeconds,
+        )}
       </p>
     </div>
     <WeekBoard />
@@ -270,62 +233,44 @@ const LIMITS = [
 
 <main>
   <section class="band" id="evidence">
-    <h2>The right departure date was worth €{FLEX.best} on New&nbsp;York and €{FLEX.worst} on Lyon</h2>
+    <h2>{copy.evidence.heading(FLEX.best, FLEX.worst)}</h2>
     <p class="lead measure">
-      Every route here was searched on all seven of its departure dates, so the spread is exactly
-      what moving your dates would have saved you. {FLEX.paidForItself} of the {FLEX.routes}
-      returned more than the €10 we charge to look, and the best of them returned {FLEX.timesOver}
-      times it. You cannot tell which kind of route you have until someone checks.
+      {copy.evidence.lead(FLEX.paidForItself, FLEX.routes, FLEX.timesOver)}
     </p>
     <FareRange />
     <p class="measure kicker">
-      Cabin makes its own point. Across that Singapore week economy moved between €{CABIN
-        .economyLow} and €{CABIN.economyHigh}, while premium economy sat at €{CABIN.premiumFlat} on
-      every single day. The step up cost €{CABIN.premiumFlat - CABIN.economyHigh} on the dearest
-      economy day and €{CABIN.premiumFlat - CABIN.economyLow} on the cheapest. The upgrade never
-      moved; only the thing you were comparing it against did. Fourteen searches and 37 seconds
-      bought that answer.
+      {copy.evidence.kicker(
+        CABIN.economyLow,
+        CABIN.economyHigh,
+        CABIN.premiumFlat,
+        CABIN.premiumFlat - CABIN.economyHigh,
+        CABIN.premiumFlat - CABIN.economyLow,
+      )}
     </p>
 
   </section>
 
   <section class="band" id="work">
-    <h2>Seventy-five searches took us 200 seconds. By&nbsp;hand they take two hours.</h2>
-    <p class="lead measure">
-      Four briefs, seventy-five searches. One search is one route priced on one date, so a brief
-      that leaves both open is not one question but dozens — and dozens is exactly where a row of
-      browser tabs stops being any use.
-    </p>
+    <h2>{copy.work.heading}</h2>
+    <p class="lead measure">{copy.work.lead}</p>
     <QueryGrid />
   </section>
 
   <section class="band" id="avoid">
-    <h2>Ruling out the Gulf cost €73 on Singapore and nothing at all on Hanoi</h2>
-    <p class="lead measure">
-      Say you will not change planes in the Gulf. We read every option first, then take away the
-      ones that connect there. On Singapore that took out 113 of 1,060 options and put €73 on the
-      cheapest fare; on Hanoi it took out 50 of 135 and changed the price by nothing. You only find
-      out which by having priced both.
-    </p>
+    <h2>{copy.avoid.heading}</h2>
+    <p class="lead measure">{copy.avoid.lead}</p>
     <AvoidHubs />
   </section>
 
   <section class="band" id="routes">
-    <h2>
-      There are {nf.format(DISCOVERY.byStops[2].routes)} ways to reach Hanoi, and we read the map
-      in {DISCOVERY.seconds} seconds before pricing one of them
-    </h2>
-    <p class="lead measure">
-      Every line is one way of getting from Amsterdam to Hanoi within a stop budget. Nothing here
-      has a price on it yet. We look at what connects to what first, and then go and price the
-      routes worth pricing.
-    </p>
+    <h2>{copy.routes.heading(nf.format(DISCOVERY.byStops[2].routes), DISCOVERY.seconds)}</h2>
+    <p class="lead measure">{copy.routes.lead}</p>
     <RouteWeb />
   </section>
 
   <section class="band air" id="report">
     <Airspace set={0} />
-    <h2>How it works</h2>
+    <h2>{copy.report.heading}</h2>
     <ol class="steps">
       {#each STEPS as step, i}
         <li>
@@ -341,30 +286,16 @@ const LIMITS = [
 
   <section class="band air" id="pricing">
     <Airspace set={1} />
-    <h2>You pay for the searching, not the seat</h2>
-    <p class="lead measure">
-      One date is cheap to answer. Five destinations across a fortnight in two cabins is not,
-      because it is far more work: the New York job above took 28 searches to find the €147 between
-      its best day and its worst. That is a €10 report returning fourteen times its price, on one
-      leg, for one traveller.
-    </p>
+    <h2>{copy.pricing.heading}</h2>
+    <p class="lead measure">{copy.pricing.lead}</p>
     <PriceTiers bind:selected={tier} />
-    <p class="measure kicker">
-      One route on one fixed date? Do not pay us for that, because Google Flights does it free in
-      ninety seconds. We are worth paying once you have several destinations and a spread of
-      dates — which is where tabs stop being any help, and where the spread is usually worth more
-      than the fee.
-    </p>
+    <p class="measure kicker">{copy.pricing.kicker}</p>
   </section>
 
   <section class="band air" id="brief">
     <Airspace set={2} />
-    <h2>Send a brief</h2>
-    <p class="lead measure">
-      Only the destination is required. Everything else is a tap, or leave it and we will use our
-      judgement — the vaguest briefs are the ones worth most, because they have the most dates to
-      be wrong about. The report comes back the same day.
-    </p>
+    <h2>{copy.brief.heading}</h2>
+    <p class="lead measure">{copy.brief.lead}</p>
     <BriefForm {tier} />
     <ul class="limits">
       {#each LIMITS as l}
@@ -375,9 +306,9 @@ const LIMITS = [
 </main>
 
 <footer>
-  <p>Bureau — flight research reports. We find the flights; you book them.</p>
+  <p>{copy.footer.line}</p>
   <nav>
-    <a href="https://github.com/jurrejan/flights">The engine on GitHub</a>
+    <a href="https://github.com/jurrejan/flights">{copy.footer.github}</a>
   </nav>
 </footer>
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 import '../app.css'
+import { en as copy } from '$lib/i18n/en'
 const { children } = $props()
 
 // TODO: swap for the real domain before deploy — the schema below is inert until then.
@@ -13,27 +14,25 @@ const schema = {
     {
       '@type': 'Organization',
       '@id': `${SITE}/#org`,
-      name: 'Bureau',
+      name: copy.meta.orgName,
       url: SITE,
-      description:
-        'A paid flight research service. Bureau searches every route and date combination in a brief and returns a PDF report with price charts, ranked options and booking links. It does not sell, book or ticket flights.',
+      description: copy.meta.orgDescription,
     },
     {
       '@type': 'WebSite',
       '@id': `${SITE}/#site`,
       url: SITE,
-      name: 'Bureau',
+      name: copy.meta.siteName,
       publisher: { '@id': `${SITE}/#org` },
       inLanguage: 'en',
     },
     {
       '@type': 'Service',
       '@id': `${SITE}/#service`,
-      name: 'Bureau flight research report',
-      serviceType: 'Flight research report',
+      name: copy.meta.serviceName,
+      serviceType: copy.meta.serviceType,
       provider: { '@id': `${SITE}/#org` },
-      description:
-        'You brief a route and rough dates. Bureau runs the searches one at a time and sends back a PDF report: price-by-date charts, ranked options with airline, routing and total journey time, and a booking link for each. Prices come from public flight search results at the time of the search, not an airline feed. Bureau does not book or ticket flights.',
+      description: copy.meta.serviceDescription,
     },
   ],
 }
@@ -42,11 +41,8 @@ const ld = `<script type="application/ld+json">${JSON.stringify(schema)}<\/scrip
 </script>
 
 <svelte:head>
-  <title>Bureau — flight research for people with flexible dates</title>
-  <meta
-    name="description"
-    content="Tell us where you want to go and roughly when. Bureau prices every date you could fly, ranks what comes back and sends you one report with a link to book each option. From €3, and we never book or ticket anything."
-  />
+  <title>{copy.meta.title}</title>
+  <meta name="description" content={copy.meta.description} />
   {@html ld}
 </svelte:head>
 
