@@ -37,6 +37,10 @@ export type Sign = {
   pad: number
   /** vertical centre of the cap band, 0 the panel's top edge … 1 its bottom */
   textY: number
+  /** horizontal scale on the type. A corner-pinned board is rarely scaled the
+   *  same amount in both axes, and text is where that shows: the flaps have
+   *  carried a squeeze for exactly this reason since the start. */
+  squeeze: number
   font: string
   icon: boolean
 }
@@ -56,6 +60,7 @@ export const SIGN: Sign = {
   bloom: 0.55,
   pad: 0.55,
   textY: 0.42,
+  squeeze: 1,
   font: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   icon: true,
 }
@@ -186,7 +191,7 @@ export function paintSign(
 
   const chars = [...s.text]
   const track = cap * s.letter
-  const run = (adv: number[]) => adv.reduce((a, v) => a + v + track, 0) - track
+  const run = (adv: number[]) => (adv.reduce((a, v) => a + v + track, 0) - track) * s.squeeze
   let advances = chars.map((c) => ctx.measureText(c).width)
   const k = fitScale(run(advances), x + w - rail - inset - cursor)
   if (k < 1) {
@@ -205,15 +210,18 @@ export function paintSign(
   ]
   const base = y + h * s.textY + cap * 0.5
   for (const [ch, i] of chars.map((c, n) => [c, n] as const)) {
-    const at = cursor
+    ctx.save()
+    ctx.translate(cursor, base)
+    ctx.scale(s.squeeze, 1)
     for (const [width, colour] of passes) {
       if (width <= 0) continue
       ctx.lineWidth = width
       ctx.strokeStyle = colour
-      ctx.strokeText(ch, at, base)
+      ctx.strokeText(ch, 0, 0)
     }
     ctx.fillStyle = s.ink
-    ctx.fillText(ch, at, base)
-    cursor += advances[i] + track
+    ctx.fillText(ch, 0, 0)
+    ctx.restore()
+    cursor += (advances[i] + track) * s.squeeze
   }
 }

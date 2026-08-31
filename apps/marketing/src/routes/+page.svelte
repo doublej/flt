@@ -473,7 +473,7 @@ const LIMITS = [
      same place twice. */
   .stage {
     /* zoomed enough that the tremble and the roll never walk an edge in */
-    transform: scale(1.03);
+    transform: scale(1.015);
   }
   .stage::after {
     content: "";
@@ -507,16 +507,16 @@ const LIMITS = [
   @keyframes hero-drift {
     0%,
     100% {
-      transform: scale(1.03) translate3d(0, 0, 0) rotate(0deg);
+      transform: scale(1.015) translate3d(0, 0, 0) rotate(0deg);
     }
     23% {
-      transform: scale(1.036) translate3d(-0.4%, 0.28%, 0) rotate(0.18deg);
+      transform: scale(1.019) translate3d(-0.17%, 0.12%, 0) rotate(0.07deg);
     }
     47% {
-      transform: scale(1.03) translate3d(0.32%, 0.44%, 0) rotate(-0.15deg);
+      transform: scale(1.015) translate3d(0.13%, 0.18%, 0) rotate(-0.06deg);
     }
     71% {
-      transform: scale(1.038) translate3d(0.45%, -0.24%, 0) rotate(0.12deg);
+      transform: scale(1.02) translate3d(0.19%, -0.1%, 0) rotate(0.05deg);
     }
   }
   @keyframes hero-handheld {
@@ -525,19 +525,19 @@ const LIMITS = [
       transform: translate3d(0, 0, 0);
     }
     17% {
-      transform: translate3d(1.8px, -3.2px, 0);
+      transform: translate3d(0.7px, -1.3px, 0);
     }
     34% {
-      transform: translate3d(-3.5px, 1.2px, 0);
+      transform: translate3d(-1.4px, 0.5px, 0);
     }
     52% {
-      transform: translate3d(2.6px, 2.8px, 0);
+      transform: translate3d(1px, 1.1px, 0);
     }
     68% {
-      transform: translate3d(-1.4px, -2.1px, 0);
+      transform: translate3d(-0.6px, -0.8px, 0);
     }
     85% {
-      transform: translate3d(3.2px, 0.7px, 0);
+      transform: translate3d(1.3px, 0.3px, 0);
     }
   }
   /* Exposure hunts slowly; focus goes twice, and a focus hunt is quick — the

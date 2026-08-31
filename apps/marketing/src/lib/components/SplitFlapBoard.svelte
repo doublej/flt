@@ -60,6 +60,7 @@ import {
   createDrum,
   fitType,
   padCells,
+  pinDistortion,
   settle,
   setTarget,
   tick,
@@ -94,8 +95,9 @@ let {
   /** A header fixture bolted above the flaps — a lit sign, usually. It rides
    *  inside the same homography and the same lens as the board, because on a
    *  real wall it is the same object; anything pinned separately reads as a
-   *  sticker. */
-  sign?: Snippet
+   *  sticker. It is handed the board's own horizontal distortion, so type
+   *  inside it can cancel what the homography is about to do to it. */
+  sign?: Snippet<[number]>
   /** Where that fixture sits, as plain fractions of the board's own box: x and
    *  w across, y and h up. y is the clearance between the fixture's underside
    *  and the top row, so every one of the four grows in the direction you would
@@ -468,6 +470,11 @@ $effect(() => {
    the cut, because an SVG filter simply stops at its region edge. */
 const head = $derived(sign ? Math.min(400, (signY + signH * 3) * 100) : 0)
 
+const distort = $derived(
+  composite?.corners ? pinDistortion(bw, bh, composite.corners) : 1
+)
+
+
 const pin = $derived(composite?.corners ? cornerPinMatrix(bw, bh, composite.corners) : null)
 const grade = $derived(composite?.grade)
 const lens = $derived(composite?.lens)
@@ -499,7 +506,7 @@ const lensCss = $derived(
 					style:--sign-w="{signW * 100}%"
 					style:--sign-h="{signH * 100}%"
 				>
-					{@render sign()}
+					{@render sign(distort)}
 				</div>
 			{/if}
 			<div class="board" style:mask-image={composite?.mask} aria-hidden="true">

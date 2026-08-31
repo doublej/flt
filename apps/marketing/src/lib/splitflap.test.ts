@@ -7,6 +7,7 @@ import {
   fitType,
   flapIndex,
   padCells,
+  pinDistortion,
   setTarget,
   stepsTo,
   tick,
@@ -130,6 +131,21 @@ ok('padCells truncates', padCells('AMSTERDAM', 3, 'left') === 'AMS')
   ok('glyph absorbs the remainder', Math.abs(huge.glyph * huge.squeeze * 0.944 - 0.3) < 1e-9)
 
   ok('an unmeasurable face is left alone', !fitType(1.1, 0.7, 0.62, 0).clamped)
+}
+
+// --- pinDistortion ---------------------------------------------------------
+{
+  const rect = (w: number, h: number) => [
+    { x: 0, y: 0 },
+    { x: w, y: 0 },
+    { x: w, y: h },
+    { x: 0, y: h },
+  ]
+  ok('a quad of the same shape distorts nothing', pinDistortion(100, 50, rect(200, 100)) === 1)
+  ok('a quad twice as wide needs half-width type', pinDistortion(100, 50, rect(400, 100)) === 0.5)
+  ok('a quad twice as tall needs double-width type', pinDistortion(100, 50, rect(200, 200)) === 2)
+  ok('a degenerate box is left alone', pinDistortion(0, 50, rect(200, 100)) === 1)
+  ok('too few corners is left alone', pinDistortion(100, 50, [{ x: 0, y: 0 }]) === 1)
 }
 
 console.log(`splitflap: ${n} assertions passed`)

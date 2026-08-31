@@ -150,3 +150,18 @@ export function fitType(
   const rest = aspect / (glyph * s * widest)
   return { glyph: rest < 1 ? glyph * rest : glyph, squeeze: s, clamped: true }
 }
+
+/** How much wider than tall a corner pin is about to scale its content.
+ *
+ *  A board's natural box and the quad it lands on rarely share an aspect, and
+ *  the homography absorbs the difference as a non-uniform scale. On flaps that
+ *  passes unnoticed — they are tuned by eye against it — but on ordinary type it
+ *  reads as a stretched face. Multiply a glyph's width by this and it comes out
+ *  of the transform with the proportions it was drawn at. */
+export function pinDistortion(w: number, h: number, corners: { x: number; y: number }[]): number {
+  if (!w || !h || corners.length < 4) return 1
+  const [tl, tr, , bl] = corners
+  const across = Math.hypot(tr.x - tl.x, tr.y - tl.y) / w
+  const down = Math.hypot(bl.x - tl.x, bl.y - tl.y) / h
+  return across > 0 ? down / across : 1
+}

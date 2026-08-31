@@ -9,31 +9,52 @@ const nf = new Intl.NumberFormat('en-GB')
 const hours = byHandHours(TOTALS.queries)
 </script>
 
-<div class="jobs">
-  {#each SCENARIOS as s (s.id)}
-    <figure>
-      <img class="who" src="/img/people/{s.id}.webp" alt="" width="350" height="450" loading="lazy" />
-      <blockquote>{s.ask}</blockquote>
-      <p class="route">{s.route}</p>
-      <div class="win"><FlapText text={s.window} size="0.55rem" /></div>
+<div class="ledger">
+  <div class="head">
+    <span class="c-who"></span>
+    <span>The brief</span>
+    <span>Window</span>
+    <span>Searches run</span>
+    <span>Came back</span>
+  </div>
 
-      <div class="grid" style:--cols={s.grid.cols}>
-        {#each Array(s.queries) as _, i (i)}
-          <span></span>
-        {/each}
+  {#each SCENARIOS as s (s.id)}
+    <article class="job">
+      <img
+        class="who"
+        src="/img/people/{s.id}.webp"
+        alt=""
+        width="350"
+        height="450"
+        loading="lazy"
+      />
+
+      <div class="ask">
+        <blockquote>{s.ask}</blockquote>
+        <p class="route">{s.route}</p>
       </div>
 
-      <p class="count">
-        <b>{s.queries}</b> searches — {s.grid.rows}
-        {s.grid.rowKind} × {s.grid.cols}
-        {s.grid.cols === 1 ? 'date' : 'dates'}
+      <div class="win"><FlapText text={s.window} size="0.5rem" /></div>
+
+      <div class="work">
+        <div class="grid" style:--cols={s.grid.cols}>
+          {#each Array(s.queries) as _, i (i)}
+            <span></span>
+          {/each}
+        </div>
+        <p class="shape">
+          <b>{s.queries}</b> — {s.grid.rows}
+          {s.grid.rowKind} × {s.grid.cols}
+          {s.grid.cols === 1 ? 'date' : 'dates'}
+        </p>
+      </div>
+
+      <p class="got">
+        {nf.format(s.options)} options<br />{s.seconds} seconds
       </p>
-      <p class="sub">{nf.format(s.options)} options · {s.seconds} seconds</p>
-    </figure>
+    </article>
   {/each}
 </div>
-
-<p class="note">Every brief and every number above came off a real run. The portraits did not.</p>
 
 <p class="total">
   <b>{TOTALS.queries} searches</b> in {TOTALS.searchingSeconds} seconds of actual searching, which
@@ -44,44 +65,62 @@ const hours = byHandHours(TOTALS.queries)
 </p>
 
 <style>
-  .jobs {
+  /* Four jobs as four ruled lines of one ledger, not four boxes. Reading down a
+     column is the point: the search grids stack at the same x, so five squares
+     against twenty-eight is the argument, made without a sentence. */
+  .ledger {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-    gap: var(--space-4);
+    grid-template-columns:
+      4rem
+      minmax(0, 1fr)
+      auto
+      calc(7 * 1.5rem + 6 * 3px)
+      7.5rem;
+    column-gap: var(--space-4);
     margin-top: var(--space-5);
+    border-block: 1px solid var(--color-border);
   }
-  figure {
-    margin: 0;
+  .head,
+  .job {
     display: grid;
-    align-content: start;
-    gap: 0.35rem;
-    padding: var(--space-3);
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: start;
   }
-  /* The person who sent the brief, cropped to the one portrait format this
-     subject already owns: 35x45mm, the passport and visa standard, head filling
-     most of the frame. Square-cut and ruled like a print, not rounded like an
-     avatar — four of them across the row read as a strip of document photos.
-     The briefs and the numbers are real runs; the faces are not, which the note
-     under the cards says. */
+  .head {
+    padding-block: var(--space-2);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .job {
+    padding-block: var(--space-3);
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* The face is the only organic thing in a row of grids and numerals, so it
+     gets the format the subject already owns: 35x45mm, square-cut, ruled. */
   .who {
-    width: 6rem;
-    /* the height attribute is a presentational hint, so aspect-ratio only gets
-       a say once height is back to auto */
+    display: block;
+    width: 100%;
     height: auto;
     aspect-ratio: 35 / 45;
     object-fit: cover;
     border: 1px solid var(--color-border);
-    border-radius: 0;
-    margin-bottom: var(--space-1);
+  }
+
+  .ask {
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
   }
   blockquote {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 1.05rem;
-    line-height: 1.3;
+    font-size: clamp(1.05rem, 1.5vw, 1.3rem);
+    line-height: 1.35;
     text-wrap: pretty;
   }
   blockquote::before {
@@ -91,47 +130,69 @@ const hours = byHandHours(TOTALS.queries)
     content: "”";
   }
   .route {
-    margin-top: 0.35rem;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
+    line-height: 1.5;
     color: var(--color-muted);
   }
+
   .win {
     justify-self: start;
-    font-size: 0.7rem;
+    margin-top: 0.2rem;
   }
 
+  .work {
+    display: grid;
+    gap: var(--space-2);
+    align-content: start;
+  }
   .grid {
     display: grid;
-    grid-template-columns: repeat(var(--cols), 1fr);
+    grid-template-columns: repeat(var(--cols), 1.5rem);
     gap: 3px;
-    margin: var(--space-3) 0 var(--space-2);
-    width: min(100%, calc(var(--cols) * 1.5rem));
+    justify-content: start;
   }
   .grid span {
     aspect-ratio: 1;
     background: var(--color-primary);
     border-radius: 1px;
   }
-
-  .count {
-    font-size: 0.85rem;
+  .shape {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--color-muted);
   }
-  .count b {
+  .shape b {
     font-family: var(--font-mono);
     font-weight: 400;
+    font-size: 0.95rem;
     color: var(--color-primary);
   }
-  .sub {
+
+  .got {
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.78rem;
+    line-height: 1.7;
     color: var(--color-muted);
   }
 
-  .note {
-    margin-top: var(--space-3);
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: var(--color-muted);
+  /* Narrow: the ledger stops being a table. The face and the brief keep their
+     line, everything the Bureau did drops underneath it. */
+  @media (max-width: 900px) {
+    .ledger {
+      grid-template-columns: 3.5rem minmax(0, 1fr);
+      column-gap: var(--space-3);
+    }
+    .head {
+      display: none;
+    }
+    .job {
+      row-gap: var(--space-3);
+    }
+    .win,
+    .work,
+    .got {
+      grid-column: 2;
+    }
   }
 
   .total {

@@ -317,6 +317,7 @@ function seedSign() {
     signBloom: SIGN.bloom,
     signPad: SIGN.pad,
     signTextY: SIGN.textY,
+    signSqueeze: 1,
     signIcon: SIGN.icon,
     signX: 0,
     signY: 0.02,
@@ -420,6 +421,12 @@ onMount(() => {
       lit.addBinding(look, 'signH', { min: 0.01, max: 0.6, step: 0.002, label: 'height' })
       lit.addBinding(look, 'signPad', { min: 0, max: 3, step: 0.01, label: 'inner pad' })
       lit.addBinding(look, 'signTextY', { min: 0.1, max: 0.9, step: 0.005, label: 'text y' })
+      lit.addBinding(look, 'signSqueeze', {
+        min: 0.4,
+        max: 1.6,
+        step: 0.01,
+        label: 'letter width',
+      })
       lit.addBinding(look, 'signGlyph', { min: 0.2, max: 0.9, step: 0.01, label: 'cap height' })
       lit.addBinding(look, 'signLetter', { min: 0, max: 0.6, step: 0.01, label: 'tracking' })
       lit.addBinding(look, 'signBloom', { min: 0, max: 1.4, step: 0.01, label: 'light bleed' })
@@ -494,8 +501,12 @@ onMount(() => {
 		>
 			<img class="scene" {src} alt="" draggable="false" style:object-position={objectPosition} />
 			<div class="pinned" style:width="{width}px">
-				{#snippet lit()}
-					<LightBox text={sign} sign={SIGNSKIN} scale={n('supersample', 2)} />
+				{#snippet lit(distort: number)}
+					<LightBox
+						text={sign}
+						sign={{ ...SIGNSKIN, squeeze: distort * n('signSqueeze', 1) }}
+						scale={n('supersample', 2)}
+					/>
 				{/snippet}
 				<SplitFlapBoard
 					{rows}
