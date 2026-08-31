@@ -305,18 +305,6 @@ export const en = {
     searchMark: searchMark,
     searchUnit: searchUnit,
     searchCount: (n: number) => `${searchMark(n)}${n} ${searchUnit(n)}`,
-    /** FeeScale. One euro axis with everything we charge at its origin and each
-     *  route's week spread further along it, so the fee and what the searching
-     *  gave back are read off the same scale. */
-    scale: {
-      charged: (cheapest: string, dearest: string) => `${cheapest}–${dearest} · what we charge`,
-      worth: (best: number, route: string) => `€${best} · ${route}`,
-      /** Says what the figure is doing and nothing else. Which route sits at
-       *  each end is already told by the hero board, the weekband and the
-       *  evidence heading, so naming them again here would be the fourth. */
-      caption: (routes: number, paidForItself: number) =>
-        `Every ring is one of the ${routes} routes above, placed at what shifting its departure date within one week saved. The block at the left is everything we charge, on the same scale — ${paidForItself} of the ${routes} rings clear it.`,
-    },
     tiersFoot:
       'Every tier is the same work at a different size. Return-trip date grids are capped at 21 date combinations.',
   },

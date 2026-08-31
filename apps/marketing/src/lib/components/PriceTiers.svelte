@@ -4,8 +4,8 @@ import { TIERS } from '$lib/tiers'
 
 /** A schedule of charges, not three cards to choose between. Three cards put
  *  the prices next to each other, where the only scale on offer is €3 to €10;
- *  the scale that matters is the one in FeeScale above, where €10 sits against
- *  what a week of dates was worth. So this is a tariff: one row per tier, the
+ *  the scale that matters is the lead's, where €10 sits against the €147 a
+ *  week of dates was worth. So this is a tariff: one row per tier, the
  *  amount of searching set as the row's numeral because that is what is being
  *  bought, and the charge in the column a tariff keeps it in, reached by a
  *  leader so the name and the price stay paired at any width.

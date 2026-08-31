@@ -244,12 +244,6 @@ export const nl: Messages = {
     searchMark: searchMark,
     searchUnit: searchUnit,
     searchCount: (n: number) => `${searchMark(n)}${n} ${searchUnit(n)}`,
-    scale: {
-      charged: (cheapest: string, dearest: string) => `${cheapest}–${dearest} · wat wij rekenen`,
-      worth: (best: number, route: string) => `€${best} · ${route}`,
-      caption: (routes: number, paidForItself: number) =>
-        `Elke ring is een van de ${routes} routes hierboven, gezet op wat het verschuiven van de vertrekdatum binnen één week opleverde. Het blok links is alles wat we rekenen, op dezelfde schaal — ${paidForItself} van de ${routes} ringen komt daar overheen.`,
-    },
     tiersFoot:
       'Elk tarief is hetzelfde werk in een ander formaat. Heen-en-terug-datumgrids zijn beperkt tot 21 datumcombinaties.',
   },
