@@ -11,6 +11,7 @@ import type { Column, Point } from '$lib/components/SplitFlapBoard.svelte'
 import Story from '$lib/components/Story.svelte'
 import WeekBoard from '$lib/components/WeekBoard.svelte'
 import { getCopy, getLocale } from '$lib/i18n/copy.svelte'
+import { HERO_LOOK } from '$lib/look'
 import { CABIN, DISCOVERY, FLEX, SPREADS, TOTALS } from '$lib/scenarios'
 import { onMount } from 'svelte'
 import { fade } from 'svelte/transition'
@@ -74,52 +75,7 @@ let CORNERS = $state<Point[]>([
 ])
 
 /* Grade tuned against the photograph itself, at full size, on the page. */
-let LOOK = $state({
-  renderer: 'canvas',
-  exposure: 0.78,
-  contrast: 1.25,
-  warmth: -0.15,
-  angle: 179,
-  multiply: '#00000000',
-  screen: '#ffc90019',
-  grain: 0.56,
-  aberration: 0.75,
-  vignette: 0,
-  blur: 0.85,
-  supersample: 1,
-  glass: false,
-  bg: '#2d2d2dff',
-  pad: 0.42,
-  face: '#1d1d1d',
-  ink: '#dfd6c4',
-  aspect: 0.495,
-  glyph: 1.07,
-  squeeze: 0.66,
-  baseline: 0.014,
-  rowgap: 0.125,
-  grit: 0.3,
-  pins: false,
-  /* the lit header. Its tones are the photograph's own, so it stays amber even
-     though the flaps beside it were graded cool. */
-  signFace: '#fedf8e',
-  signLip: '#ffc34e',
-  signFrame: '#974716',
-  signInk: '#cc6707',
-  signGlow: '#ff5a0f',
-  signGlyph: 0.52,
-  signLetter: 0,
-  signBloom: 0,
-  signUp: 0,
-  signDown: 0,
-  signIcon: false,
-  signX: 0,
-  signY: -0.0002,
-  signW: 1.014,
-  signH: 0.1656,
-  signPad: 0.55,
-  signTextY: 0.42,
-  signSqueeze: 1,
-})
+let LOOK = $state({ ...HERO_LOOK })
 
 const DEP_ROWS = $derived(
   SPREADS.map((r) => {

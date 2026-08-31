@@ -1,6 +1,14 @@
 <script lang="ts">
 import LightBox from '$lib/components/LightBox.svelte'
 import SplitFlapBoard, { type Column, type Point } from '$lib/components/SplitFlapBoard.svelte'
+import {
+  type Look,
+  buildComposite,
+  buildSignSkin,
+  buildSkinKey,
+  readNumber,
+  readText,
+} from '$lib/composite'
 import { SIGN } from '$lib/lightbox-canvas'
 import { shade } from '$lib/splitflap-canvas'
 import { loadTuning, saveTuning } from '$lib/tuning'
@@ -32,7 +40,7 @@ let {
   columns: Column[]
   /** TL, TR, BR, BL as fractions of the INTRINSIC image, never of the container */
   corners: Point[]
-  look: Record<string, string | number | boolean>
+  look: Look
   /** Text for the lit sign above the board. Omit for a board with no header. */
   sign?: string
   /** off: no pane, no handles, no tweakpane fetched. The page case. */
@@ -144,8 +152,10 @@ function unplace(p: Point): Point {
   }
 }
 
-const n = (k: string, d: number) => (typeof look[k] === 'number' ? (look[k] as number) : d)
-const str = (k: string, d: string) => (typeof look[k] === 'string' ? (look[k] as string) : d)
+// Every reader below coerces and falls back; the branching lives in
+// $lib/composite.ts so it can be tested without mounting a stage.
+const n = (k: string, d: number) => readNumber(look, k, d)
+const str = (k: string, d: string) => readText(look, k, d)
 
 /* Never strand the hero on a board that cannot report in — a refused canvas
    context, an image that 404s, anything. Three seconds, then the composite is
@@ -215,60 +225,11 @@ const faceCss = $derived.by(() => {
   return `linear-gradient(180deg, ${shade(f, 2.7)} 0%, ${f} 47%, ${shade(f, 2.1)} 53%, ${shade(f, 0.6)} 100%)`
 })
 
-/* the board restyles itself from CSS, but the canvas painter and the width
-   budget have to be told a variable moved */
-const skinKey = $derived(
-  [
-    str('face', ''),
-    str('ink', ''),
-    str('bg', ''),
-    n('aspect', 0),
-    n('glyph', 0),
-    n('squeeze', 0),
-    n('baseline', 0),
-    n('rowgap', 0),
-    n('grit', 0),
-    n('pad', 0),
-    look.renderer,
-  ].join('|'),
-)
+const skinKey = $derived(buildSkinKey(look))
 
-/* the sign is lit, so it takes none of the board's palette — its own tones came
-   off the photograph and the two are only related by sitting on one wall */
-const SIGNSKIN = $derived({
-  face: str('signFace', '#fedf8e'),
-  lip: str('signLip', '#ffc34e'),
-  frame: str('signFrame', '#974716'),
-  ink: str('signInk', '#cc6707'),
-  glow: str('signGlow', '#ff5a0f'),
-  up: n('signUp', 1.2),
-  down: n('signDown', 0.45),
-  glyph: n('signGlyph', 0.5),
-  letter: n('signLetter', 0.16),
-  bloom: n('signBloom', 0.55),
-  pad: n('signPad', 0.55),
-  textY: n('signTextY', 0.42),
-  icon: look.signIcon !== false,
-})
+const SIGNSKIN = $derived(buildSignSkin(look))
 
-const COMPOSITE = $derived({
-  corners: pins,
-  grade: {
-    exposure: n('exposure', 1),
-    contrast: n('contrast', 1),
-    warmth: n('warmth', 0),
-    angle: n('angle', 190),
-    multiply: str('multiply', '#00000000'),
-    screen: str('screen', '#00000000'),
-  },
-  lens: {
-    grain: n('grain', 0),
-    aberration: n('aberration', 0) * n('supersample', 2),
-    vignette: n('vignette', 0),
-    blur: n('blur', 0) * n('supersample', 2),
-  },
-  glass: look.glass !== false,
-})
+const COMPOSITE = $derived(buildComposite(look, pins))
 
 /* --- pointer work -------------------------------------------------------- */
 

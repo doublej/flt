@@ -97,12 +97,12 @@ chrome:
 [group('view')]
 shot url width height out *selector: chrome
     mkdir -p local/shots
-    bun scripts/view.ts {{url}} {{width}} {{height}} shot local/shots/{{out}} {{selector}}
+    bun scripts/view.ts "{{url}}" {{width}} {{height}} shot "local/shots/{{out}}" {{selector}}
 
 # just measure http://localhost:3848/ 390 844 probe.js  — probe.js is evaluated in the page
 [group('view')]
 measure url width height probe: chrome
-    bun scripts/view.ts {{url}} {{width}} {{height}} measure {{probe}}
+    bun scripts/view.ts "{{url}}" {{width}} {{height}} measure "{{probe}}"
 
 # The standard sweep: phone, big phone, tablet portrait/landscape, laptop, desktop.
 [group('view')]
@@ -110,5 +110,5 @@ breakpoints url: chrome
     #!/usr/bin/env zsh
     mkdir -p local/shots
     for wh in 390x844 430x932 768x1024 1024x768 1280x800 1440x900 1920x1080; do
-        bun scripts/view.ts {{url}} ${wh%x*} ${wh#*x} shot local/shots/bp-${wh}.png
+        bun scripts/view.ts "{{url}}" ${wh%x*} ${wh#*x} shot "local/shots/bp-${wh}.png"
     done
