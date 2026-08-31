@@ -82,6 +82,7 @@ let {
   signY = 0.02,
   signW = 1,
   signH = 0.13,
+  onready,
 }: {
   rows: Record<string, string>[]
   columns: Column[]
@@ -108,6 +109,11 @@ let {
   signY?: number
   signW?: number
   signH?: number
+  /** Fired once, after the frame that first put drums on screen has painted.
+   *  A composite can hold itself back until then rather than showing a board
+   *  that is still an empty box. Never fired by a board that stays offscreen —
+   *  it has not built, so there is nothing to wait for. */
+  onready?: () => void
 } = $props()
 
 /* Every internal dimension is a ratio of the cell, so the board is the same
@@ -514,10 +520,22 @@ $effect(() => {
       rest(i)
     }
     mirror = readout()
+    announce()
     return
   }
   join(frame)
+  announce()
 })
+
+/** Both paths above have already drawn the first flaps — into the canvas, or
+ *  into the cells' own spans. One frame from here is the paint that puts them
+ *  on screen, and the second is proof it happened. */
+let announced = false
+function announce() {
+  if (announced || !drums.length) return
+  announced = true
+  requestAnimationFrame(() => requestAnimationFrame(() => onready?.()))
+}
 
 $effect(() => {
   const el = shell

@@ -43,6 +43,22 @@ let {
   storageKey?: string
 } = $props()
 
+/* The photograph decodes about a second before the board has drums in it, so
+   the hero would open on a bare terminal with a dead box hanging on the wall.
+   Hold both back and bring them in together. `decode()` resolves whether the
+   image is still arriving or was already in cache, and rejects on a 404 —
+   which counts as decoded here, because the alternative is holding forever. */
+let photo = $state<HTMLImageElement | null>(null)
+let decoded = $state(false)
+let built = $state(false)
+const held = $derived(!(decoded && built))
+$effect(() => {
+  const done = () => {
+    decoded = true
+  }
+  photo?.decode().then(done, done)
+})
+
 let stage = $state<HTMLElement | null>(null)
 let panel = $state<HTMLElement | null>(null)
 /** the pane, once it has been fetched. Bindings are one-way in practice, so
@@ -546,7 +562,7 @@ onMount(() => {
 })
 </script>
 
-<div class="work">
+<div class="work" class:held>
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="photo"
@@ -579,7 +595,14 @@ onMount(() => {
 			style:--sf-rowgap={n('rowgap', 0.09)}
 			style:--sf-grain={n('grit', 0.06)}
 		>
-			<img class="scene" {src} alt="" draggable="false" style:object-position={objectPosition} />
+			<img
+				class="scene"
+				bind:this={photo}
+				{src}
+				alt=""
+				draggable="false"
+				style:object-position={objectPosition}
+			/>
 			<div class="pinned" style:width="{width}px">
 				{#snippet lit(distort: number)}
 					<LightBox
@@ -600,6 +623,7 @@ onMount(() => {
 					signY={n('signY', 0.02)}
 					signW={n('signW', 1)}
 					signH={n('signH', 0.13)}
+					onready={() => (built = true)}
 				/>
 			</div>
 			{#if editable}
@@ -640,6 +664,48 @@ onMount(() => {
 </div>
 
 <style>
+	/* The entry rides on .work because everything inside it is spoken for: the
+	   hero animates .stage with its drift loop and .photo with two more, and a
+	   fourth writer on either would just win the cascade and stop the camera. */
+	.work {
+		transition:
+			opacity 900ms ease,
+			transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
+	}
+	/* Held until the photograph has decoded and the board has painted its first
+	   flaps, then released as one object — a shot being focused rather than a
+	   panel appearing. The delayed keyframe is the backstop, and it is CSS on
+	   purpose: it covers a board that never reports in, and it covers the
+	   prerendered page being served to someone whose script never runs, which no
+	   timer of ours could. Whichever fires first, the other is a no-op. */
+	.work.held {
+		opacity: 0;
+		transform: scale(1.06);
+		/* `forwards`, never `both`: a backwards fill would own opacity through the
+		   whole delay, and an animated property cannot be transitioned — the
+		   release would snap instead of easing. With no fill before it starts,
+		   the two declarations below hold and the transition is free to run. */
+		animation: composite-in 900ms cubic-bezier(0.16, 1, 0.3, 1) 3s forwards;
+	}
+	@keyframes composite-in {
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+	/* Motion goes, the hold stays. Revealing early here would only trade a long
+	   dead board for a short one, and the board settles instantly on this path
+	   anyway, so the wait costs nothing. The backstop keeps its 3s delay and
+	   loses only its duration. */
+	@media (prefers-reduced-motion: reduce) {
+		.work {
+			transition: none;
+		}
+		.work.held {
+			transform: none;
+			animation-duration: 1ms;
+		}
+	}
 	.work {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) 17rem;
