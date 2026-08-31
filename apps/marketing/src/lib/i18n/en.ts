@@ -34,7 +34,7 @@ export const en = {
   /** `app.html` and the `<svelte:head>` in `+layout.svelte`, including the
    *  JSON-LD an answer engine reads back aloud. */
   meta: {
-    title: 'Bureau — flight research for people with flexible dates',
+    title: 'Bureau: flight research for people with flexible dates',
     description:
       'Tell us where you want to go and roughly when. Bureau prices every date you could fly, ranks what comes back and sends you one report with a link to book each option. From €3, and we never book or ticket anything.',
     orgName: 'Bureau',
@@ -118,7 +118,7 @@ export const en = {
      *  follows. */
     boardFootLead: 'Cheapest day',
     boardFootDearest: ', dearest',
-    boardFootWorth: '— being flexible was worth',
+    boardFootWorth: 'and being flexible was worth',
     boardFootTail: 'on this route. One-way economy.',
   },
 
@@ -154,7 +154,7 @@ export const en = {
      *  `TOTALS.searchingSeconds` and `byHandHours(TOTALS.queries)`, written out
      *  in words and rounded. */
     heading: 'Seventy-five searches took us 200 seconds. By\u00a0hand they take two hours.',
-    lead: 'Four briefs, seventy-five searches. One search is one route priced on one date, so a brief that leaves both open is not one question but dozens — and dozens is exactly where a row of browser tabs stops being any use.',
+    lead: 'Four briefs, seventy-five searches. One search is one route priced on one date, so a brief that leaves both open is not one question but dozens, and dozens is exactly where a row of browser tabs stops being any use.',
     /** QueryGrid. The prose that used to sit on each run in `scenarios.ts`,
      *  keyed by the same scenario id so the two files cannot drift apart. */
     scenarios: {
@@ -189,7 +189,7 @@ export const en = {
       queries: number,
       hours: string,
     ) =>
-      `in ${seconds} seconds of actual searching, which returned ${options} options across ${carriers} airlines. Run by hand at a generous ${manualSeconds} seconds each (type the route, wait for it, scan the results, write the price down) the same ${queries} searches take about ${hours} hours. The largest of the four — twenty-eight searches across four American cities — is a €10 Survey. That by-hand estimate is the only number on this page we did not measure.`,
+      `in ${seconds} seconds of actual searching, which returned ${options} options across ${carriers} airlines. Run by hand at a generous ${manualSeconds} seconds each (type the route, wait for it, scan the results, write the price down) the same ${queries} searches take about ${hours} hours. The largest of the four, twenty-eight searches across four American cities, is a €10 Survey. That by-hand estimate is the only number on this page we did not measure.`,
   },
 
   /** The five jobs in `STORIES`, and the one group here that is not named after
@@ -207,66 +207,72 @@ export const en = {
    *  counts itself in the same words rather than in its own. */
   stories: {
     lisbon: {
-      ask: "Lisbon sometime in October. I'm not tied to a date, so if there's a cheaper day in there I'll take it.",
+      ask: "Lisbon in October. My sister lives there, so the date is whatever's cheapest that week. I really don't mind which day.",
       rowKind: 'route',
       point: (low: number, high: number, gap: number) =>
-        `€${low} on the cheapest of the seven dates, €${high} on the dearest. €${gap} for moving a short flight by a few days — and the cheapest of the seven was a nonstop, which is not how that usually goes.`,
+        `€${low} on the cheapest day of that week, €${high} on the dearest. That is €${gap} for shifting a three-hour flight by a couple of days. The cheap one was a nonstop as well.`,
     },
     bali: {
-      ask: "Bali in February. One stop is fine, but not in the Gulf — I've done Doha at four in the morning and I'm not doing it again.",
+      ask: 'Bali in February. One stop is fine, but not Doha. I did that once and spent five hours on a bench at three in the morning.',
       rowKind: 'route',
       point: (low: number, high: number, gap: number) =>
-        `€${low} was the cheapest of everything, and it changes planes in the Gulf. Rule the Gulf out and the cheapest becomes €${high}: €${gap} is what that one refusal costs on this route, in this week. Nothing flies it nonstop, so the only question was where you would rather be at 3am.`,
+        `The cheapest was €${low}, changing planes in the Gulf. Rule the Gulf out and the cheapest is €${high}. So staying off that bench costs €${gap}. Nothing flies this route nonstop, so it was always going to be somebody's airport in the middle of the night.`,
     },
     chiangmai: {
-      ask: 'Chiang Mai in November. Nobody seems to fly there, so I have no idea what a sensible price even looks like.',
+      ask: 'Chiang Mai in November. Nobody flies there direct, so I have no idea what a normal price even looks like.',
       rowKind: 'route',
       point: (low: number, high: number, gap: number) =>
-        `No airline flies it nonstop, so every option is a connection and the only question is which. €${low} was the cheapest, at two stops; €${high} was the quickest, at one. €${gap} is what buying the short way costs — and neither of them is the flight you would have found by typing the route in once.`,
+        `€${low} was the cheapest, with two stops. €${high} was the quickest, with one, and it landed hours earlier. €${gap} between them, and searching the route once shows you neither.`,
     },
     warm: {
-      ask: "Somewhere warm for a long weekend in February. Canaries, Portugal, Morocco, I don't mind which — cheapest wins.",
+      ask: "Somewhere warm for a long weekend in February. Canaries, Portugal, Morocco, I don't mind which. I just want to sit outside.",
       rowKind: 'destinations',
       point: (low: number, high: number, gap: number) =>
-        `€${low} to the cheapest of the four and €${high} to the dearest, each priced on all three dates. €${gap} between two places that were both just "somewhere warm" when the brief came in. This is the shape a Survey is for.`,
+        `Four destinations, three dates each. €${low} to the cheapest of them and €${high} to the dearest. €${gap} between two places that were both just "somewhere warm" when the brief came in.`,
     },
     istanbul: {
-      ask: 'Istanbul, first week of December. Cheap is good, but not if it costs me a whole day getting there.',
+      ask: "Istanbul, first week of December. Cheap is good, but I'm not spending a whole day getting there. I've only got four days.",
       rowKind: 'route',
       point: (low: number, high: number, gap: number) =>
-        `€${low} was the cheapest and it changes planes; €${high} was the quickest and it does not. €${gap} is the price of the afternoon that buys back. Both are in the report, ranked by price and by journey time, and the choice is yours rather than ours.`,
+        `€${low} was the cheapest and it changes planes. €${high} was the quickest and it does not. €${gap} buys the afternoon back, and both are in the report with their journey times next to them.`,
     },
   },
 
   avoid: {
-    /** €73, 113, 1,060, 50 and 135 are all in `AVOIDING`, written out here. */
-    heading: 'Ruling out the Gulf cost €73 on Singapore and nothing at all on Hanoi',
-    lead: 'Say you will not change planes in the Gulf. We read every option first, then take away the ones that connect there. On Singapore that took out 113 of 1,060 options and put €73 on the cheapest fare; on Hanoi it took out 50 of 135 and changed the price by nothing. You only find out which by having priced both.',
+    /** €73 and €0 are the two `cheapestAvoiding - cheapest` gaps in `AVOIDING`,
+     *  written out. The counts they used to be argued with are on the bars now,
+     *  so neither this heading nor the lead repeats them. */
+    heading: 'Ruling out the Gulf: €73 on Singapore, €0 on Hanoi',
+    lead: 'Say you will not change planes in the Gulf. We read every option first, then take away the ones that connect there. What that costs is different on every route, and pricing both is the only way to know.',
     /** AvoidHubs. */
     toggleOn: 'Gulf hubs excluded',
     toggleOff: 'Everything we found',
     toggleHint:
-      'Press to drop every option that connects in Dubai, Doha, Abu Dhabi, Bahrain, Muscat or Kuwait.',
+      'Drops every option connecting in Dubai, Doha, Abu Dhabi, Bahrain, Muscat or Kuwait.',
     optionCount: (options: string) => `${options} options`,
+    /** Labels the coloured head of each bar. */
+    viaGulf: (options: string) => `${options} via the Gulf`,
     cheapest: 'Cheapest',
     up: (added: number) => `up €${added}`,
     without: (fare: number) => `€${fare} without them`,
     unchanged: 'unchanged either way',
-    hubsHeading: 'Where the connections actually happen',
-    /** 2,942 is `TOTALS.options` and 66 is `LAYOVER_DISTINCT`, both written out. */
-    hubsNote:
-      "Connection counts across all 2,942 options, in which 66 different airports appeared. Excluding a hub matches an option's connecting airports only, so it never rules out your origin or your destination.",
+    hubsHeading: 'Where the connections happen',
+    hubsNote: (options: string, airports: number) =>
+      `Connection counts across all ${options} options, in ${airports} different airports. Excluding a hub matches connecting airports only, never your origin or your destination.`,
   },
 
   routes: {
-    heading: (routings: string, seconds: number) =>
+    /** `seconds` is `DISCOVERY.seconds` (0.16), pre-formatted by the call site
+     *  through `Intl.NumberFormat` — it is a fraction, and a locale's decimal
+     *  separator is not '.' everywhere the way a plain template literal assumes. */
+    heading: (routings: string, seconds: string) =>
       `There are ${routings} ways to reach Hanoi, and we read the map in ${seconds} seconds before pricing one of them`,
-    lead: 'Every line is one way of getting from Amsterdam to Hanoi within a stop budget — we look at what connects to what first, and then go and price the routes worth pricing.',
+    lead: 'Every line is one way of getting from Amsterdam to Hanoi within a stop budget. We look at what connects to what first, and then go and price the routes worth pricing.',
     /** RouteWeb. The plural rule lives with the language, not at the call site. */
     webLabel: (routings: string, stops: number) =>
       `${routings} routings within ${stops} ${stops === 1 ? 'stop' : 'stops'}`,
     webUpTo: (stops: number) => `Up to ${stops} ${stops === 1 ? 'stop' : 'stops'}`,
-    webNote: (airports: string, connections: string, seconds: number) =>
+    webNote: (airports: string, connections: string, seconds: string) =>
       `Amsterdam to Hanoi, walked over a map of ${airports} airports and ${connections} direct connections in ${seconds} seconds.`,
     /** RouteWeb tab list: one live diagram, stepped through by stop budget. */
     tabsLabel: 'Choose a stop budget',
@@ -310,7 +316,7 @@ export const en = {
     /** €10 and €147 are both measured, written out. */
     lead: 'More dates and destinations mean more searching, and the searching is what you pay for. The New York report above cost €10 and found €147 between the best day in its window and the worst.',
     kicker:
-      'One route on one fixed date? Google Flights does that free in ninety seconds — do not pay us for it. We are worth it once you have several destinations and flexible dates, where the spread is usually worth more than the fee.',
+      'One route on one fixed date? Google Flights does that free in ninety seconds, so do not pay us for it. We are worth it once you have several destinations and flexible dates, where the spread is usually worth more than the fee.',
     /** PriceTiers. Keyed by the tier id in `tiers.ts`, which keeps the two
      *  figures — the price, parsed into cents by `briefAmount`, and the search
      *  count the tariff sizes its numeral off. Neither is a figure a
@@ -347,7 +353,7 @@ export const en = {
 
   brief: {
     heading: 'Send a brief',
-    lead: 'Only the destination is required. Everything else is a tap, or leave it and we will use our judgement — the vaguest briefs are the ones worth most, because they have the most dates to be wrong about. The report comes back the same day.',
+    lead: 'Only the destination is required. Everything else is a tap, or leave it and we will use our judgement. The vaguest briefs are the ones worth most, because they have the most dates to be wrong about. The report comes back the same day.',
     limits: [
       'We do not book or ticket anything. We find the options and hand you the links.',
       'Prices come from public flight search results rather than from the airlines, so they are what was showing when we looked and they can move before you book.',
@@ -392,7 +398,7 @@ export const en = {
     monthLabel: 'Which month',
     lengthLabel: 'How long',
     moreSummary: 'Fussy about anything?',
-    moreHint: (dates: string, cabin: string) => `Optional — ${dates}, ${cabin}, no other rules`,
+    moreHint: (dates: string, cabin: string) => `Optional: ${dates}, ${cabin}, no other rules`,
     datesLabel: 'Your dates',
     cabinLabel: 'Cabin',
     prioritiesLabel: 'What matters most, in the order you tap them',
@@ -406,13 +412,13 @@ export const en = {
     payBusy: 'Opening checkout…',
     pay: (price: string) => `Pay ${price}`,
     note: (time: string) =>
-      `You finish on Stripe's checkout — card, Apple Pay or Google Pay, and a voucher code if you have one. We never see the card. The report lands in your inbox in about ${time}.`,
+      `You finish on Stripe's checkout: card, Apple Pay or Google Pay, and a voucher code if you have one. We never see the card. The report lands in your inbox in about ${time}.`,
     /** What the customer sees on Stripe's own checkout page. */
-    checkoutLineItem: (name: string) => `Bureau — ${name} report`,
+    checkoutLineItem: (name: string) => `Bureau: ${name} report`,
   },
 
   status: {
-    title: 'Bureau — your report',
+    title: 'Bureau: your report',
     brand: 'Bureau',
     missing: 'We cannot find that job. Check the link in your receipt.',
     eyebrow: (tier: string, job: string) => `${tier} · job ${job}`,
@@ -423,8 +429,7 @@ export const en = {
   },
 
   footer: {
-    line: 'Bureau — flight research reports. We find the flights; you book them.',
-    github: 'The engine on GitHub',
+    line: 'Bureau: flight research reports. We find the flights; you book them.',
   },
 
   /** Everything the browser is ever shown when something goes wrong. The first

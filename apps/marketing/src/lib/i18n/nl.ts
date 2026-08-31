@@ -30,7 +30,7 @@ const searchUnit = (n: number): string => (n === 1 ? 'zoekopdracht' : 'zoekopdra
 
 export const nl: Messages = {
   meta: {
-    title: 'Bureau — vluchtonderzoek voor wie flexibele reisdata heeft',
+    title: 'Bureau: vluchtonderzoek voor wie flexibele reisdata heeft',
     description:
       'Je geeft aan waar je heen wilt en ongeveer wanneer. Bureau prijst elke datum waarop je zou kunnen vliegen, rangschikt wat dat oplevert en stuurt je één rapport met een boekingslink per optie. Vanaf €3, en we boeken of ticketen zelf nooit iets.',
     orgName: 'Bureau',
@@ -84,7 +84,7 @@ export const nl: Messages = {
     boardWindow: 'elke vertrekdatum',
     boardFootLead: 'Goedkoopste dag',
     boardFootDearest: ', duurste',
-    boardFootWorth: '— flexibel zijn was',
+    boardFootWorth: 'en flexibel zijn was',
     boardFootTail: 'waard op deze route. Enkele reis, economy.',
   },
 
@@ -109,13 +109,13 @@ export const nl: Messages = {
     colDearest: 'Duurst',
     colSave: 'Je bespaart',
     fareNote:
-      'Elke route is doorzocht op alle zeven vertrekdata, en de balken delen één schaal, dus de Alpenroutes zijn echt zoveel goedkoper dan de Atlantische. Het percentage is de besparing gemeten tegen het goedkoopste tarief — daarom wint Innsbruck op flexibiliteit van New York, terwijl het een tiende kost. Acht van de negen spreidingen verslaan de €10 die een Verkenning kost. Enkele reis-tarieven in economy, de goedkoopste op het moment dat we keken.',
+      'Elke route is doorzocht op alle zeven vertrekdata, en de balken delen één schaal, dus de Alpenroutes zijn echt zoveel goedkoper dan de Atlantische. Het percentage is de besparing gemeten tegen het goedkoopste tarief, en daarom wint Innsbruck op flexibiliteit van New York, terwijl het een tiende kost. Acht van de negen spreidingen verslaan de €10 die een Verkenning kost. Enkele reis-tarieven in economy, de goedkoopste op het moment dat we keken.',
   },
 
   work: {
     heading:
       'Vijfenzeventig zoekopdrachten kostten ons 200 seconden. Met de hand kost dat twee uur.',
-    lead: 'Vier briefings, vijfenzeventig zoekopdrachten. Eén zoekopdracht is één route geprijsd op één datum, dus een briefing die beide open laat is niet één vraag maar tientallen — en bij tientallen houdt een rij browsertabs op nuttig te zijn.',
+    lead: 'Vier briefings, vijfenzeventig zoekopdrachten. Eén zoekopdracht is één route geprijsd op één datum, dus een briefing die beide open laat is niet één vraag maar tientallen, en bij tientallen houdt een rij browsertabs op nuttig te zijn.',
     scenarios: {
       gateway: {
         ask: 'Hanoi in november. Ik reis desnoods met de trein naar Brussel of Frankfurt als dat goedkoper is, maakt me niet uit.',
@@ -147,7 +147,7 @@ export const nl: Messages = {
       queries: number,
       hours: string,
     ) =>
-      `in ${seconds} seconden daadwerkelijk zoeken, wat ${options} opties opleverde bij ${carriers} maatschappijen. Met de hand, aan een royale ${manualSeconds} seconden per stuk (route intypen, wachten, resultaten scannen, prijs noteren), kosten diezelfde ${queries} zoekopdrachten ongeveer ${hours} uur. De grootste van de vier — achtentwintig zoekopdrachten over vier Amerikaanse steden — is een Verkenning van €10. Die met-de-hand-schatting is het enige cijfer op deze pagina dat we niet hebben gemeten.`,
+      `in ${seconds} seconden daadwerkelijk zoeken, wat ${options} opties opleverde bij ${carriers} maatschappijen. Met de hand, aan een royale ${manualSeconds} seconden per stuk (route intypen, wachten, resultaten scannen, prijs noteren), kosten diezelfde ${queries} zoekopdrachten ongeveer ${hours} uur. De grootste van de vier, achtentwintig zoekopdrachten over vier Amerikaanse steden, is een Verkenning van €10. Die met-de-hand-schatting is het enige cijfer op deze pagina dat we niet hebben gemeten.`,
   },
 
   /** De vijf verhalen uit `STORIES`, elk in de band waar het bewijs voor is.
@@ -156,62 +156,63 @@ export const nl: Messages = {
    *  liggen vast. De regel met de telling eronder komt uit `work`. */
   stories: {
     lisbon: {
-      ask: 'Lissabon ergens in oktober. Ik zit niet vast aan een datum, dus als er een goedkopere dag tussen zit neem ik die.',
+      ask: 'Lissabon in oktober. Mijn zus woont daar, dus de datum is wat die week het goedkoopst is. Maakt me echt niet uit welke dag.',
       rowKind: 'route',
       point: (low: number, high: number, gap: number) =>
-        `€${low} op de goedkoopste van de zeven data, €${high} op de duurste. €${gap} voor het verschuiven van een korte vlucht met een paar dagen — en de goedkoopste van de zeven was een directe vlucht, wat meestal niet zo uitpakt.`,
+        `€${low} op de goedkoopste dag van die week, €${high} op de duurste. Dat is €${gap} voor het opschuiven van een vlucht van drie uur met een paar dagen. De goedkope was er ook nog een directe.`,
     },
     bali: {
-      ask: "Bali in februari. Eén tussenstop is prima, maar niet in de Golf — ik heb Doha om vier uur 's nachts gedaan en dat doe ik niet nog eens.",
+      ask: "Bali in februari. Eén tussenstop is prima, maar niet Doha. Dat heb ik één keer gedaan en toen zat ik daar vijf uur op een bankje, om drie uur 's nachts.",
       rowKind: 'route',
       point: (low: number, high: number, gap: number) =>
-        `€${low} was de goedkoopste van alles, en die stapt over in de Golf. Sluit je de Golf uit, dan wordt de goedkoopste €${high}: €${gap} is wat die ene weigering kost op deze route, in deze week. Er vliegt niemand direct, dus de enige vraag was waar je om 3 uur 's nachts liever staat.`,
+        `De goedkoopste was €${low}, met een overstap in de Golf. Sluit de Golf uit en de goedkoopste is €${high}. Van dat bankje wegblijven kost dus €${gap}. Er vliegt niemand direct, dus het werd altijd iemands luchthaven midden in de nacht.`,
     },
     chiangmai: {
-      ask: 'Chiang Mai in november. Er lijkt niemand heen te vliegen, dus ik heb geen idee wat een normale prijs is.',
+      ask: 'Chiang Mai in november. Er vliegt niemand direct heen, dus ik heb geen idee wat een normale prijs is.',
       rowKind: 'route',
       point: (low: number, high: number, gap: number) =>
-        `Geen enkele maatschappij vliegt er direct heen, dus elke optie is een overstap en de vraag is alleen welke. €${low} was de goedkoopste, met twee tussenstops; €${high} was de snelste, met één. €${gap} is wat de korte weg kost — en geen van beide is de vlucht die je had gevonden door de route één keer in te typen.`,
+        `€${low} was de goedkoopste, met twee tussenstops. €${high} was de snelste, met één, en die landde uren eerder. €${gap} verschil, en als je de route één keer zoekt, zie je geen van beide.`,
     },
     warm: {
-      ask: 'Ergens warm voor een lang weekend in februari. Canarische Eilanden, Portugal, Marokko, maakt me niet uit — de goedkoopste wint.',
+      ask: 'Ergens warm voor een lang weekend in februari. Canarische Eilanden, Portugal, Marokko, maakt me niet uit. Ik wil gewoon buiten kunnen zitten.',
       rowKind: 'bestemmingen',
       point: (low: number, high: number, gap: number) =>
-        `€${low} naar de goedkoopste van de vier en €${high} naar de duurste, elk geprijsd op alle drie de data. €${gap} tussen twee plekken die in de briefing allebei gewoon "ergens warm" waren. Dit is precies de vorm waar een Verkenning voor is.`,
+        `Vier bestemmingen, elk op drie data. €${low} naar de goedkoopste en €${high} naar de duurste. €${gap} tussen twee plekken die in de briefing allebei gewoon "ergens warm" waren.`,
     },
     istanbul: {
-      ask: 'Istanbul, eerste week van december. Goedkoop is mooi, maar niet als het me een hele dag reizen kost.',
+      ask: 'Istanbul, eerste week van december. Goedkoop is mooi, maar ik ga er geen hele dag over doen. Ik heb maar vier dagen.',
       rowKind: 'route',
       point: (low: number, high: number, gap: number) =>
-        `€${low} was de goedkoopste en die stapt over; €${high} was de snelste en die doet dat niet. €${gap} is de prijs van de middag die je daarmee terugkoopt. Beide staan in het rapport, gerangschikt op prijs en op reisduur, en de keuze is aan jou en niet aan ons.`,
+        `€${low} was de goedkoopste en die stapt over. €${high} was de snelste en die niet. €${gap} koopt de middag terug, en beide staan in het rapport met hun reistijd ernaast.`,
     },
   },
 
   avoid: {
-    heading: 'De Golf uitsluiten kostte €73 op Singapore en helemaal niets op Hanoi',
-    lead: 'Stel dat je niet wilt overstappen in de Golf. We lezen eerst alle opties, en halen daarna de opties weg die daar overstappen. Op Singapore verdwenen zo 113 van de 1.060 opties, en steeg de goedkoopste prijs met €73; op Hanoi verdwenen er 50 van de 135, zonder dat de prijs veranderde. Je weet pas welke van de twee het is als je allebei hebt geprijsd.',
+    heading: 'De Golf uitsluiten: €73 op Singapore, €0 op Hanoi',
+    lead: 'Stel dat je niet wilt overstappen in de Golf. We lezen eerst alle opties en halen daarna de opties weg die daar overstappen. Wat dat kost verschilt per route, en allebei prijzen is de enige manier om het te weten.',
     toggleOn: 'Golf-hubs uitgesloten',
     toggleOff: 'Alles wat we vonden',
     toggleHint:
-      'Druk om elke optie te laten vallen die overstapt in Dubai, Doha, Abu Dhabi, Bahrein, Muscat of Koeweit.',
+      'Laat elke optie vallen die overstapt in Dubai, Doha, Abu Dhabi, Bahrein, Muscat of Koeweit.',
     optionCount: (options: string) => `${options} opties`,
+    viaGulf: (options: string) => `${options} via de Golf`,
     cheapest: 'Goedkoopst',
     up: (added: number) => `€${added} duurder`,
     without: (fare: number) => `€${fare} zonder die hubs`,
     unchanged: 'in beide gevallen gelijk',
-    hubsHeading: 'Waar de overstappen echt plaatsvinden',
-    hubsNote:
-      'Overstaptellingen over alle 2.942 opties, waarin 66 verschillende luchthavens voorkwamen. Een hub uitsluiten kijkt alleen naar de overstapluchthavens van een optie, dus je vertrek- of bestemmingsluchthaven vallen er nooit onder.',
+    hubsHeading: 'Waar de overstappen plaatsvinden',
+    hubsNote: (options: string, airports: number) =>
+      `Overstaptellingen over alle ${options} opties, in ${airports} verschillende luchthavens. Een hub uitsluiten kijkt alleen naar overstapluchthavens, nooit naar je vertrek- of bestemmingsluchthaven.`,
   },
 
   routes: {
-    heading: (routings: string, seconds: number) =>
+    heading: (routings: string, seconds: string) =>
       `Er zijn ${routings} manieren om Hanoi te bereiken, en we lazen de kaart in ${seconds} seconden voor we er één gingen prijzen`,
-    lead: 'Elke lijn is één manier om van Amsterdam naar Hanoi te komen binnen een tussenstopbudget — we kijken eerst wat met wat verbonden is, en gaan dan de routes prijzen die het waard zijn.',
+    lead: 'Elke lijn is één manier om van Amsterdam naar Hanoi te komen binnen een tussenstopbudget. We kijken eerst wat met wat verbonden is, en gaan dan de routes prijzen die het waard zijn.',
     webLabel: (routings: string, stops: number) =>
       `${routings} routeringen binnen ${stops} ${stops === 1 ? 'tussenstop' : 'tussenstops'}`,
     webUpTo: (stops: number) => `Tot ${stops} ${stops === 1 ? 'tussenstop' : 'tussenstops'}`,
-    webNote: (airports: string, connections: string, seconds: number) =>
+    webNote: (airports: string, connections: string, seconds: string) =>
       `Amsterdam naar Hanoi, doorlopen over een kaart van ${airports} luchthavens en ${connections} directe verbindingen in ${seconds} seconden.`,
     tabsLabel: 'Kies een tussenstopbudget',
   },
@@ -221,7 +222,7 @@ export const nl: Messages = {
     steps: [
       {
         h: 'Stuur een ruwe briefing',
-        p: 'Vanwaar, waarheen en ongeveer wanneer. Meerdere bestemmingen kan, en vaag ook — vaag is precies het deel waar we goed in zijn.',
+        p: 'Vanwaar, waarheen en ongeveer wanneer. Meerdere bestemmingen kan, en vaag ook. Vaag is precies het deel waar we goed in zijn.',
       },
       {
         h: 'Wij prijzen elke datum',
@@ -251,7 +252,7 @@ export const nl: Messages = {
     heading: 'Je betaalt voor het zoeken, niet voor de stoel',
     lead: 'Meer data en bestemmingen betekent meer zoekwerk, en dat zoekwerk is wat je betaalt. Het New York-rapport hierboven kostte €10 en vond €147 tussen de beste en de slechtste dag in zijn venster.',
     kicker:
-      'Eén route op één vaste datum? Google Flights doet dat gratis in negentig seconden — betaal ons daar niet voor. We zijn het waard zodra je meerdere bestemmingen en flexibele data hebt, waar de spreiding meestal meer waard is dan de kosten.',
+      'Eén route op één vaste datum? Google Flights doet dat gratis in negentig seconden, dus betaal ons daar niet voor. We zijn het waard zodra je meerdere bestemmingen en flexibele data hebt, waar de spreiding meestal meer waard is dan de kosten.',
     tiers: {
       enquiry: {
         name: 'Aanvraag',
@@ -279,7 +280,7 @@ export const nl: Messages = {
 
   brief: {
     heading: 'Stuur een briefing',
-    lead: 'Alleen de bestemming is verplicht. Al het andere is een tik, of laat het leeg en wij gebruiken ons eigen oordeel — de vaagste briefings zijn juist het meest waard, omdat ze de meeste data hebben om fout over te zitten. Het rapport komt dezelfde dag terug.',
+    lead: 'Alleen de bestemming is verplicht. Al het andere is een tik, of laat het leeg en wij gebruiken ons eigen oordeel. De vaagste briefings zijn juist het meest waard, omdat ze de meeste data hebben om fout over te zitten. Het rapport komt dezelfde dag terug.',
     limits: [
       'We boeken of ticketen niets. We vinden de opties en geven je de links.',
       'Prijzen komen uit publieke vluchtzoekresultaten, niet van de maatschappijen zelf, dus het zijn de prijzen die zichtbaar waren toen we keken en ze kunnen bewegen voordat je boekt.',
@@ -320,8 +321,7 @@ export const nl: Messages = {
     monthLabel: 'Welke maand',
     lengthLabel: 'Hoe lang',
     moreSummary: 'Ergens kieskeurig over?',
-    moreHint: (dates: string, cabin: string) =>
-      `Optioneel — ${dates}, ${cabin}, verder geen regels`,
+    moreHint: (dates: string, cabin: string) => `Optioneel: ${dates}, ${cabin}, verder geen regels`,
     datesLabel: 'Jouw data',
     cabinLabel: 'Klasse',
     prioritiesLabel: 'Wat het belangrijkst is, in de volgorde waarin je tikt',
@@ -335,12 +335,12 @@ export const nl: Messages = {
     payBusy: 'Checkout wordt geopend…',
     pay: (price: string) => `Betaal ${price}`,
     note: (time: string) =>
-      `Je rondt af op Stripe's checkout — kaart, Apple Pay of Google Pay, en een kortingscode als je die hebt. Wij zien je kaartgegevens nooit. Het rapport landt over ongeveer ${time} in je inbox.`,
-    checkoutLineItem: (name: string) => `Bureau — ${name}-rapport`,
+      `Je rondt af op Stripe's checkout: kaart, Apple Pay of Google Pay, en een kortingscode als je die hebt. Wij zien je kaartgegevens nooit. Het rapport landt over ongeveer ${time} in je inbox.`,
+    checkoutLineItem: (name: string) => `Bureau: ${name}-rapport`,
   },
 
   status: {
-    title: 'Bureau — jouw rapport',
+    title: 'Bureau: jouw rapport',
     brand: 'Bureau',
     missing: 'We kunnen die klus niet vinden. Controleer de link in je bevestiging.',
     eyebrow: (tier: string, job: string) => `${tier} · klus ${job}`,
@@ -351,8 +351,7 @@ export const nl: Messages = {
   },
 
   footer: {
-    line: 'Bureau — vluchtonderzoeksrapporten. Wij vinden de vluchten; jij boekt ze.',
-    github: 'De motor op GitHub',
+    line: 'Bureau: vluchtonderzoeksrapporten. Wij vinden de vluchten; jij boekt ze.',
   },
 
   errors: {

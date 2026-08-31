@@ -201,7 +201,7 @@ $effect(() => {
 </div>
 
 <p class="note">
-  {copy.routes.webNote(nf.format(GRAPH.airports), nf.format(GRAPH.connections), DISCOVERY.seconds)}
+  {copy.routes.webNote(nf.format(GRAPH.airports), nf.format(GRAPH.connections), nf.format(DISCOVERY.seconds))}
 </p>
 
 <style>

@@ -19,14 +19,14 @@ function reshuffle() {
     else {
       const avg = gaps.reduce((a, b) => a + b, 0) / gaps.length
       const worst = Math.max(...gaps.slice(1))
-      result = `${renderer} — 480 cells, ${(1000 / avg).toFixed(0)} fps average, ${(1000 / worst).toFixed(0)} fps worst frame, ${gaps.length} frames`
+      result = `${renderer}: 480 cells, ${(1000 / avg).toFixed(0)} fps average, ${(1000 / worst).toFixed(0)} fps worst frame, ${gaps.length} frames`
     }
   }
   requestAnimationFrame(sample)
 }
 </script>
 
-<svelte:head><title>Split-flap — frame budget</title></svelte:head>
+<svelte:head><title>Split-flap: frame budget</title></svelte:head>
 
 <section>
 	<h2>Frame budget</h2>

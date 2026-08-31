@@ -8,6 +8,7 @@ import PriceTiers from '$lib/components/PriceTiers.svelte'
 import QueryGrid from '$lib/components/QueryGrid.svelte'
 import RouteWeb from '$lib/components/RouteWeb.svelte'
 import type { Column, Point } from '$lib/components/SplitFlapBoard.svelte'
+import Story from '$lib/components/Story.svelte'
 import WeekBoard from '$lib/components/WeekBoard.svelte'
 import { getCopy, getLocale } from '$lib/i18n/copy.svelte'
 import { CABIN, DISCOVERY, FLEX, SPREADS, TOTALS } from '$lib/scenarios'
@@ -48,7 +49,6 @@ const HEADLINES = $derived(
     return { ...h, row: i, spread: SPREADS[i].high - SPREADS[i].low }
   }),
 )
-let held = $state(false)
 
 /* The board inside the photograph. Every row is the cheapest fare we actually
  *  found on that route, on the day it was cheapest — no gates, no statuses, no
@@ -166,7 +166,7 @@ onMount(() => {
     return () => window.removeEventListener('scroll', onScroll)
   }
   const t = setInterval(() => {
-    if (!held) hi = (hi + 1) % HEADLINES.length
+    hi = (hi + 1) % HEADLINES.length
   }, 5200)
   return () => {
     window.removeEventListener('scroll', onScroll)
@@ -242,25 +242,6 @@ const LIMITS = $derived(copy.brief.limits)
       {/key}
     </div>
     <p class="pitch">{copy.hero.pitch}</p>
-    <div class="hero-actions">
-      <a class="btn" href="#brief">{copy.hero.ctaBrief}</a>
-      <a class="quiet" href="#report">{copy.hero.ctaHow}</a>
-    </div>
-    <ol class="ticks">
-      {#each HEADLINES as h, n (h.kicker)}
-        <li>
-          <button
-            type="button"
-            aria-label={h.kicker}
-            aria-current={hi === n}
-            onclick={() => {
-              held = true
-              hi = n
-            }}
-          ></button>
-        </li>
-      {/each}
-    </ol>
   </div>
 </section>
 
@@ -304,7 +285,11 @@ const LIMITS = $derived(copy.brief.limits)
         CABIN.premiumFlat - CABIN.economyLow,
       )}
     </p>
-
+    <!-- One traveller to a band, from `STORIES`. The charts above argue that a
+         week of dates is worth money; this is the job where it was worth €35 on
+         a short flight everyone assumes has nothing in it. Sides alternate down
+         the page: left, right, left, right, left. -->
+    <Story id="lisbon" />
   </section>
 
   <section class="band" id="work">
@@ -317,12 +302,14 @@ const LIMITS = $derived(copy.brief.limits)
     <h2>{copy.avoid.heading}</h2>
     <p class="lead measure">{copy.avoid.lead}</p>
     <AvoidHubs />
+    <Story id="bali" side="right" />
   </section>
 
   <section class="band" id="routes">
-    <h2>{copy.routes.heading(nf.format(DISCOVERY.byStops[2].routes), DISCOVERY.seconds)}</h2>
+    <h2>{copy.routes.heading(nf.format(DISCOVERY.byStops[2].routes), nf.format(DISCOVERY.seconds))}</h2>
     <p class="lead measure">{copy.routes.lead}</p>
     <RouteWeb />
+    <Story id="chiangmai" />
   </section>
 
   <section class="band air" id="report">
@@ -339,6 +326,7 @@ const LIMITS = $derived(copy.brief.limits)
         </li>
       {/each}
     </ol>
+    <Story id="istanbul" side="right" />
   </section>
 
   <section class="band air" id="pricing">
@@ -347,6 +335,7 @@ const LIMITS = $derived(copy.brief.limits)
     <p class="lead measure">{copy.pricing.lead}</p>
     <PriceTiers bind:selected={tier} />
     <p class="measure kicker">{copy.pricing.kicker}</p>
+    <Story id="warm" />
   </section>
 
   <section class="band air" id="brief">
@@ -364,9 +353,6 @@ const LIMITS = $derived(copy.brief.limits)
 
 <footer>
   <p>{copy.footer.line}</p>
-  <nav>
-    <a href="https://github.com/jurrejan/flights">{copy.footer.github}</a>
-  </nav>
 </footer>
 
 <style>
@@ -470,6 +456,24 @@ const LIMITS = $derived(copy.brief.limits)
     header nav .lang a {
       display: inline;
     }
+    /* Three things left on the bar, and the Dutch CTA is 138px of them: at 320
+       the label broke to two lines and the sticky bar grew from 73px to 95px.
+       A button does not wrap, so the gaps, the mark and the label's own size
+       give way instead. */
+    header .bar {
+      gap: var(--space-2);
+    }
+    header nav {
+      gap: var(--space-3);
+      font-size: 0.82rem;
+    }
+    header nav .cta {
+      white-space: nowrap;
+      padding-inline: 0.7rem;
+    }
+    .mark {
+      font-size: 1.1rem;
+    }
   }
 
   /* ---- hero ------------------------------------------------------------ */
@@ -481,8 +485,7 @@ const LIMITS = $derived(copy.brief.limits)
      it rather than with the window. --board-w is the span between the corner
      pins — 0.6462 - 0.3582 of the intrinsic photograph — taken through the same
      --photo-w the copy column is already placed against. */
-  .hero,
-  .weekband {
+  .hero {
     --photo-w: max(100vw, calc(max(30rem, min(82vh, 48vw)) * 2.3447));
     --board-w: calc(0.288 * var(--photo-w));
     --depth: calc(var(--board-w) * 0.15);
@@ -494,8 +497,7 @@ const LIMITS = $derived(copy.brief.limits)
      background layer and would bury it. Thrown from the upper left, so the
      panel reads as lit from the same side the concourse windows are, and a
      hairline bevel — lit top edge, dark bottom — sells the thickness. */
-  .hero::after,
-  .weekband::after {
+  .hero::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -708,6 +710,28 @@ const LIMITS = $derived(copy.brief.limits)
      blocks, so handing them back does not re-cover the board. */
   .hero-inner {
     pointer-events: none;
+    position: relative;
+    isolation: isolate;
+  }
+  /* The copy sat directly on the photograph and read as printed onto it. This
+     is a scrim, angled so it is densest behind the type and gone by the time it
+     reaches the board — the board must not be dimmed, it is the evidence. Its
+     own layer rather than a background on .hero-inner, because that box spans
+     the whole hero and a flat wash across all of it would kill the concourse. */
+  .hero-inner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+      101deg,
+      rgb(1 7 5 / 0.86) 0%,
+      rgb(1 7 5 / 0.66) 26%,
+      rgb(1 7 5 / 0.3) 46%,
+      rgb(1 7 5 / 0.06) 62%,
+      rgb(1 7 5 / 0) 72%
+    );
   }
   .hero-inner > * {
     pointer-events: auto;
@@ -718,14 +742,17 @@ const LIMITS = $derived(copy.brief.limits)
        width the photo ends up displayed at. The copy column is placed against
        that edge rather than against a centred container, which at wide viewports
        drifts right faster than the board does and walks the text onto it. */
-    --photo-w: max(100vw, calc(max(30rem, min(82vh, 48vw)) * 2.3447));
     --board-x: calc(0.361 * var(--photo-w));
+    /* How much clear glass the copy is guaranteed to the left of the board.
+       This is what caps the headline: the figure can only be as big as the
+       column it has, so growing the type means widening this first. */
+    --copy-col: clamp(30rem, 26vw, 40rem);
     max-width: none;
     margin: 0;
     padding: 6rem var(--gutter) var(--space-5)
       min(
         max(var(--gutter), calc((100vw - 74rem) / 2 + var(--gutter))),
-        calc(var(--board-x) - 30rem)
+        calc(var(--board-x) - var(--copy-col))
       );
     min-height: max(30rem, min(82vh, 48vw));
     display: grid;
@@ -743,7 +770,9 @@ const LIMITS = $derived(copy.brief.limits)
      buys. Everything in here is sized off that figure. */
   .rotor {
     display: grid;
-    max-width: 30rem;
+    /* the column, less a margin — never a fixed rem, or the copy grows past
+       the clear glass and onto the board on a wide screen */
+    max-width: calc(var(--copy-col) - 3rem);
   }
   .slab {
     grid-area: 1 / 1;
@@ -756,6 +785,7 @@ const LIMITS = $derived(copy.brief.limits)
     letter-spacing: 0.24em;
     text-transform: uppercase;
     color: #f0d489;
+    text-shadow: 0 0.08em 0.7em rgb(0 0 0 / 0.7);
     margin-bottom: 1.1em;
     animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
@@ -771,9 +801,16 @@ const LIMITS = $derived(copy.brief.limits)
   .rotor h1 em {
     display: block;
     font-style: normal;
-    font-size: clamp(4.25rem, 10.4vw, 9.75rem);
+    /* Two caps, and the second is the one that matters. Viewport-relative type
+       grows faster than the board moves right, so on a wide screen the figure
+       outruns its own column and lands on the flap board — measured at 1920, a
+       32px overlap. The second term is the column's own limit: "EUR147" is
+       about 2.2em of this face, so 2.4 leaves the figure a margin it cannot
+       spend. */
+    font-size: min(clamp(4.25rem, 11.6vw, 13rem), calc((var(--copy-col) - 3rem) / 2.5));
     line-height: 0.8;
     letter-spacing: -0.055em;
+    text-shadow: 0 0.045em 0.34em rgb(0 0 0 / 0.55);
     animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
     animation-delay: 90ms;
   }
@@ -781,8 +818,9 @@ const LIMITS = $derived(copy.brief.limits)
     display: block;
     max-width: 17em;
     margin-top: 0.8rem;
-    font-size: clamp(1.05rem, 1.45vw, 1.3rem);
+    font-size: clamp(1.05rem, 1.7vw, 1.75rem);
     font-weight: 400;
+    text-shadow: 0 0.05em 0.5em rgb(0 0 0 / 0.6);
     line-height: 1.22;
     letter-spacing: -0.012em;
     color: rgb(237 243 239 / 0.72);
@@ -798,45 +836,12 @@ const LIMITS = $derived(copy.brief.limits)
 
   /* The hero says what the thing is, once, in the same glass as the headline. */
   .pitch {
-    max-width: 27rem;
+    max-width: min(27rem, calc(var(--copy-col) - 3rem));
     color: rgb(237 243 239 / 0.82);
     font-size: 1.02rem;
     line-height: 1.5;
   }
-  .hero-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-3);
-  }
-  .hero-actions .btn {
-    background: #f0f5f1;
-    color: #12211c;
-  }
-  .hero-actions .btn:hover {
-    background: #fff;
-  }
 
-  .ticks {
-    list-style: none;
-    display: flex;
-    gap: 0.5rem;
-  }
-  .ticks button {
-    width: 2.2rem;
-    height: 3px;
-    padding: 0;
-    border: none;
-    border-radius: 2px;
-    background: rgb(237 243 239 / 0.28);
-    transition: background 0.25s ease;
-  }
-  .ticks button:hover {
-    background: rgb(237 243 239 / 0.6);
-  }
-  .ticks button[aria-current="true"] {
-    background: #f0d489;
-  }
 
   /* Narrow: the photograph becomes a band of its own and the copy sits under
      it, rather than being squeezed on top of the board. */
@@ -868,20 +873,26 @@ const LIMITS = $derived(copy.brief.limits)
      read as a stacked pair rather than as a card followed by a full-width band.
      Same radius, same inset, one notch off black so the seam between them is
      still legible. */
+  /* No panel. The two cards are the objects, laid straight on the page's own
+     ground and straddling the hero's bottom edge — a container behind them was
+     one frame too many, and it was the thing stopping them reading as loose
+     prints rather than as a section. What is left here is layout only. */
   .weekband {
     position: relative;
     margin: 0 var(--gutter) var(--gutter);
-    border-radius: clamp(6rem, 12vw, 11rem);
-    /* The ground the two cards sit on, and the darkest thing here: a raised
-       object catches more light than what it lies on, so the stack reads
-       panel -> board -> copy, darkest to lightest, in that order. */
-    background: #070d0b;
     color: #edf3ef;
   }
   .weekband-inner {
     max-width: 74rem;
     margin: 0 auto;
-    padding: clamp(var(--space-5), 6vw, var(--space-6)) clamp(var(--gutter), 4vw, var(--space-5));
+    --pad-y: clamp(var(--space-5), 6vw, var(--space-6));
+    /* How far the pair climbs out of this panel and over the hero's bottom
+       edge. It has to clear this panel's own top padding and the gutter between
+       the two panels before any of it counts as overlap, so those are the first
+       two terms and only the third is the straddle itself. */
+    --overlap: clamp(2rem, 4vw, 5rem);
+    --rise: calc(var(--pad-y) + var(--gutter) + var(--overlap));
+    padding: var(--pad-y) clamp(var(--gutter), 4vw, var(--space-5));
     /* How far the copy laps over the board, and how far the board runs past
        the panel's inner edge. Both cards add these back as padding, so an
        overlap and a crop can only ever eat empty card, never a glyph. */
@@ -900,7 +911,10 @@ const LIMITS = $derived(copy.brief.limits)
     --card-pad: clamp(1.75rem, 3vw, 2.75rem);
     display: grid;
     grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.18fr);
-    align-items: center;
+    /* Both tops start on the same line, then the two transforms below throw
+       them apart. Centred, the shorter card floated to the middle of the taller
+       one's row and never reached the seam at all. */
+    align-items: start;
     /* no gap: the two cards overlap instead, and the overlap is the point */
     gap: 0;
   }
@@ -911,16 +925,21 @@ const LIMITS = $derived(copy.brief.limits)
      number of pixels. The pair is placed off the grid on purpose: the copy sits
      high and rides over the board, the board sits low and runs off the right
      edge to be cropped by the panel. One held, one leaving. */
+  /* The pair straddles the seam: pulled up out of this panel's top, across the
+     gutter, and over the hero's bottom edge. They are a later sibling than the
+     hero in normal flow, so they paint over it without needing a z-index and
+     without the hero's own overflow clipping them. */
   .card {
     position: relative;
     border-radius: clamp(2rem, 4.2vw, 3.75rem);
     padding: var(--card-pad);
+    margin-block-start: calc(-1 * var(--rise));
   }
   /* The raised one, so the lightest, and the only one that casts. */
   .weekband-copy.card {
     z-index: 1;
     background: #1a2822;
-    box-shadow: 0 2rem 5rem rgb(0 0 0 / 0.5);
+    box-shadow: 0 2rem 5rem -1rem rgb(12 24 20 / 0.5);
     margin-right: calc(-1 * var(--lap));
     transform: translateY(clamp(-2.5rem, -2vw, -1rem));
   }
@@ -934,31 +953,46 @@ const LIMITS = $derived(copy.brief.limits)
      back as padding on the sides they happen on: whatever the copy covers on
      the left and whatever the panel's radius bites off on the right is empty
      card by construction, not by luck. */
-  /* Out of the panel, not cropped by it: it clears the rounded edge and its
-     right end sits on the page's own ground — a dark card half off a dark
-     panel, which is the whole point of the pair being off the grid. Above the
-     panel's inner-shadow overlay, or the part that has left would still be
-     graded as though it were inside. */
+  /* There is no panel behind these any more, so each card casts for itself.
+     This one still runs on toward the page's right edge — the reach is what
+     keeps the pair from reading as a tidy two-column block. */
   .wb-card {
     z-index: 4;
+    box-shadow: 0 1.5rem 4rem -1.25rem rgb(12 24 20 / 0.45);
     background: #101b17;
     border: 1px solid rgb(237 243 239 / 0.06);
     padding-left: calc(var(--card-pad) + var(--lap));
     padding-right: var(--card-pad);
     margin-inline-end: calc(-1 * (var(--edge-gap) + var(--stick)));
-    transform: translateY(clamp(1rem, 2vw, 2.5rem));
+    transform: translateY(clamp(0.5rem, 1.2vw, 1.5rem));
   }
   @media (max-width: 900px) {
     .weekband-inner {
-      grid-template-columns: 1fr;
+      /* minmax(0, …) and not a bare 1fr: 1fr's automatic minimum is the item's
+         min-content, and the week board's seven fare columns are wider than a
+         320px screen — the card came out 287px in a 224px track and put the
+         document 40px past the viewport. */
+      grid-template-columns: minmax(0, 1fr);
       gap: var(--space-4);
+      /* The section already stands off the page by the gutter, so a second
+         inset here was double-counting it: 48px of a 320px screen, which is
+         exactly what the board had left to give. Gone, the stacked cards line
+         up with the hero panel and with main's own content edge. */
+      padding-inline: 0;
     }
     /* the overlap is a two-column idea; stacked it is just a broken layout */
+    /* stacked, there is no seam to straddle and no second column to lap */
     .weekband-copy.card,
     .wb-card {
       margin-right: 0;
       margin-inline-end: 0;
+      margin-block-start: 0;
       transform: none;
+    }
+    /* and with nothing lapping, the room held open for it is only an off-centre
+       card — 52px of padding on the left against 28px on the right */
+    .wb-card {
+      padding-left: var(--card-pad);
     }
   }
   /* Not --text-h2: that is sized for the full 74rem measure, and this headline
@@ -1127,7 +1161,7 @@ const LIMITS = $derived(copy.brief.limits)
     position: relative;
   }
   .limits li::before {
-    content: "—";
+    content: "–";
     position: absolute;
     left: 0;
   }
@@ -1143,8 +1177,5 @@ const LIMITS = $derived(copy.brief.limits)
     color: var(--color-muted);
     max-width: 74rem;
     margin: 0 auto;
-  }
-  footer a {
-    color: var(--color-muted);
   }
 </style>

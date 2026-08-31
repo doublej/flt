@@ -35,16 +35,16 @@ const RAIL = [
 const rail = $derived([{ t: RAIL[clock.beat % RAIL.length] }])
 </script>
 
-<svelte:head><title>Split-flap — scales</title></svelte:head>
+<svelte:head><title>Split-flap: scales</title></svelte:head>
 
 <section>
-	<h2>Large — a header</h2>
+	<h2>Large: a header</h2>
 	<SplitFlapBoard rows={head} columns={HEAD_COLS} variant="plain" />
 	<p>The <code>plain</code> variant: pine drums on timetable stock, for pages rather than photos.</p>
 </section>
 
 <section>
-	<h2>Smaller — a stat line</h2>
+	<h2>Smaller: a stat line</h2>
 	<div class="half"><SplitFlapBoard rows={stat} columns={STAT_COLS} variant="plain" /></div>
 </section>
 
@@ -59,7 +59,7 @@ const rail = $derived([{ t: RAIL[clock.beat % RAIL.length] }])
 </section>
 
 <section>
-	<h2>Decorative — a rail, no case</h2>
+	<h2>Decorative: a rail, no case</h2>
 	<SplitFlapBoard rows={rail} columns={RAIL_COLS} variant="bare" />
 	<p>The bare variant drops the case: the drums stand on the page itself.</p>
 </section>

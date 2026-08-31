@@ -74,12 +74,12 @@ let look = $state({
 })
 </script>
 
-<svelte:head><title>Split-flap — terminal hall</title></svelte:head>
+<svelte:head><title>Split-flap: terminal hall</title></svelte:head>
 
 <section>
 	<h2>Terminal hall</h2>
 	<p>
-		An amber board across a dark glass wall — a much harder light to match than the counter. Ink,
+		An amber board across a dark glass wall. A much harder light to match than the counter. Ink,
 		flap tone and the whole grade are sampled off the picture, then everything is yours to tune.
 		The lit header above the flaps is drawn too, not photographed: its diffuser, its letters and
 		the light it throws on the wall all came off the same pixels.
@@ -93,7 +93,7 @@ let look = $state({
 		columns={COLS}
 		bind:corners
 		bind:look
-		sign="Terminal 3 — all departures"
+		sign="Terminal 3 / all departures"
 		editable
 		storageKey="lab-terminal"
 	/>

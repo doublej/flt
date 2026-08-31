@@ -407,6 +407,15 @@ onMount(() => {
     color: var(--color-muted);
   }
 
+  /* Stacked. These rules used to be aimed at .who, which is the <img> inside
+     .frame and not a grid item at all, so every grid property on it was inert
+     and .frame kept its two-column placement. On the flipped rows that left
+     `grid-column: 2` standing, which conjured an implicit second track and
+     squeezed the copy into 29.6px at 320; on the others .frame and .body stayed
+     in the same cell and the quote was printed straight over the photograph,
+     512px of it at 800. Placement belongs on .frame — and so does the width, or
+     the wash keeps the old full-column box while the print alone shrinks, which
+     is what put the wash 7px past the viewport at 800. */
   @media (max-width: 800px) {
     .jobs {
       gap: var(--space-5);
@@ -415,17 +424,23 @@ onMount(() => {
     .job.flip {
       grid-template-columns: minmax(0, 1fr);
       gap: var(--space-3);
+      /* the indent is a two-column composition device; stacked it is just 7rem
+         off the front of a 224px column */
+      margin-inline-start: 0;
     }
-    .who,
-    .flip .who {
+    .frame,
+    .flip .frame {
       grid-column: 1;
       grid-row: 1;
       width: 11rem;
+      margin-block-start: 0;
     }
     .body,
     .flip .body {
       grid-column: 1;
+      grid-row: 2;
       justify-self: start;
+      margin-block-start: 0;
     }
   }
 

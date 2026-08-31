@@ -52,7 +52,7 @@ const look = $state({
 })
 </script>
 
-<svelte:head><title>Split-flap — night counter</title></svelte:head>
+<svelte:head><title>Split-flap: night counter</title></svelte:head>
 
 <section>
 	<h2>Night counter</h2>

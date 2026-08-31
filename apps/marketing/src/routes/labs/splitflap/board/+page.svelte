@@ -58,7 +58,7 @@ const fit = $derived.by(() => {
   const drawn = fitType(glyph, squeeze, aspect, advance)
   return {
     verdict: drawn.clamped
-      ? `asked ${needs.toFixed(3)}, flap is ${aspect} — clamped`
+      ? `asked ${needs.toFixed(3)}, flap is ${aspect}, clamped`
       : `fits, ${((1 - needs / aspect) * 100).toFixed(0)}% spare`,
     drawn: `glyph ${drawn.glyph.toFixed(3)} x squeeze ${drawn.squeeze.toFixed(3)}`,
     maxSqueeze: aspect / (glyph * advance),
@@ -173,7 +173,7 @@ onMount(() => {
 })
 </script>
 
-<svelte:head><title>Split-flap — board</title></svelte:head>
+<svelte:head><title>Split-flap: board</title></svelte:head>
 
 <section>
 	<h2>The board</h2>
