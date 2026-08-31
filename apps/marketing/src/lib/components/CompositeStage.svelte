@@ -72,6 +72,11 @@ const fit = $derived.by(() => {
 const basePx = $derived(
   corners.map((c) => ({ x: fit.ox + c.x * fit.dw, y: fit.oy + c.y * fit.dh })),
 )
+/** A stage point back into fractions of the photograph — the inverse of the
+ *  line above, and the only form a corner is ever stored or exported in. */
+function asFraction(p: Point): Point {
+  return { x: (p.x - fit.ox) / fit.dw, y: (p.y - fit.oy) / fit.dh }
+}
 const centre = $derived({
   x: basePx.reduce((a, p) => a + p.x, 0) / 4,
   y: basePx.reduce((a, p) => a + p.y, 0) / 4,
@@ -103,7 +108,7 @@ function bake() {
   if (!fit.dw || !fit.dh) return
   if (!place.x && !place.y && place.scale === 1 && !place.rotate) return
   // read the placed pins before zeroing what placed them
-  corners = pins.map((p) => ({ x: (p.x - fit.ox) / fit.dw, y: (p.y - fit.oy) / fit.dh }))
+  corners = pins.map(asFraction)
   place.x = 0
   place.y = 0
   place.scale = 1
@@ -228,7 +233,7 @@ function movePin(e: PointerEvent) {
   const p = local(e)
   if (!p) return
   const b = unplace(p)
-  corners[dragPin] = { x: (b.x - fit.ox) / fit.dw, y: (b.y - fit.oy) / fit.dh }
+  corners[dragPin] = asFraction(b)
 }
 
 /* drag inside the board to move it, shift-drag to size it about its centre */
@@ -279,7 +284,20 @@ function zoom(e: WheelEvent) {
    snapshot is per photograph, so the two pages never overwrite each other. */
 
 const KEY = $derived(`splitflap:${storageKey ?? src}`)
-const ui = $state({ saved: 'not saved' })
+const ui = $state({ saved: 'not saved', tl: '', tr: '', br: '', bl: '' })
+
+/* The pane can only show a number it is bound to, and the one it used to show —
+   the camera — is now folded away to identity the moment a drag ends. So bind
+   the thing that actually moves. Read off `pins` rather than `corners` so it is
+   the board's real position at every instant, camera engaged or not; readonly
+   makes it a monitor on a 200ms ticker, so it follows a drag as it happens. */
+$effect(() => {
+  const [tl, tr, br, bl] = pins.map(asFraction).map((c) => `${c.x.toFixed(4)}, ${c.y.toFixed(4)}`)
+  ui.tl = tl
+  ui.tr = tr
+  ui.br = br
+  ui.bl = bl
+})
 /* set once the page's declared defaults are known; gates the auto-save */
 let baseHash = $state<unknown>(null)
 
@@ -315,6 +333,20 @@ function apply(data: ReturnType<typeof snapshot>) {
   bake()
 }
 
+/** navigator.clipboard exists only in a secure context, and the operator reaches
+ *  this app by LAN address rather than localhost — where the whole API is simply
+ *  undefined and the button throws. The old selection trick does not care. */
+async function copy(text: string) {
+  if (navigator.clipboard) return navigator.clipboard.writeText(text)
+  const box = document.createElement('textarea')
+  box.value = text
+  box.style.cssText = 'position:fixed;opacity:0'
+  document.body.append(box)
+  box.select()
+  document.execCommand('copy')
+  box.remove()
+}
+
 function stamp() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
@@ -326,7 +358,9 @@ function asSource() {
     .join('\n')
   const pts = $state
     .snapshot(corners)
-    .map((c) => `  { x: ${c.x.toFixed(4)}, y: ${c.y.toFixed(4)} },`)
+    // Number() drops the trailing zeros toFixed leaves behind, which the
+    // formatter would otherwise strip out of the pasted block by hand.
+    .map((c) => `  { x: ${Number(c.x.toFixed(4))}, y: ${Number(c.y.toFixed(4))} },`)
     .join('\n')
   return `const look = $state({\n${body}\n})\n\nlet corners = $state<Point[]>([\n${pts}\n])\n`
 }
@@ -385,6 +419,12 @@ onMount(() => {
     const p = new Pane({ container: panel, title: 'Composite' })
     pane = p
 
+    const pins = p.addFolder({ title: 'Pins' })
+    pins.addBinding(ui, 'tl', { readonly: true, label: 'top left' })
+    pins.addBinding(ui, 'tr', { readonly: true, label: 'top right' })
+    pins.addBinding(ui, 'br', { readonly: true, label: 'bottom right' })
+    pins.addBinding(ui, 'bl', { readonly: true, label: 'bottom left' })
+
     const keep = p.addFolder({ title: 'Save' })
     keep.addBinding(ui, 'saved', { readonly: true, label: '' })
     keep.addButton({ title: 'Restore' }).on('click', () => {
@@ -398,7 +438,7 @@ onMount(() => {
       ui.saved = 'restored'
     })
     keep.addButton({ title: 'Copy as code' }).on('click', async () => {
-      await navigator.clipboard.writeText(asSource())
+      await copy(asSource())
       ui.saved = 'copied to clipboard'
     })
     keep.addButton({ title: 'Reset to defaults' }).on('click', () => {
