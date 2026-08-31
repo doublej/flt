@@ -15,6 +15,9 @@ import { fade } from 'svelte/transition'
 let tier = $state('survey')
 let scrolled = $state(false)
 let hero: HTMLElement
+/** ?tune opens the hero's tuning pane. Read from location rather than from
+ *  $app/state because the page is prerendered and has no searchParams then. */
+let tuning = $state(false)
 
 /** Four ways of saying the same thing, every figure from the runs in
  *  `scenarios.ts`. The Amsterdam-New York week ran 19-25 December: the 22nd
@@ -51,15 +54,15 @@ const DEP_COLS: Column[] = [
 ]
 
 /* Solved on /labs/splitflap/terminal — fractions of the intrinsic 2000x853. */
-const CORNERS: Point[] = [
+let CORNERS = $state<Point[]>([
   { x: 0.361, y: 0.44 },
   { x: 0.649, y: 0.44 },
   { x: 0.649, y: 0.646 },
   { x: 0.361, y: 0.646 },
-]
+])
 
 /* Grade tuned against the photograph itself, at full size, on the page. */
-const LOOK = {
+const LOOK = $state({
   renderer: 'canvas',
   exposure: 0.69,
   contrast: 1.31,
@@ -84,7 +87,7 @@ const LOOK = {
   rowgap: 0.19,
   grit: 0,
   pins: false,
-}
+})
 
 const DEPARTURES = SPREADS.map((r) => {
   const i = r.days.indexOf(r.low)
@@ -104,6 +107,8 @@ const nf = new Intl.NumberFormat('en-GB')
 /** The header sits on the photograph until you have scrolled past it, then
  *  takes the page background so the links stay readable. */
 onMount(() => {
+  tuning = new URLSearchParams(location.search).has('tune')
+
   const io = new IntersectionObserver(
     (e) => {
       scrolled = !e[0].isIntersecting
@@ -167,8 +172,10 @@ const LIMITS = [
       objectPosition="0% 46%"
       rows={DEPARTURES}
       columns={DEP_COLS}
-      corners={CORNERS}
+      bind:corners={CORNERS}
       look={LOOK}
+      editable={tuning}
+      storageKey="hero"
     />
   </div>
   <div class="hero-inner">
@@ -184,7 +191,7 @@ const LIMITS = [
       {/key}
     </div>
     <p class="pitch">
-      We price every date you could fly, then send you one report. From €7.
+      We price every date you could fly, then send you one report. From €3.
     </p>
     <div class="hero-actions">
       <a class="btn" href="#brief">Start a brief</a>
@@ -218,7 +225,7 @@ const LIMITS = [
         advance.
       </p>
       <div class="weekband-actions">
-        <a class="btn" href="#brief">Start a brief, from €7</a>
+        <a class="btn" href="#brief">Start a brief, from €3</a>
         <a class="quiet" href="#report">See how it works</a>
       </div>
       <p class="proof">
@@ -314,7 +321,8 @@ const LIMITS = [
   <section class="band" id="brief">
     <h2>Send a brief</h2>
     <p class="lead measure">
-      Tell us roughly what you are after, and the report comes back the same day.
+      Only the destination is required. Everything else is a tap, or leave it and we will use our
+      judgement. The report comes back the same day.
     </p>
     <BriefForm {tier} />
     <ul class="limits">
