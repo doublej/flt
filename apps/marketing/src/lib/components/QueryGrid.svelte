@@ -27,13 +27,13 @@ const hours = byHandHours(TOTALS.queries)
 
         <p class="tally">
           <b>{s.queries}</b>
-          <span>
-            searches — {s.grid.rows}
-            {s.grid.rowKind} × {s.grid.cols}
-            {s.grid.cols === 1 ? 'date' : 'dates'}
-          </span>
+          <span>searches</span>
         </p>
-        <p class="sub">{nf.format(s.options)} options · {s.seconds} seconds</p>
+        <p class="sub">
+          {s.grid.rows}
+          {s.grid.rowKind} × {s.grid.cols}
+          {s.grid.cols === 1 ? 'date' : 'dates'} · {nf.format(s.options)} options · {s.seconds} seconds
+        </p>
       </div>
     </article>
   {/each}
@@ -67,6 +67,7 @@ const hours = byHandHours(TOTALS.queries)
   }
   .who {
     grid-column: 1;
+    grid-row: 1;
     display: block;
     width: 100%;
     height: auto;
@@ -76,6 +77,7 @@ const hours = byHandHours(TOTALS.queries)
   }
   .body {
     grid-column: 2;
+    grid-row: 1;
     display: grid;
     gap: var(--space-2);
     align-content: center;
@@ -101,6 +103,7 @@ const hours = byHandHours(TOTALS.queries)
     font-family: var(--font-display);
     font-size: clamp(1.35rem, 2.2vw, 1.9rem);
     line-height: 1.28;
+    letter-spacing: -0.012em;
     text-wrap: pretty;
   }
   blockquote::before {
@@ -126,17 +129,16 @@ const hours = byHandHours(TOTALS.queries)
   }
   .tally b {
     font-family: var(--font-display);
-    font-weight: 400;
-    font-size: calc(2.4rem + var(--n) * 0.1rem);
-    line-height: 0.85;
+    font-stretch: var(--display-wide);
+    font-weight: 600;
+    font-size: calc(3.2rem + var(--n) * 0.13rem);
+    line-height: 0.8;
     color: var(--color-primary);
     font-variant-numeric: lining-nums tabular-nums;
   }
   .tally span {
-    font-size: 0.92rem;
-    line-height: 1.4;
+    font-size: 1rem;
     color: var(--color-muted);
-    max-width: 14rem;
   }
   .sub {
     font-family: var(--font-mono);

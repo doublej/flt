@@ -92,8 +92,10 @@ onMount(() => {
   }
   .route {
     font-family: var(--font-display);
+    font-stretch: var(--display-wide);
+    font-weight: 500;
     font-size: 1.35rem;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.005em;
   }
   .win {
     display: flex;

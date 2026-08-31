@@ -284,8 +284,8 @@ const LIMITS = [
   <section class="band" id="work">
     <h2>Seventy-five searches took us 200 seconds and would have taken you two hours</h2>
     <p class="lead measure">
-      Four briefs, seventy-five searches. Each square is one search, laid out the way the job
-      actually ran: a row for everything that varied, a column for every departure date.
+      Four briefs, seventy-five searches. One search is one route priced on one date, so a brief
+      that leaves both open is not one question but dozens.
     </p>
     <QueryGrid />
   </section>
@@ -391,6 +391,9 @@ const LIMITS = [
 
   .mark {
     font-family: var(--font-display);
+    font-stretch: var(--display-wide);
+    font-weight: 600;
+    letter-spacing: 0.01em;
     font-size: 1.3rem;
     color: #f4f6ee;
     text-decoration: none;
@@ -654,10 +657,11 @@ const LIMITS = [
   }
   .rotor h1 {
     font-family: var(--font-display);
-    font-weight: 300;
+    font-stretch: var(--display-wide);
+    font-weight: 500;
     font-size: clamp(2.1rem, 3.4vw, 3rem);
     line-height: 1.04;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.015em;
     color: #f2f4ec;
   }
   .rotor h1 span {
@@ -766,10 +770,11 @@ const LIMITS = [
   }
   .weekband h2 {
     font-family: var(--font-display);
-    font-weight: 400;
+    font-stretch: var(--display-wide);
+    font-weight: 500;
     font-size: var(--text-h2);
-    line-height: 1.12;
-    letter-spacing: -0.015em;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
     margin-bottom: var(--space-3);
   }
   .weekband-copy p {
@@ -827,10 +832,11 @@ const LIMITS = [
 
   h2 {
     font-family: var(--font-display);
-    font-weight: 400;
+    font-stretch: var(--display-wide);
+    font-weight: 500;
     font-size: var(--text-h2);
-    line-height: 1.12;
-    letter-spacing: -0.015em;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
     text-wrap: balance;
     margin-bottom: var(--space-3);
   }

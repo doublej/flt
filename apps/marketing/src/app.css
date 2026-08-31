@@ -26,7 +26,10 @@
   --shadow-lg: 0 1px 2px rgb(23 33 29 / 0.06), 0 12px 32px rgb(23 33 29 / 0.08);
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
   --font-body: "IBM Plex Sans", system-ui, sans-serif;
-  --font-display: "Newsreader", Georgia, serif;
+  /* Signage, not editorial: one grotesque whose width axis does the work a
+     second family used to. Display sets it wide, body leaves it alone. */
+  --font-display: "Archivo", system-ui, sans-serif;
+  --display-wide: 112%;
 
   --text-display: clamp(3rem, 8vw, 6.25rem);
   --text-h2: clamp(2.1rem, 4.8vw, 3.75rem);
