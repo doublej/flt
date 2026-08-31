@@ -78,17 +78,27 @@ onMount(() => {
     color: #f2f4ec;
   }
 
+  /* All nine routes stay on one line. They only just fit at the widest the panel
+     gets, so below that the row scrolls rather than wrapping to a second line
+     and changing the panel's height. */
   .chips {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
+    flex-wrap: nowrap;
+    gap: 0.3rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar {
+    display: none;
   }
   .chips button {
+    flex: none;
+    white-space: nowrap;
     background: none;
     border: 1px solid rgb(240 244 232 / 0.22);
     border-radius: 999px;
-    padding: 0.28rem 0.7rem;
-    font-size: 0.74rem;
+    padding: 0.28rem 0.46rem;
+    font-size: 0.62rem;
     color: rgb(242 244 236 / 0.72);
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
