@@ -47,13 +47,13 @@ onMount(() => {
 </script>
 
 <div class="board">
-  <p class="head">
+  <div class="head">
     <span class="route">{cur.from} → {cur.short}</span>
     <span class="win">
       <FlapText text={cur.window} variant="night" size="0.6rem" />
       every departure date
     </span>
-  </p>
+  </div>
 
   <ol class="week">
     {#each cur.days as fare, d}

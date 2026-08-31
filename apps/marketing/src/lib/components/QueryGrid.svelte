@@ -14,7 +14,7 @@ const hours = byHandHours(TOTALS.queries)
     <figure>
       <blockquote>{s.ask}</blockquote>
       <p class="route">{s.route}</p>
-      <p class="win"><FlapText text={s.window} size="0.55rem" /></p>
+      <div class="win"><FlapText text={s.window} size="0.55rem" /></div>
 
       <div class="grid" style:--cols={s.grid.cols}>
         {#each Array(s.queries) as _, i (i)}

@@ -465,7 +465,7 @@ const LIMITS = [
      lands in the same place twice. */
   .stage {
     /* scaled up so the tremble never walks an edge into frame */
-    transform: scale(1.012);
+    transform: scale(1.035);
   }
   .stage::after {
     content: "";
@@ -473,21 +473,21 @@ const LIMITS = [
     /* over-hangs the frame so the grain can crawl without showing its own edge */
     inset: -80px;
     pointer-events: none;
-    opacity: 0.05;
+    opacity: 0.13;
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   @media (prefers-reduced-motion: no-preference) {
     .stage {
-      animation: hero-drift 41s ease-in-out infinite;
+      animation: hero-drift 31s ease-in-out infinite;
     }
     .stage :global(.photo) {
       animation:
-        hero-handheld 7.3s ease-in-out infinite,
-        hero-camera 29s ease-in-out infinite;
+        hero-handheld 5.1s ease-in-out infinite,
+        hero-camera 17s ease-in-out infinite;
     }
     .stage::after {
-      animation: hero-grain 0.7s steps(1) infinite;
+      animation: hero-grain 0.5s steps(1) infinite;
     }
   }
   /* tuning fights a moving target */
@@ -499,16 +499,16 @@ const LIMITS = [
   @keyframes hero-drift {
     0%,
     100% {
-      transform: scale(1.012) translate3d(0, 0, 0) rotate(0deg);
+      transform: scale(1.035) translate3d(0, 0, 0) rotate(0deg);
     }
     23% {
-      transform: scale(1.014) translate3d(-0.18%, 0.1%, 0) rotate(0.05deg);
+      transform: scale(1.045) translate3d(-0.6%, 0.34%, 0) rotate(0.2deg);
     }
     47% {
-      transform: scale(1.012) translate3d(0.12%, 0.16%, 0) rotate(-0.04deg);
+      transform: scale(1.035) translate3d(0.42%, 0.55%, 0) rotate(-0.16deg);
     }
     71% {
-      transform: scale(1.015) translate3d(0.2%, -0.08%, 0) rotate(0.03deg);
+      transform: scale(1.052) translate3d(0.68%, -0.28%, 0) rotate(0.12deg);
     }
   }
   @keyframes hero-handheld {
@@ -517,19 +517,19 @@ const LIMITS = [
       transform: translate3d(0, 0, 0);
     }
     17% {
-      transform: translate3d(0.6px, -1.1px, 0);
+      transform: translate3d(2.2px, -4px, 0);
     }
     34% {
-      transform: translate3d(-1.2px, 0.4px, 0);
+      transform: translate3d(-4.4px, 1.5px, 0);
     }
     52% {
-      transform: translate3d(0.9px, 1px, 0);
+      transform: translate3d(3.3px, 3.6px, 0);
     }
     68% {
-      transform: translate3d(-0.5px, -0.7px, 0);
+      transform: translate3d(-1.8px, -2.6px, 0);
     }
     85% {
-      transform: translate3d(1.1px, 0.2px, 0);
+      transform: translate3d(4px, 0.8px, 0);
     }
   }
   @keyframes hero-camera {
@@ -538,22 +538,22 @@ const LIMITS = [
       filter: brightness(1) contrast(1) blur(0px);
     }
     13% {
-      filter: brightness(1.035) contrast(0.99) blur(0px);
+      filter: brightness(1.11) contrast(0.95) blur(0px);
     }
     29% {
-      filter: brightness(1.012) contrast(1) blur(0.5px);
+      filter: brightness(1.04) contrast(1) blur(1.8px);
     }
     36% {
-      filter: brightness(1.004) contrast(1.01) blur(0px);
+      filter: brightness(1.01) contrast(1.05) blur(0px);
     }
     58% {
-      filter: brightness(0.966) contrast(1.02) blur(0px);
+      filter: brightness(0.89) contrast(1.08) blur(0px);
     }
     74% {
-      filter: brightness(0.99) contrast(1) blur(0.35px);
+      filter: brightness(0.97) contrast(1) blur(1.2px);
     }
     81% {
-      filter: brightness(1.015) contrast(0.995) blur(0px);
+      filter: brightness(1.05) contrast(0.98) blur(0px);
     }
   }
   @keyframes hero-grain {
@@ -561,16 +561,16 @@ const LIMITS = [
       transform: translate3d(0, 0, 0);
     }
     20% {
-      transform: translate3d(-24px, 13px, 0);
+      transform: translate3d(-42px, 27px, 0);
     }
     40% {
-      transform: translate3d(17px, -21px, 0);
+      transform: translate3d(31px, -38px, 0);
     }
     60% {
-      transform: translate3d(-9px, -14px, 0);
+      transform: translate3d(-19px, -29px, 0);
     }
     80% {
-      transform: translate3d(22px, 8px, 0);
+      transform: translate3d(37px, 16px, 0);
     }
   }
 
