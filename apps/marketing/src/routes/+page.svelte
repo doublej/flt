@@ -180,19 +180,24 @@ const LIMITS = [
 
 <section class="hero" class:tune={tuning} id="top" bind:this={hero}>
   <div class="stage">
-    <CompositeStage
-      src="/img/terminal.jpg"
-      imageWidth={2000}
-      imageHeight={853}
-      objectPosition="0% 46%"
-      rows={DEPARTURES}
-      columns={DEP_COLS}
-      bind:corners={CORNERS}
-      look={LOOK}
-      sign="Cheapest day by route"
-      editable={tuning}
-      storageKey="hero"
-    />
+    <!-- ?tune is only known after mount, and CompositeStage builds its pane in
+         its own onMount. Keying on it remounts the stage once, with editable
+         already true, instead of flipping a prop the pane never re-reads. -->
+    {#key tuning}
+      <CompositeStage
+        src="/img/terminal.jpg"
+        imageWidth={2000}
+        imageHeight={853}
+        objectPosition="0% 46%"
+        rows={DEPARTURES}
+        columns={DEP_COLS}
+        bind:corners={CORNERS}
+        look={LOOK}
+        sign="Cheapest day by route"
+        editable={tuning}
+        storageKey="hero"
+      />
+    {/key}
   </div>
   <div class="hero-inner">
     <div class="rotor" aria-live="polite">
