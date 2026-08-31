@@ -480,6 +480,40 @@ const LIMITS = $derived(copy.brief.limits)
   /* ---- hero ------------------------------------------------------------ */
   /* The photograph is the point, so it is never cropped harder than it has to
      be and the copy stays in the dark glass on the left, clear of the board. */
+  /* Both top panels share one depth model, and its scale is the flap board's.
+     The board is the thing in the photograph the eye measures everything else
+     against, so a shadow that reads right beside it has to grow and shrink with
+     it rather than with the window. --board-w is the span between the corner
+     pins — 0.6462 - 0.3582 of the intrinsic photograph — taken through the same
+     --photo-w the copy column is already placed against. */
+  .hero,
+  .weekband {
+    --photo-w: max(100vw, calc(max(30rem, min(82vh, 48vw)) * 2.3447));
+    --board-w: calc(0.288 * var(--photo-w));
+    --depth: calc(var(--board-w) * 0.15);
+    /* lifted off the page ground rather than lying flat on it */
+    box-shadow: 0 1.5rem 4rem -1.5rem rgb(12 24 20 / 0.34);
+  }
+  /* The inner shadow has to be an overlay and not a plain inset box-shadow: the
+     photograph is a negative-z-index child, which paints above the panel's own
+     background layer and would bury it. Thrown from the upper left, so the
+     panel reads as lit from the same side the concourse windows are, and a
+     hairline bevel — lit top edge, dark bottom — sells the thickness. */
+  .hero::after,
+  .weekband::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.06),
+      inset 0 -1px 0 0 rgb(0 0 0 / 0.55),
+      inset calc(var(--depth) * 0.55) calc(var(--depth) * 0.28) var(--depth)
+        calc(var(--depth) * -0.45) rgb(0 0 0 / 0.78);
+  }
+
   .hero {
     position: relative;
     /* The hero is a panel laid on the page rather than a band bled to its
@@ -840,6 +874,7 @@ const LIMITS = $derived(copy.brief.limits)
      Same radius, same inset, one notch off black so the seam between them is
      still legible. */
   .weekband {
+    position: relative;
     margin: 0 var(--gutter) var(--gutter);
     border-radius: clamp(6rem, 12vw, 11rem);
     /* The ground the two cards sit on, and the darkest thing here: a raised
@@ -847,9 +882,6 @@ const LIMITS = $derived(copy.brief.limits)
        panel -> board -> copy, darkest to lightest, in that order. */
     background: #070d0b;
     color: #edf3ef;
-    /* one of the two cards is deliberately pushed past the panel's edge, and
-       this is what crops it against that radius */
-    overflow: hidden;
   }
   .weekband-inner {
     max-width: 74rem;
@@ -859,7 +891,17 @@ const LIMITS = $derived(copy.brief.limits)
        the panel's inner edge. Both cards add these back as padding, so an
        overlap and a crop can only ever eat empty card, never a glyph. */
     --lap: clamp(1.5rem, 3vw, 4rem);
-    --run: clamp(2rem, 5vw, 7rem);
+    /* How far past the PANEL's own edge the board card pokes. Measured from
+       the panel and not from this 74rem-capped inner, because the two edges are
+       hundreds of pixels apart on a wide screen: a push sized against the inner
+       never reached the edge at 1920 and shot past the viewport at 1280.
+       --edge-gap is inner-content-right to panel-right; --stick is the overhang
+       itself, kept under the gutter so it can never scroll the document. */
+    --panel-w: calc(100vw - 2 * var(--gutter));
+    --edge-gap: calc(
+      max(0px, (var(--panel-w) - 74rem) / 2) + clamp(var(--gutter), 4vw, var(--space-5))
+    );
+    --stick: clamp(1.5rem, 3vw, 4rem);
     --card-pad: clamp(1.75rem, 3vw, 2.75rem);
     display: grid;
     grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.18fr);
@@ -897,12 +939,18 @@ const LIMITS = $derived(copy.brief.limits)
      back as padding on the sides they happen on: whatever the copy covers on
      the left and whatever the panel's radius bites off on the right is empty
      card by construction, not by luck. */
+  /* Out of the panel, not cropped by it: it clears the rounded edge and its
+     right end sits on the page's own ground — a dark card half off a dark
+     panel, which is the whole point of the pair being off the grid. Above the
+     panel's inner-shadow overlay, or the part that has left would still be
+     graded as though it were inside. */
   .wb-card {
+    z-index: 4;
     background: #101b17;
     border: 1px solid rgb(237 243 239 / 0.06);
     padding-left: calc(var(--card-pad) + var(--lap));
-    padding-right: calc(var(--card-pad) + var(--run));
-    margin-right: calc(-1 * clamp(var(--gutter), 4vw, var(--space-5)) - var(--run));
+    padding-right: var(--card-pad);
+    margin-inline-end: calc(-1 * (var(--edge-gap) + var(--stick)));
     transform: translateY(clamp(1rem, 2vw, 2.5rem));
   }
   @media (max-width: 900px) {
@@ -914,6 +962,7 @@ const LIMITS = $derived(copy.brief.limits)
     .weekband-copy.card,
     .wb-card {
       margin-right: 0;
+      margin-inline-end: 0;
       transform: none;
     }
   }
