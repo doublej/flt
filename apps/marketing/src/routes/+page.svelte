@@ -862,7 +862,8 @@ const LIMITS = [
   /* holds the Airspace layer's negative z-index inside its own band. No
      overflow here on purpose: the layer spans the viewport, so clipping it to
      this box is what cut a straight edge through a cloud. It sizes itself to
-     the band and lets the SVG crop its own artwork instead. */
+     the band, and the svg's own "meet" fits the artwork inside without ever
+     cropping it, so there is nothing here that needs clipping. */
   section.air {
     position: relative;
     isolation: isolate;
