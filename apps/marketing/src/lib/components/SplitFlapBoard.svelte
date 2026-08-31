@@ -172,6 +172,11 @@ function misreg(i: number): string {
 function wear(i: number): string {
   return (0.88 + hash(i, 7.13) * 0.12).toFixed(3)
 }
+/** Motor tolerance: no two drums hold the same pace over a long cycle. Random
+ *  rather than hashed — nothing in the markup depends on it. */
+function jitter(): number {
+  return (Math.random() - 0.5) * 0.08
+}
 
 /* --- the machine ------------------------------------------------------- */
 
@@ -249,7 +254,7 @@ function build(text: string) {
     ltTxt.push(kids[2].firstElementChild as HTMLElement)
     lbTxt.push(kids[3].firstElementChild as HTMLElement)
     // boards boot blank and flap up to their content, so that is where we start
-    drums.push(createDrum(' ', (Math.random() - 0.5) * 0.08))
+    drums.push(createDrum(' ', jitter()))
     rest(i)
   })
   const now = performance.now()
@@ -264,7 +269,7 @@ function buildCanvas(text: string) {
   drums = []
   phase = new Uint8Array(text.length)
   shown = new Int16Array(text.length).fill(-99)
-  for (let i = 0; i < text.length; i++) drums.push(createDrum(' ', (Math.random() - 0.5) * 0.08))
+  for (let i = 0; i < text.length; i++) drums.push(createDrum(' ', jitter()))
   const now = performance.now()
   for (let i = 0; i < drums.length; i++) setTarget(drums[i], text[i], now)
 }
@@ -337,7 +342,10 @@ function frame(now: number) {
     const d = drums[i]
     const p = tick(d, now, flapMs)
     if (p < 0) {
-      if (shown[i] !== ~d.current) rest(i)
+      if (shown[i] !== ~d.current) {
+        rest(i)
+        d.rate = 1 + jitter() // the speed the hand lent it goes back
+      }
       // A drum the hand knocked later in this same frame carries a start time
       // the frame clock has not reached yet. It is not at rest, and if the loop
       // stopped on it the drum would sit there until some other knock restarted
@@ -415,9 +423,18 @@ function readout(): string {
    showing. There is no bookkeeping to get wrong and no path on which the board
    is left lying about what we found. */
 
-/** cells per second at which the hand is going hard enough to take every drum
- *  it passes over. A slow read of a board is a tenth of this. */
-const HAND_REF = 120
+/** Cells per second at which the hand is going hard enough to take every drum
+ *  it passes over. This is a flick, not a sweep: reading a board with the mouse
+ *  on it is a twentieth of this, so ordinary movement disturbs a drum or two and
+ *  only a deliberate swipe sets the whole thing off. */
+const HAND_REF = 420
+
+/** What the hand lends a knocked drum's motor, as a multiple of flapMs — a
+ *  drift leaves drums turning over lazily, a swipe snaps them round and is done
+ *  before the hand is off the board. Both are under 1: a knocked drum has forty
+ *  flaps to get through and no reason to dawdle over them. */
+const HAND_LAZY = 0.85
+const HAND_BRISK = 0.3
 
 const hand = { x: 0, y: 0, t: 0, speed: 0, owed: 0 }
 
@@ -461,7 +478,8 @@ function knock(e: PointerEvent) {
   // the patch spreads with the same force: a drift takes the drums it touches,
   // a sweep takes them either side as well. A row is a cell tall divided by the
   // aspect, so the same radius reaches fewer rows than it does columns.
-  const radius = 1 + force * 3
+  const radius = 1 + force * 2
+  const rate = HAND_LAZY - force * (HAND_LAZY - HAND_BRISK)
   const now = performance.now()
   let woke = false
   for (; hand.owed >= 1; hand.owed -= 1) {
@@ -469,6 +487,7 @@ function knock(e: PointerEvent) {
     const r = clamp(Math.round(r0 - 0.5 + scatter(radius * aspect)), rows.length - 1)
     const d = drums[r * perRow + k]
     if (d.stepStart !== REST) continue // already turning; it has been asked once
+    d.rate = rate
     d.stepStart = now
     woke = true
   }
