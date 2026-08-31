@@ -250,6 +250,19 @@ export const SPREADS: Spread[] = [
   },
 ]
 
+/** What a flexible week was worth across all nine routes, and how many of them
+ *  returned more than a Survey costs. Derived, so the copy cannot drift. */
+const spreads = SPREADS.map((r) => r.high - r.low)
+export const FLEX = {
+  best: Math.max(...spreads),
+  worst: Math.min(...spreads),
+  routes: spreads.length,
+  /** Routes whose week spread beat the EUR 10 Survey fee. */
+  paidForItself: spreads.filter((s) => s > 10).length,
+  /** How many times over the best spread covered that fee. */
+  timesOver: Math.floor(Math.max(...spreads) / 10),
+}
+
 /** Same route, same week, both cabins. Economy moved every day; premium did not move at all. */
 export const CABIN = {
   route: 'Amsterdam → Singapore',

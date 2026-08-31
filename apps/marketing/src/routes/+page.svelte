@@ -8,7 +8,7 @@ import QueryGrid from '$lib/components/QueryGrid.svelte'
 import RouteWeb from '$lib/components/RouteWeb.svelte'
 import type { Column, Point } from '$lib/components/SplitFlapBoard.svelte'
 import WeekBoard from '$lib/components/WeekBoard.svelte'
-import { CABIN, DISCOVERY, SPREADS, TOTALS } from '$lib/scenarios'
+import { CABIN, DISCOVERY, FLEX, SPREADS, TOTALS } from '$lib/scenarios'
 import { onMount } from 'svelte'
 import { fade } from 'svelte/transition'
 
@@ -20,25 +20,28 @@ let hero: HTMLElement
 let tuning = $state(false)
 
 /** Four ways of saying the same thing, every figure from the runs in
- *  `scenarios.ts`. The Amsterdam-New York week ran 19-25 December: the 22nd
- *  came in at EUR 400, the 19th at EUR 547. Nine routes x seven dates is 63. */
+ *  `scenarios.ts`. Hanoi on 3 November was priced from five departure airports
+ *  at once: cheapest of the 135 options EUR 320, dearest EUR 2,312. The
+ *  Amsterdam-New York week ran 19-25 December, EUR 400 on the 22nd against
+ *  EUR 547 on the 19th. Innsbruck's EUR 84 against EUR 121 is 44% of the
+ *  cheaper fare. Seventy-five searches by hand at 90s each is 1.9 hours. */
 let hi = $state(0)
 const HEADLINES = [
   {
-    kicker: 'NINE ROUTES ONE WEEK',
-    lines: ['Same seat.', 'Different day.', 'Different price.'],
+    kicker: 'FIVE AIRPORTS ONE DAY',
+    lines: ['€320 to Hanoi.', '€2,312 to Hanoi.', 'The same day.'],
   },
   {
     kicker: 'AMSTERDAM-NEW YORK',
-    lines: ['€400 on the 22nd.', '€547 on the 19th.', 'The same flight.'],
-  },
-  {
-    kicker: 'SEVENTY-FIVE SEARCHES',
-    lines: ['Four briefs.', '75 searches.', '200 seconds.'],
+    lines: ['€400 on the 22nd.', '€547 on the 19th.', '€147 to move one date.'],
   },
   {
     kicker: 'AMSTERDAM-INNSBRUCK',
-    lines: ['€84 on the 17th.', '€121 on the 16th.', 'The same week.'],
+    lines: ['€84 on the 17th.', '€121 on the 16th.', '44% for one day.'],
+  },
+  {
+    kicker: 'SEVENTY-FIVE SEARCHES',
+    lines: ['Two hours in tabs.', '200 seconds in ours.', '2,942 options either way.'],
   },
 ]
 let held = $state(false)
@@ -159,7 +162,7 @@ const STEPS = [
   },
   {
     h: 'The report lands',
-    p: 'A PDF with the prices day by day, every option ranked by price and journey time, and a link to book each one. You book in the same place you always did.',
+    p: 'A PDF with the prices day by day, every option ranked by price and journey time, and a link to book each one. The last one of these found €147 between the best departure date and the worst. You book in the same place you always did.',
   },
 ]
 
@@ -216,7 +219,8 @@ const LIMITS = [
       {/key}
     </div>
     <p class="pitch">
-      We price every date you could fly, then send you one report. From €3.
+      We price every date you could fly, then send one report. On the nine routes below, the
+      right day was worth up to €{FLEX.best}. Reports from €3.
     </p>
     <div class="hero-actions">
       <a class="btn" href="#brief">Start a brief</a>
@@ -243,11 +247,11 @@ const LIMITS = [
 <section class="weekband">
   <div class="weekband-inner">
     <div class="weekband-copy">
-      <h2>The same seat, priced on every day of the week</h2>
+      <h2>Seven departure dates, up to €{FLEX.best} between the best one and the worst</h2>
       <p>
-        Nine real briefs, each priced on all seven departure dates in its window. Moving your dates
-        was worth €147 on New York and €9 on Lyon, and nothing about either route said so in
-        advance.
+        Nine real routes, each priced on all seven departure dates in its window. Moving your dates
+        was worth €{FLEX.best} on New York and €{FLEX.worst} on Lyon, and nothing about either
+        route said which it would be in advance. The New York answer cost €10.
       </p>
       <div class="weekband-actions">
         <a class="btn" href="#brief">Start a brief, from €3</a>
@@ -264,11 +268,12 @@ const LIMITS = [
 
 <main>
   <section class="band" id="evidence">
-    <h2>Being flexible is worth €147 on New York and €9 on Lyon</h2>
+    <h2>The right departure date was worth €{FLEX.best} on New York and €{FLEX.worst} on Lyon</h2>
     <p class="lead measure">
       Every route here was searched on all seven of its departure dates, so the spread is exactly
-      what moving your dates would have saved you. You cannot tell which kind of route you have
-      until someone checks.
+      what moving your dates would have saved you. {FLEX.paidForItself} of the {FLEX.routes}
+      returned more than the €10 we charge to look, and the best of them returned {FLEX.timesOver}
+      times it. You cannot tell which kind of route you have until someone checks.
     </p>
     <FareRange />
     <p class="measure kicker">
@@ -276,34 +281,37 @@ const LIMITS = [
         .economyLow} and €{CABIN.economyHigh}, while premium economy sat at €{CABIN.premiumFlat} on
       every single day. The step up cost €{CABIN.premiumFlat - CABIN.economyHigh} on the dearest
       economy day and €{CABIN.premiumFlat - CABIN.economyLow} on the cheapest. The upgrade never
-      moved; only the thing you were comparing it against did.
+      moved; only the thing you were comparing it against did. Fourteen searches and 37 seconds
+      bought that answer.
     </p>
 
   </section>
 
   <section class="band" id="work">
-    <h2>Seventy-five searches took us 200 seconds and would have taken you two hours</h2>
+    <h2>Seventy-five searches took us 200 seconds. By hand they take two hours.</h2>
     <p class="lead measure">
       Four briefs, seventy-five searches. One search is one route priced on one date, so a brief
-      that leaves both open is not one question but dozens.
+      that leaves both open is not one question but dozens — and dozens is exactly where a row of
+      browser tabs stops being any use.
     </p>
     <QueryGrid />
   </section>
 
   <section class="band" id="avoid">
-    <h2>You can rule an airport out and still see what it cost you</h2>
+    <h2>Ruling out the Gulf cost €73 on Singapore and nothing at all on Hanoi</h2>
     <p class="lead measure">
       Say you will not change planes in the Gulf. We read every option first, then take away the
-      ones that connect there. What matters is what is left, and what the cheapest one that
-      survives costs you.
+      ones that connect there. On Singapore that took out 113 of 1,060 options and put €73 on the
+      cheapest fare; on Hanoi it took out 50 of 135 and changed the price by nothing. You only find
+      out which by having priced both.
     </p>
     <AvoidHubs />
   </section>
 
   <section class="band" id="routes">
     <h2>
-      There are {nf.format(DISCOVERY.byStops[2].routes)} ways to reach Hanoi, so we read the map
-      before we price anything
+      There are {nf.format(DISCOVERY.byStops[2].routes)} ways to reach Hanoi, and we read the map
+      in {DISCOVERY.seconds} seconds before pricing one of them
     </h2>
     <p class="lead measure">
       Every line is one way of getting from Amsterdam to Hanoi within a stop budget. Nothing here
@@ -333,13 +341,15 @@ const LIMITS = [
     <p class="lead measure">
       One date is cheap to answer. Five destinations across a fortnight in two cabins is not,
       because it is far more work: the New York job above took 28 searches to find the €147 between
-      its best day and its worst.
+      its best day and its worst. That is a €10 report returning fourteen times its price, on one
+      leg, for one traveller.
     </p>
     <PriceTiers bind:selected={tier} />
     <p class="measure kicker">
       One route on one fixed date? Do not pay us for that, because Google Flights does it free in
-      ninety seconds. We are worth paying once you have several destinations and a spread of dates,
-      which is where tabs stop being any help.
+      ninety seconds. We are worth paying once you have several destinations and a spread of
+      dates — which is where tabs stop being any help, and where the spread is usually worth more
+      than the fee.
     </p>
   </section>
 
@@ -347,7 +357,8 @@ const LIMITS = [
     <h2>Send a brief</h2>
     <p class="lead measure">
       Only the destination is required. Everything else is a tap, or leave it and we will use our
-      judgement. The report comes back the same day.
+      judgement — the vaguest briefs are the ones worth most, because they have the most dates to
+      be wrong about. The report comes back the same day.
     </p>
     <BriefForm {tier} />
     <ul class="limits">
@@ -395,7 +406,7 @@ const LIMITS = [
     font-weight: 600;
     letter-spacing: 0.01em;
     font-size: 1.3rem;
-    color: #f4f6ee;
+    color: #f0f5f1;
     text-decoration: none;
     transition: color 0.25s ease;
   }
@@ -406,7 +417,7 @@ const LIMITS = [
     font-size: 0.88rem;
   }
   header nav a {
-    color: rgb(244 246 238 / 0.8);
+    color: rgb(240 245 241 / 0.8);
     text-decoration: none;
     transition: color 0.25s ease;
   }
@@ -414,8 +425,8 @@ const LIMITS = [
     color: #fff;
   }
   header nav .cta {
-    color: #10201a;
-    background: #f4f6ee;
+    color: #12211c;
+    background: #f0f5f1;
     padding: 0.45rem 0.9rem;
     border-radius: var(--radius);
   }
@@ -662,7 +673,7 @@ const LIMITS = [
     font-size: clamp(2.1rem, 3.4vw, 3rem);
     line-height: 1.04;
     letter-spacing: -0.015em;
-    color: #f2f4ec;
+    color: #edf3ef;
   }
   .rotor h1 span {
     display: block;
@@ -683,7 +694,7 @@ const LIMITS = [
   /* The hero says what the thing is, once, in the same glass as the headline. */
   .pitch {
     max-width: 24rem;
-    color: rgb(242 244 236 / 0.82);
+    color: rgb(237 243 239 / 0.82);
     font-size: 1.02rem;
     line-height: 1.5;
   }
@@ -694,8 +705,8 @@ const LIMITS = [
     gap: var(--space-3);
   }
   .hero-actions .btn {
-    background: #f4f6ee;
-    color: #10201a;
+    background: #f0f5f1;
+    color: #12211c;
   }
   .hero-actions .btn:hover {
     background: #fff;
@@ -712,11 +723,11 @@ const LIMITS = [
     padding: 0;
     border: none;
     border-radius: 2px;
-    background: rgb(242 244 236 / 0.28);
+    background: rgb(237 243 239 / 0.28);
     transition: background 0.25s ease;
   }
   .ticks button:hover {
-    background: rgb(242 244 236 / 0.6);
+    background: rgb(237 243 239 / 0.6);
   }
   .ticks button[aria-current="true"] {
     background: #f0d489;
@@ -751,7 +762,7 @@ const LIMITS = [
   .weekband {
     background: #0c1512;
     border-top: 1px solid rgb(240 244 232 / 0.1);
-    color: #f2f4ec;
+    color: #edf3ef;
   }
   .weekband-inner {
     max-width: 74rem;
@@ -778,7 +789,7 @@ const LIMITS = [
     margin-bottom: var(--space-3);
   }
   .weekband-copy p {
-    color: rgb(242 244 236 / 0.76);
+    color: rgb(237 243 239 / 0.76);
     font-size: var(--text-lead);
     max-width: 34ch;
   }
@@ -790,17 +801,17 @@ const LIMITS = [
     margin-top: var(--space-4);
   }
   .weekband .btn {
-    background: #f4f6ee;
-    color: #10201a;
+    background: #f0f5f1;
+    color: #12211c;
   }
   .weekband .btn:hover {
     background: #fff;
   }
   .quiet {
-    color: rgb(242 244 236 / 0.82);
+    color: rgb(237 243 239 / 0.82);
     font-size: 0.92rem;
     text-decoration: none;
-    border-bottom: 1px solid rgb(242 244 236 / 0.35);
+    border-bottom: 1px solid rgb(237 243 239 / 0.35);
     padding-bottom: 1px;
   }
   .quiet:hover {
@@ -811,7 +822,7 @@ const LIMITS = [
     margin-top: var(--space-4);
     font-family: var(--font-mono);
     font-size: 0.78rem;
-    color: rgb(242 244 236 / 0.5);
+    color: rgb(237 243 239 / 0.5);
   }
   .weekband-copy .proof {
     font-size: 0.78rem;

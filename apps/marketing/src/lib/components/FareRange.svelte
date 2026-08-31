@@ -54,7 +54,8 @@ const pct = (v: number) => `${(v / max) * 100}%`
     Every route was searched on all seven of its departure dates, and the bars share one scale, so
     the Alpine routes really are that much cheaper than the Atlantic ones. The percentage is the
     saving measured against the cheapest fare, which is why Innsbruck beats New York on flexibility
-    while costing a tenth as much. One-way economy fares, the cheapest showing when we looked.
+    while costing a tenth as much. Eight of the nine spreads beat the €10 a Survey costs. One-way
+    economy fares, the cheapest showing when we looked.
   </p>
 </figure>
 
@@ -151,7 +152,9 @@ const pct = (v: number) => `${(v / max) * 100}%`
     color: var(--color-text);
   }
   .num.save {
-    color: var(--color-saving);
+    /* 0.9rem, so it takes the darker amber: the fill tone does not carry at
+       this size. */
+    color: var(--color-saving-ink);
   }
   .pc {
     color: var(--color-muted);

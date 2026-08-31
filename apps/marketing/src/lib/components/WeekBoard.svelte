@@ -76,7 +76,7 @@ onMount(() => {
     display: grid;
     gap: var(--space-3);
     padding: var(--space-4) 0 0;
-    color: #f2f4ec;
+    color: #edf3ef;
   }
 
   /* All nine routes stay on one line. They only just fit at the widest the panel
@@ -104,7 +104,7 @@ onMount(() => {
     justify-self: start;
     font-family: var(--font-mono);
     font-size: 0.72rem;
-    color: rgb(242 244 236 / 0.6);
+    color: rgb(237 243 239 / 0.6);
   }
 
   .week {
@@ -127,12 +127,12 @@ onMount(() => {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     font-size: 0.72rem;
-    color: rgb(242 244 236 / 0.66);
+    color: rgb(237 243 239 / 0.66);
   }
   .col {
     width: 100%;
     align-self: end;
-    background: rgb(242 244 236 / 0.28);
+    background: rgb(237 243 239 / 0.28);
     border-radius: 1px;
     transition: height 0.45s cubic-bezier(0.22, 1, 0.36, 1);
   }
@@ -146,21 +146,21 @@ onMount(() => {
     font-family: var(--font-mono);
     font-size: 0.68rem;
     letter-spacing: 0.06em;
-    color: rgb(242 244 236 / 0.45);
+    color: rgb(237 243 239 / 0.45);
   }
 
   /* Two lines are reserved: the sentence is one line on the short routes and two
      on the long ones, and the page must not jump between them. */
   .foot {
     font-size: 0.85rem;
-    color: rgb(242 244 236 / 0.72);
+    color: rgb(237 243 239 / 0.72);
     line-height: 1.5;
     min-height: 2.55rem;
   }
   .foot b {
     font-family: var(--font-mono);
     font-weight: 400;
-    color: #f2f4ec;
+    color: #edf3ef;
   }
   .foot b.save {
     color: #f0d489;

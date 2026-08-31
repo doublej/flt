@@ -6,24 +6,32 @@
   padding: 0;
 }
 
-/* Two spot colours on timetable stock: deep pine for structure, signal red used
-   once per screen for the number that carries the argument. */
+/* Two spot colours on clean stock: the pine has been lifted out of the mud and
+   the paper cooled, so the page reads as daylight rather than as an old
+   timetable. Signal red is still used once per screen, for the number that
+   carries the argument. */
 :root {
-  --color-bg: #f2f3ee;
-  --color-surface: #fbfbf8;
-  --color-surface-raised: #e8eae1;
-  --color-text: #17211d;
-  --color-muted: #667069;
-  --color-primary: #0b5f52;
-  --color-primary-hover: #084a40;
-  --color-signal: #c34527;
-  --color-saving: #b8871f;
-  --color-saving-soft: #f0e3bd;
-  --color-border: #dcded6;
-  --color-track: #e2e4dc;
+  --color-bg: #f4f7f3;
+  --color-surface: #ffffff;
+  --color-surface-raised: #e8efe9;
+  --color-text: #12211c;
+  --color-muted: #5d6f68;
+  --color-primary: #0a7a62;
+  --color-primary-hover: #075f4c;
+  --color-signal: #c73e20;
+  /* Amber twice: bright enough to read as a fill, dark enough to read as text.
+     The 0.9rem saving figures need the second one. */
+  --color-saving: #ad7c0c;
+  --color-saving-ink: #8a6410;
+  --color-saving-soft: #f7ecd0;
+  --color-border: #dfe7e0;
+  --color-track: #e7eee8;
+  /* Referenced by four glows that have been dead since they were written: the
+     token was never defined, so every one of those box-shadows was dropped. */
+  --color-amber-glow: rgb(255 197 94 / 0.38);
   --radius: 3px;
   --radius-lg: 4px;
-  --shadow-lg: 0 1px 2px rgb(23 33 29 / 0.06), 0 12px 32px rgb(23 33 29 / 0.08);
+  --shadow-lg: 0 1px 2px rgb(18 33 28 / 0.05), 0 12px 32px rgb(18 33 28 / 0.07);
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
   --font-body: "IBM Plex Sans", system-ui, sans-serif;
   /* Signage, not editorial: one grotesque whose width axis does the work a

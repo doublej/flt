@@ -1,5 +1,8 @@
 <script lang="ts">
 import { MANUAL_S, SCENARIOS, TOTALS, byHandHours } from '$lib/scenarios'
+import { onMount } from 'svelte'
+
+let list: HTMLElement
 
 /** Four jobs, alternating sides. The search count is set as the item's numeral
  *  and sized off the count itself, so five searches and twenty-eight are told
@@ -21,6 +24,56 @@ const SHAPE = {
 } as const
 const FALLBACK = { ar: '4 / 5', w: '23rem', rot: '0deg', iw: 720, ih: 900 }
 const shapeOf = (id: string) => SHAPE[id as keyof typeof SHAPE] ?? FALLBACK
+
+/** Each photograph sits on a wash cut to its neighbour's blob, so the two
+ *  outlines never coincide and the print reads as laid on top of something. */
+
+/** Print, wash and copy travel at three different rates while a row crosses
+ *  the viewport. Nothing loops: every bit of movement here is spent by the
+ *  scroll that caused it. */
+onMount(() => {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+  let ctx: { revert: () => void } | undefined
+  ;(async () => {
+    const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+      import('gsap'),
+      import('gsap/ScrollTrigger'),
+    ])
+    gsap.registerPlugin(ScrollTrigger)
+
+    ctx = gsap.context(() => {
+      for (const job of gsap.utils.toArray<HTMLElement>('.job')) {
+        gsap.from(job, {
+          opacity: 0,
+          y: 48,
+          duration: 0.7,
+          ease: 'power2.out',
+          scrollTrigger: { trigger: job, start: 'top 88%', once: true },
+        })
+
+        const scrub = { trigger: job, start: 'top bottom', end: 'bottom top', scrub: 0.6 }
+        gsap.fromTo(
+          job.querySelector('.frame'),
+          { y: 44 },
+          { y: -44, ease: 'none', scrollTrigger: scrub },
+        )
+        gsap.fromTo(
+          job.querySelector('.wash'),
+          { y: 78, scale: 1.06 },
+          { y: -78, scale: 0.97, ease: 'none', scrollTrigger: scrub },
+        )
+        gsap.fromTo(
+          job.querySelector('.body'),
+          { y: 14 },
+          { y: -14, ease: 'none', scrollTrigger: scrub },
+        )
+      }
+    }, list)
+  })()
+
+  return () => ctx?.revert()
+})
 
 /** One closed bezier per job, drawn round an eight-point ring with the radius
  *  jittered off a fixed seed, then normalised to fill its box. In
@@ -44,9 +97,11 @@ const BLOB: Record<string, string> = {
   </defs>
 </svg>
 
-<div class="jobs">
+<div class="jobs" bind:this={list}>
   {#each SCENARIOS as s, i (s.id)}
     {@const sh = shapeOf(s.id)}
+    {@const ids = Object.keys(BLOB)}
+    {@const wash = ids[(ids.indexOf(s.id) + 1) % ids.length] ?? s.id}
     <article
       class="job"
       class:flip={i % 2 === 1}
@@ -55,15 +110,18 @@ const BLOB: Record<string, string> = {
       style:--w={sh.w}
       style:--rot={sh.rot}
     >
-      <img
-        class="who"
-        src="/img/people/{s.id}.webp"
-        alt=""
-        width={sh.iw}
-        height={sh.ih}
-        loading="lazy"
-        style:clip-path={BLOB[s.id] ? `url(#blob-${s.id})` : undefined}
-      />
+      <div class="frame">
+        <span class="wash" aria-hidden="true" style:clip-path="url(#blob-{wash})"></span>
+        <img
+          class="who"
+          src="/img/people/{s.id}.webp"
+          alt=""
+          width={sh.iw}
+          height={sh.ih}
+          loading="lazy"
+          style:clip-path={BLOB[s.id] ? `url(#blob-${s.id})` : undefined}
+        />
+      </div>
 
       <div class="body">
         <p class="when">{s.window}</p>
@@ -93,8 +151,9 @@ const BLOB: Record<string, string> = {
   <b>{TOTALS.queries} searches</b> in {TOTALS.searchingSeconds} seconds of actual searching, which
   returned {nf.format(TOTALS.options)} options across {TOTALS.carriers} airlines. Run by hand at a
   generous {MANUAL_S} seconds each (type the route, wait for it, scan the results, write the price
-  down) the same {TOTALS.queries} searches take about {hours.toFixed(1)} hours. That estimate is
-  the only number on this page we did not measure.
+  down) the same {TOTALS.queries} searches take about {hours.toFixed(1)} hours. The largest of the
+  four — twenty-eight searches across four American cities — is a €10 Survey. That by-hand estimate
+  is the only number on this page we did not measure.
 </p>
 
 <style>
@@ -127,9 +186,23 @@ const BLOB: Record<string, string> = {
   .job.flip {
     grid-template-columns: minmax(0, 1fr) var(--w);
   }
-  .who {
+  .frame {
     grid-column: 1;
     grid-row: 1;
+    position: relative;
+    isolation: isolate;
+  }
+  /* the wash is generously larger than the print so it never uncovers a corner
+     as it turns, and it is always the neighbour's blob, never its own */
+  .wash {
+    position: absolute;
+    inset: -9% -11% -7% -12%;
+    z-index: 0;
+    background: color-mix(in oklab, var(--color-primary) 13%, var(--color-bg));
+  }
+  .who {
+    position: relative;
+    z-index: 1;
     display: block;
     width: 100%;
     height: auto;
@@ -144,7 +217,7 @@ const BLOB: Record<string, string> = {
     align-content: center;
     max-width: 34rem;
   }
-  .flip .who {
+  .flip .frame {
     grid-column: 2;
   }
   .flip .body {
