@@ -1,5 +1,4 @@
 <script lang="ts">
-import FlapText from '$lib/components/FlapText.svelte'
 import { SPREADS } from '$lib/scenarios'
 import { onMount } from 'svelte'
 
@@ -50,7 +49,7 @@ onMount(() => {
   <div class="head">
     <span class="route">{cur.from} → {cur.short}</span>
     <span class="win">
-      <FlapText text={cur.window} variant="night" size="0.6rem" />
+      <b>{cur.window}</b>
       every departure date
     </span>
   </div>
@@ -105,6 +104,14 @@ onMount(() => {
     font-family: var(--font-mono);
     font-size: 0.72rem;
     color: rgb(237 243 239 / 0.6);
+  }
+  /* The window used to be a small flap board. Set plain, it still has to read as
+     the datum and not as more of the sentence beside it. */
+  .win b {
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgb(237 243 239 / 0.9);
   }
 
   .week {
