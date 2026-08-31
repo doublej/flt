@@ -94,14 +94,14 @@ const LOOK = $state({
   signFrame: '#974716',
   signInk: '#cc6707',
   signGlow: '#ff5a0f',
-  signAspect: 24.1,
-  signGap: 1.05,
-  signGlyph: 0.5,
-  signLetter: 0.16,
-  signBloom: 0.55,
-  signUp: 1.2,
-  signDown: 0.45,
-  signIcon: true,
+  signAspect: 19.8,
+  signGap: 0.25,
+  signGlyph: 0.52,
+  signLetter: 0,
+  signBloom: 0.04,
+  signUp: 0,
+  signDown: 0,
+  signIcon: false,
 })
 
 const DEPARTURES = SPREADS.map((r) => {
@@ -439,6 +439,8 @@ const LIMITS = [
     margin-top: -5.5rem;
     isolation: isolate;
     background: #08120f;
+    /* the camera moves, so the stage is oversized and the hero clips it */
+    overflow: hidden;
   }
   /* CompositeStage maps the corners through the same object-position as the
      photograph, so our board stays on the concourse board through any crop. */
@@ -452,6 +454,124 @@ const LIMITS = [
   .stage :global(.work),
   .stage :global(.photo) {
     height: 100%;
+  }
+
+  /* ---- the camera ------------------------------------------------------
+     The hero is meant to read as one held shot of a concourse, board and all,
+     so the whole composite drifts together: a slow tripod creep on the stage,
+     a handheld tremble on the photo, an exposure that hunts and a lens that
+     loses focus for a beat. Everything is a fraction of a pixel or a percent —
+     you should feel it, not see it. Periods are coprime so the loop never
+     lands in the same place twice. */
+  .stage {
+    /* scaled up so the tremble never walks an edge into frame */
+    transform: scale(1.012);
+  }
+  .stage::after {
+    content: "";
+    position: absolute;
+    /* over-hangs the frame so the grain can crawl without showing its own edge */
+    inset: -80px;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .stage {
+      animation: hero-drift 41s ease-in-out infinite;
+    }
+    .stage :global(.photo) {
+      animation:
+        hero-handheld 7.3s ease-in-out infinite,
+        hero-camera 29s ease-in-out infinite;
+    }
+    .stage::after {
+      animation: hero-grain 0.7s steps(1) infinite;
+    }
+  }
+  /* tuning fights a moving target */
+  .hero.tune .stage,
+  .hero.tune .stage :global(.photo),
+  .hero.tune .stage::after {
+    animation: none;
+  }
+  @keyframes hero-drift {
+    0%,
+    100% {
+      transform: scale(1.012) translate3d(0, 0, 0) rotate(0deg);
+    }
+    23% {
+      transform: scale(1.014) translate3d(-0.18%, 0.1%, 0) rotate(0.05deg);
+    }
+    47% {
+      transform: scale(1.012) translate3d(0.12%, 0.16%, 0) rotate(-0.04deg);
+    }
+    71% {
+      transform: scale(1.015) translate3d(0.2%, -0.08%, 0) rotate(0.03deg);
+    }
+  }
+  @keyframes hero-handheld {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+    17% {
+      transform: translate3d(0.6px, -1.1px, 0);
+    }
+    34% {
+      transform: translate3d(-1.2px, 0.4px, 0);
+    }
+    52% {
+      transform: translate3d(0.9px, 1px, 0);
+    }
+    68% {
+      transform: translate3d(-0.5px, -0.7px, 0);
+    }
+    85% {
+      transform: translate3d(1.1px, 0.2px, 0);
+    }
+  }
+  @keyframes hero-camera {
+    0%,
+    100% {
+      filter: brightness(1) contrast(1) blur(0px);
+    }
+    13% {
+      filter: brightness(1.035) contrast(0.99) blur(0px);
+    }
+    29% {
+      filter: brightness(1.012) contrast(1) blur(0.5px);
+    }
+    36% {
+      filter: brightness(1.004) contrast(1.01) blur(0px);
+    }
+    58% {
+      filter: brightness(0.966) contrast(1.02) blur(0px);
+    }
+    74% {
+      filter: brightness(0.99) contrast(1) blur(0.35px);
+    }
+    81% {
+      filter: brightness(1.015) contrast(0.995) blur(0px);
+    }
+  }
+  @keyframes hero-grain {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    20% {
+      transform: translate3d(-24px, 13px, 0);
+    }
+    40% {
+      transform: translate3d(17px, -21px, 0);
+    }
+    60% {
+      transform: translate3d(-9px, -14px, 0);
+    }
+    80% {
+      transform: translate3d(22px, 8px, 0);
+    }
   }
 
   /* ?tune only. The stage normally sits at z-index -2, behind the whole page,
