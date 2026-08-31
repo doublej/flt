@@ -67,7 +67,9 @@ for (const session of data) {
   }
 
   await writeFile(new URL(`${job}.json`, QUEUE), `${JSON.stringify(brief, null, 2)}\n`)
-  console.log(`+ ${job}  ${brief.tier}  ${brief.email}  €${(brief.amount / 100).toFixed(2)}  ${brief.paidAt}`)
+  console.log(
+    `+ ${job}  ${brief.tier}  ${brief.email}  €${(brief.amount / 100).toFixed(2)}  ${brief.paidAt}`,
+  )
   written++
 }
 

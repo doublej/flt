@@ -1,0 +1,61 @@
+set shell := ["zsh", "-eu", "-o", "pipefail", "-c"]
+
+default:
+    @just --list
+
+[group('develop')]
+dev:
+    bun run dev
+
+[group('build')]
+build:
+    bun run build
+
+[group('quality')]
+lint:
+    bun run lint
+
+[group('quality')]
+lint-fix:
+    bun run lint:fix
+
+[group('quality')]
+typecheck:
+    bun run check
+
+[group('quality')]
+test:
+    bun run test
+
+# The debt ledger. Anything listed here was already over the line when the rule
+# arrived; the list only ever shrinks. Add nothing to it — split the file instead.
+[group('quality')]
+loc-check:
+    #!/usr/bin/env zsh
+    setopt null_glob
+    grandfathered=(
+        'src/routes/[[lang=lang]]/+page.svelte'   # 68% scoped CSS — a stylesheet, not a god component
+        'src/lib/components/SplitFlapBoard.svelte' # physics already lives in lib/splitflap*.ts
+        'src/lib/i18n/en.ts'                       # one flat copy object; splitting it helps nobody
+        'src/lib/components/CompositeStage.svelte' # math extracted to lib/composite.ts; the rest is one stage
+        'src/lib/components/QueryGrid.svelte'      # 466 — the next one to come off this list
+    )
+    err=0
+    for f in src/**/*.ts src/**/*.svelte; do
+        (( ${grandfathered[(Ie)$f]} )) && continue
+        lines=$(wc -l < "$f")
+        if (( lines > 400 )); then echo "error: $f ($lines lines, max 400)"; err=1
+        elif (( lines > 300 )); then echo "warn: $f ($lines lines, target ≤300)"; fi
+    done
+    exit $err
+
+[group('quality')]
+check:
+    @echo '→ file lengths'
+    just loc-check
+    @echo '→ lint'
+    just lint
+    @echo '→ typecheck'
+    just typecheck
+    @echo '→ test'
+    just test

@@ -416,7 +416,13 @@ onMount(() => {
      512px of it at 800. Placement belongs on .frame — and so does the width, or
      the wash keeps the old full-column box while the print alone shrinks, which
      is what put the wash 7px past the viewport at 800. */
-  @media (max-width: 800px) {
+  /* 1100 and not 800. What the copy column gets is the list less the print's
+     22rem, less the 96px gap, less this row's indent — so at 801 it came out
+     81px wide, 129px at 861 and 259px at 1024, and the quote ran two words to a
+     line while the tally hyphenated to "de-part-ure air-ports". The two-column
+     list needs about 1140 before that column is worth having; below it the row
+     stacks and the copy gets the full width. */
+  @media (max-width: 1100px) {
     .jobs {
       gap: var(--space-5);
     }
@@ -432,7 +438,10 @@ onMount(() => {
     .flip .frame {
       grid-column: 1;
       grid-row: 1;
-      width: 11rem;
+      /* 22vw is exactly 11rem at 800, so every width that already stacked keeps
+         the print it had and only the range this breakpoint just took over
+         grows one — 11rem on a 1024 screen reads as a thumbnail. */
+      width: clamp(11rem, 22vw, 17rem);
       margin-block-start: 0;
     }
     .body,
