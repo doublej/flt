@@ -159,6 +159,16 @@ export const LAYOVER_APPEARANCES = 3314
 
 export const GRAPH = { airports: 3425, connections: 19257 }
 
+/** One pair pulled out of the graph above and actually priced: the nonstop
+ *  everyone assumes is the only option, and the cheapest one-stop sitting
+ *  next to it in the same search. `flt search AMS BKK 2026-11-10`. */
+export const ROUTE_EXAMPLE = {
+  route: 'Amsterdam → Bangkok',
+  date: '10 November',
+  nonstop: { carrier: 'THAI', price: 476, duration: '11h 5m' },
+  alt: { carrier: 'China Southern', via: 'Guangzhou', price: 322, duration: '18h 50m' },
+}
+
 export const DISCOVERY = {
   route: 'Amsterdam → Hanoi',
   /** Routes found, by how many stops you will tolerate. */

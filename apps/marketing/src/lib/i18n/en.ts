@@ -229,20 +229,14 @@ export const en = {
       withoutGulf: string,
     ) =>
       `Amsterdam to Hanoi, walked over a map of ${airports} airports and ${connections} direct connections in ${seconds} seconds. Nothing here is priced, timetabled or bookable; it is a static snapshot of what connects to what, capped at ${maxDetour}× the direct distance, and we use it to decide which routes are worth searching. Rule the Gulf hubs out and ${routings} routings become ${withoutGulf}.`,
-    /** One pair from `ROUTE_EXAMPLE`, actually priced. */
-    exampleLabel: 'One from the map, priced',
-    example: (
-      date: string,
-      nonstopCarrier: string,
-      nonstopPrice: number,
-      nonstopDuration: string,
-      altCarrier: string,
-      altVia: string,
-      altPrice: number,
-      altDuration: string,
-      diff: number,
-    ) =>
-      `On ${date}, ${nonstopCarrier}'s only nonstop to Bangkok is €${nonstopPrice} (${nonstopDuration}). ${altCarrier}'s cheapest routing through ${altVia}, from the same search, is €${altPrice} (${altDuration}) — €${diff} less for a stop. The graph does not pick one for you. It only makes sure both were on the list before either got priced.`,
+    /** RouteWeb tab list: one live diagram, stepped through by stop budget. */
+    tabsLabel: 'Choose a stop budget',
+    /** RouteWeb priced strip: one pair from `ROUTE_EXAMPLE`, actually priced. */
+    pricedEyebrow: 'One line, priced',
+    nonstopTag: 'Nonstop',
+    viaTag: (via: string) => `via ${via}`,
+    lessBy: (diff: number) => `€${diff} less`,
+    pricedCaption: (date: string) => `Same search, ${date}.`,
   },
 
   report: {

@@ -51,17 +51,6 @@ let {
 let photo = $state<HTMLImageElement | null>(null)
 let decoded = $state(false)
 let built = $state(false)
-/* Never strand the hero on a board that cannot report in — a refused canvas
-   context, an image that 404s, anything. Three seconds, then the composite is
-   exposed regardless, and it still gets the proper entry rather than a jump. */
-let stranded = $state(false)
-$effect(() => {
-  const t = setTimeout(() => {
-    stranded = true
-  }, 3000)
-  return () => clearTimeout(t)
-})
-const held = $derived(!stranded && !(decoded && built))
 $effect(() => {
   const done = () => {
     decoded = true
@@ -157,6 +146,54 @@ function unplace(p: Point): Point {
 
 const n = (k: string, d: number) => (typeof look[k] === 'number' ? (look[k] as number) : d)
 const str = (k: string, d: string) => (typeof look[k] === 'string' ? (look[k] as string) : d)
+
+/* Never strand the hero on a board that cannot report in — a refused canvas
+   context, an image that 404s, anything. Three seconds, then the composite is
+   exposed regardless, and it still gets the proper entry rather than a jump. */
+let stranded = $state(false)
+$effect(() => {
+  const t = setTimeout(
+    () => {
+      stranded = true
+    },
+    n('entryWait', 3000),
+  )
+  return () => clearTimeout(t)
+})
+const held = $derived(!stranded && !(decoded && built))
+
+/* The hero's four loops are keyframed in +page.svelte, on the page's own
+   .stage, its ::after and .photo. .stage is this component's ANCESTOR, so
+   nothing rendered here can inherit into it — :root is the only host that
+   reaches all three. The keyframes read these with their present values as
+   fallbacks, so a page that declares none of them behaves exactly as before. */
+const HERO = $derived.by(() => {
+  // paused while tuning unless the operator asks to see it run, or they tune blind
+  const live = !editable || look.heroLive !== false
+  const play = (k: string) => (live && look[k] !== false ? 'running' : 'paused')
+  return {
+    '--hero-drift-dur': `${n('heroDriftDur', 29)}s`,
+    '--hero-drift-amp': String(n('heroDriftAmp', 1)),
+    '--hero-drift-play': play('heroDrift'),
+    '--hero-shake-dur': `${n('heroShakeDur', 4.9)}s`,
+    '--hero-shake-amp': String(n('heroShakeAmp', 1)),
+    '--hero-shake-play': play('heroShake'),
+    '--hero-cam-dur': `${n('heroCamDur', 15)}s`,
+    '--hero-cam-amp': String(n('heroCamAmp', 1)),
+    '--hero-cam-hunt': String(n('heroCamHunt', 1)),
+    '--hero-cam-play': play('heroCam'),
+    '--hero-grain-dur': `${n('heroGrainDur', 0.45)}s`,
+    '--hero-grain-opacity': String(n('heroGrainOpacity', 0.09)),
+    '--hero-grain-play': play('heroGrain'),
+  }
+})
+$effect(() => {
+  const root = document.documentElement.style
+  for (const [k, v] of Object.entries(HERO)) root.setProperty(k, v)
+  return () => {
+    for (const k of Object.keys(HERO)) root.removeProperty(k)
+  }
+})
 
 /* render at supersample × the size it occupies; the homography scales it back
    down, so the lens filter and the defocus rasterise at that resolution.
@@ -421,11 +458,44 @@ function seedSign() {
   for (const [k, v] of Object.entries(fill)) if (!(k in look)) look[k] = v
 }
 
+/* Same trick as seedSign: the page declares what it cares about, and the pane
+ *  cannot bind a key that is not there, so the rest arrive before the defaults
+ *  snapshot is taken — which keeps "Reset to defaults" honest about the motion
+ *  as well. Every default here is the value the CSS already had. */
+function seedHero() {
+  const fill: Record<string, string | number | boolean> = {
+    heroLive: true,
+    heroDrift: true,
+    heroDriftDur: 29,
+    heroDriftAmp: 1,
+    heroShake: true,
+    heroShakeDur: 4.9,
+    heroShakeAmp: 1,
+    heroCam: true,
+    heroCamDur: 15,
+    heroCamAmp: 1,
+    heroCamHunt: 1,
+    heroGrain: true,
+    heroGrainDur: 0.45,
+    heroGrainOpacity: 0.09,
+    entryWait: 3000,
+    entryDur: 2400,
+    entryZoomDur: 2900,
+    entryBright: 0,
+    entryContrast: 0.55,
+    entryBlur: 16,
+    entryOvershoot: 1.13,
+    entryZoom: 1.04,
+  }
+  for (const [k, v] of Object.entries(fill)) if (!(k in look)) look[k] = v
+}
+
 onMount(() => {
   if (!editable) return
   let cancelled = false
 
   if (sign) seedSign()
+  seedHero()
 
   // captured before anything is restored, so Reset means the page's own values
   const defaults = JSON.parse(
@@ -534,6 +604,37 @@ onMount(() => {
       lit.addBinding(look, 'signIcon', { label: 'pictogram' })
     }
 
+    const cam = p.addFolder({ title: 'Hero motion' })
+    cam.addBinding(look, 'heroLive', { label: 'run while tuning' })
+    cam.addBinding(look, 'heroDrift', { label: 'tripod drift' })
+    cam.addBinding(look, 'heroDriftDur', { min: 4, max: 90, step: 0.5, label: '· seconds' })
+    cam.addBinding(look, 'heroDriftAmp', { min: 0, max: 4, step: 0.05, label: '· travel' })
+    cam.addBinding(look, 'heroShake', { label: 'handheld' })
+    cam.addBinding(look, 'heroShakeDur', { min: 0.5, max: 20, step: 0.1, label: '· seconds' })
+    cam.addBinding(look, 'heroShakeAmp', { min: 0, max: 6, step: 0.05, label: '· travel' })
+    cam.addBinding(look, 'heroCam', { label: 'exposure hunt' })
+    cam.addBinding(look, 'heroCamDur', { min: 2, max: 60, step: 0.5, label: '· seconds' })
+    cam.addBinding(look, 'heroCamAmp', { min: 0, max: 4, step: 0.05, label: '· depth' })
+    cam.addBinding(look, 'heroCamHunt', { min: 0, max: 6, step: 0.05, label: '· focus hunt' })
+    cam.addBinding(look, 'heroGrain', { label: 'grain' })
+    cam.addBinding(look, 'heroGrainDur', { min: 0.05, max: 3, step: 0.01, label: '· seconds' })
+    cam.addBinding(look, 'heroGrainOpacity', { min: 0, max: 0.6, step: 0.005, label: '· strength' })
+
+    const ent = p.addFolder({ title: 'Entry' })
+    ent.addBinding(look, 'entryDur', { min: 200, max: 6000, step: 50, label: 'exposure ms' })
+    ent.addBinding(look, 'entryZoomDur', { min: 200, max: 8000, step: 50, label: 'zoom ms' })
+    ent.addBinding(look, 'entryBright', { min: 0, max: 1, step: 0.01, label: 'open at' })
+    ent.addBinding(look, 'entryContrast', { min: 0, max: 1.5, step: 0.01, label: 'open contrast' })
+    ent.addBinding(look, 'entryBlur', { min: 0, max: 60, step: 0.5, label: 'open blur px' })
+    ent.addBinding(look, 'entryOvershoot', { min: 1, max: 1.8, step: 0.005, label: 'overshoot' })
+    ent.addBinding(look, 'entryZoom', { min: 1, max: 1.3, step: 0.002, label: 'zoom from' })
+    ent.addBinding(look, 'entryWait', {
+      min: 500,
+      max: 10000,
+      step: 100,
+      label: 'give up after ms',
+    })
+
     /* The sliders move the board exactly as dragging it does, so they settle the
        same way: on release the nudge becomes corner points and the slider comes
        back to its neutral. `last` is what tells a release from a drag in
@@ -572,7 +673,17 @@ onMount(() => {
 })
 </script>
 
-<div class="work" class:held>
+<div
+	class="work"
+	class:held
+	style:--entry-dur="{n('entryDur', 2400)}ms"
+	style:--entry-zoom-dur="{n('entryZoomDur', 2900)}ms"
+	style:--entry-bright={n('entryBright', 0)}
+	style:--entry-contrast={n('entryContrast', 0.55)}
+	style:--entry-blur="{n('entryBlur', 16)}px"
+	style:--entry-overshoot={n('entryOvershoot', 1.13)}
+	style:--entry-zoom={n('entryZoom', 1.04)}
+>
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="photo"
@@ -690,21 +801,24 @@ onMount(() => {
 	   keyframe — so the handoff into it is not a handoff at all. */
 	@keyframes expose {
 		0% {
-			filter: brightness(0) contrast(0.55) blur(16px);
+			filter: brightness(var(--entry-bright)) contrast(var(--entry-contrast))
+				blur(var(--entry-blur));
 		}
 		30% {
-			filter: brightness(0.45) contrast(0.72) blur(6px);
+			filter: brightness(calc(var(--entry-bright) + 0.45)) contrast(calc(var(--entry-contrast) + 0.17))
+				blur(calc(var(--entry-blur) * 0.38));
 		}
 		55% {
-			filter: brightness(0.95) contrast(0.92) blur(1.8px);
+			filter: brightness(calc(var(--entry-bright) + 0.95)) contrast(calc(var(--entry-contrast) + 0.37))
+				blur(calc(var(--entry-blur) * 0.11));
 		}
 		/* past the level, and the lens all but there */
 		70% {
-			filter: brightness(1.13) contrast(1.05) blur(0.5px);
+			filter: brightness(var(--entry-overshoot)) contrast(1.05) blur(calc(var(--entry-blur) * 0.03));
 		}
 		/* focus lands first; the level is still coming back down behind it */
 		82% {
-			filter: brightness(1.09) contrast(1.02) blur(0);
+			filter: brightness(calc(1 + (var(--entry-overshoot) - 1) * 0.7)) contrast(1.02) blur(0);
 		}
 		100% {
 			filter: brightness(1) contrast(1) blur(0);
@@ -714,7 +828,7 @@ onMount(() => {
 	   level has settled — felt rather than seen. */
 	@keyframes lens-settle {
 		from {
-			transform: scale(1.04);
+			transform: scale(var(--entry-zoom));
 		}
 		to {
 			transform: none;
@@ -722,8 +836,8 @@ onMount(() => {
 	}
 	.work:not(.held) {
 		animation:
-			expose 2400ms cubic-bezier(0.4, 0, 0.2, 1) both,
-			lens-settle 2900ms cubic-bezier(0.25, 0.1, 0.2, 1) both;
+			expose var(--entry-dur) cubic-bezier(0.4, 0, 0.2, 1) both,
+			lens-settle var(--entry-zoom-dur) cubic-bezier(0.25, 0.1, 0.2, 1) both;
 	}
 	/* Held black and soft until the photograph has decoded and the board has
 	   painted its first flaps. `uncover` is the no-script backstop and nothing
@@ -733,8 +847,9 @@ onMount(() => {
 	   animation whose delay merely changes when the class drops, and it would
 	   jump to wherever its clock had already reached instead of starting. */
 	.work.held {
-		filter: brightness(0) contrast(0.55) blur(16px);
-		transform: scale(1.04);
+		filter: brightness(var(--entry-bright)) contrast(var(--entry-contrast))
+			blur(var(--entry-blur));
+		transform: scale(var(--entry-zoom));
 		animation: uncover 1ms linear 4s forwards;
 	}
 	@keyframes uncover {
@@ -748,7 +863,7 @@ onMount(() => {
 	   anyway, so the wait costs nothing. */
 	@media (prefers-reduced-motion: reduce) {
 		.work.held {
-			filter: brightness(0);
+			filter: brightness(var(--entry-bright));
 			transform: none;
 		}
 		.work:not(.held) {

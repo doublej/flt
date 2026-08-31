@@ -24,6 +24,12 @@ marketing:
 marketing-build:
     cd apps/marketing && bun run build
 
+# Deploy marketing site to Cloudflare Pages (flt-ecom.jurrejan.com)
+[group('deploy')]
+marketing-deploy: marketing-build
+    cd apps/marketing && CLOUDFLARE_ACCOUNT_ID=e26bfba81a629fb8b4dcd538b1f73781 \
+        bunx wrangler pages deploy .svelte-kit/cloudflare --project-name flights-marketing --branch production
+
 [group('quality')]
 check:
     cd apps/web && just check
