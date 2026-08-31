@@ -320,15 +320,11 @@ export const en = {
     scale: {
       charged: (cheapest: string, dearest: string) => `${cheapest}–${dearest} · what we charge`,
       worth: (best: number, route: string) => `€${best} · ${route}`,
-      caption: (
-        routes: number,
-        paidForItself: number,
-        worst: number,
-        worstRoute: string,
-        best: number,
-        bestRoute: string,
-      ) =>
-        `Every ring is one of the ${routes} routes on this page, set at what moving your departure date inside its own week was worth: €${worst} on ${worstRoute} at one end, €${best} on ${bestRoute} at the other. ${paidForItself} of the ${routes} came back with more than a Survey costs — the block at the left is every fee we charge, on the same scale.`,
+      /** Says what the figure is doing and nothing else. Which route sits at
+       *  each end is already told by the hero board, the weekband and the
+       *  evidence heading, so naming them again here would be the fourth. */
+      caption: (routes: number, paidForItself: number) =>
+        `Every ring is one of the ${routes} routes above, set at what moving your departure date inside its week was worth. The block at the left is every fee we charge, on the same scale — ${paidForItself} of the ${routes} rings clear it.`,
     },
     tiersFoot:
       'You pay for how much searching you ask for, because that is the part that takes the time. A Survey is split across several runs, and return-trip date grids are capped at 21 departure and return combinations; everything else is a matter of how much work you want done.',

@@ -25,7 +25,6 @@ const routes = SPREADS.map((r) => ({
   spread: r.high - r.low,
 })).sort((a, b) => a.spread - b.spread)
 
-const worst = routes[0]
 const best = routes[routes.length - 1]
 
 /** Newark and Singapore both returned exactly €144. Drawn at the same point
@@ -57,14 +56,7 @@ for (const r of routes) {
   </div>
 
   <figcaption>
-    {copy.pricing.scale.caption(
-      FLEX.routes,
-      FLEX.paidForItself,
-      worst.spread,
-      worst.name,
-      best.spread,
-      best.name,
-    )}
+    {copy.pricing.scale.caption(FLEX.routes, FLEX.paidForItself)}
   </figcaption>
 </figure>
 
