@@ -1,4 +1,6 @@
 <script lang="ts">
+import { en as copy } from '$lib/i18n/en'
+
 type Job = {
   job: string
   route: string
@@ -34,15 +36,15 @@ $effect(() => {
 const pct = $derived(job ? Math.round((job.progress.done / job.progress.total) * 100) : 0)
 </script>
 
-<svelte:head><title>Bureau — your report</title></svelte:head>
+<svelte:head><title>{copy.status.title}</title></svelte:head>
 
 <main>
-  <a class="mark" href="/">Bureau</a>
+  <a class="mark" href="/">{copy.status.brand}</a>
 
   {#if missing}
-    <p class="line">We cannot find that job. Check the link in your receipt.</p>
+    <p class="line">{copy.status.missing}</p>
   {:else if job}
-    <p class="eyebrow">{job.tier} · job {job.job}</p>
+    <p class="eyebrow">{copy.status.eyebrow(job.tier, job.job)}</p>
     <h1>{job.route}</h1>
 
     {#if job.state === 'attention'}
@@ -55,17 +57,14 @@ const pct = $derived(job ? Math.round((job.progress.done / job.progress.total) *
       <div class="bar" role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100">
         <div style="width: {pct}%"></div>
       </div>
-      <p class="count">
-        {job.progress.done} of {job.progress.total} searches · the searches are deliberately spaced
-        out, so this takes minutes
-      </p>
+      <p class="count">{copy.status.count(job.progress.done, job.progress.total)}</p>
     {/if}
 
     {#if job.pdf}
-      <a class="btn" href={job.pdf}>Open your report</a>
+      <a class="btn" href={job.pdf}>{copy.status.open}</a>
     {/if}
   {:else}
-    <p class="line">Looking up your job…</p>
+    <p class="line">{copy.status.looking}</p>
   {/if}
 </main>
 
