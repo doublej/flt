@@ -12,6 +12,7 @@ const hours = byHandHours(TOTALS.queries)
 <div class="jobs">
   {#each SCENARIOS as s (s.id)}
     <figure>
+      <img class="who" src="/img/people/{s.id}.webp" alt="" width="640" height="800" loading="lazy" />
       <blockquote>{s.ask}</blockquote>
       <p class="route">{s.route}</p>
       <div class="win"><FlapText text={s.window} size="0.55rem" /></div>
@@ -31,6 +32,8 @@ const hours = byHandHours(TOTALS.queries)
     </figure>
   {/each}
 </div>
+
+<p class="note">Every brief and every number above came off a real run. The portraits did not.</p>
 
 <p class="total">
   <b>{TOTALS.queries} searches</b> in {TOTALS.searchingSeconds} seconds of actual searching, which
@@ -56,6 +59,18 @@ const hours = byHandHours(TOTALS.queries)
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
+  }
+  /* A face for the person who sent the brief. The briefs and the numbers are
+     real runs; these portraits are not, which the note under the cards says. */
+  .who {
+    width: 4.5rem;
+    /* the height attribute is a presentational hint, so aspect-ratio only gets
+       a say once height is back to auto */
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border-radius: var(--radius);
+    margin-bottom: 0.15rem;
   }
   blockquote {
     margin: 0;
@@ -102,6 +117,13 @@ const hours = byHandHours(TOTALS.queries)
     color: var(--color-primary);
   }
   .sub {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--color-muted);
+  }
+
+  .note {
+    margin-top: var(--space-3);
     font-family: var(--font-mono);
     font-size: 0.72rem;
     color: var(--color-muted);
