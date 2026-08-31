@@ -51,7 +51,17 @@ let {
 let photo = $state<HTMLImageElement | null>(null)
 let decoded = $state(false)
 let built = $state(false)
-const held = $derived(!(decoded && built))
+/* Never strand the hero on a board that cannot report in — a refused canvas
+   context, an image that 404s, anything. Three seconds, then the composite is
+   exposed regardless, and it still gets the proper entry rather than a jump. */
+let stranded = $state(false)
+$effect(() => {
+  const t = setTimeout(() => {
+    stranded = true
+  }, 3000)
+  return () => clearTimeout(t)
+})
+const held = $derived(!stranded && !(decoded && built))
 $effect(() => {
   const done = () => {
     decoded = true
@@ -666,44 +676,83 @@ onMount(() => {
 <style>
 	/* The entry rides on .work because everything inside it is spoken for: the
 	   hero animates .stage with its drift loop and .photo with two more, and a
-	   fourth writer on either would just win the cascade and stop the camera. */
+	   fourth writer on either would just win the cascade and stop the camera.
+	   .work sits between the two and owns neither, so grading it grades the whole
+	   composite — photograph and board as one frame — and composes with the
+	   camera loop underneath rather than replacing it. */
 	.work {
-		transition:
-			opacity 900ms ease,
-			transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
+		transition: none;
 	}
-	/* Held until the photograph has decoded and the board has painted its first
-	   flaps, then released as one object — a shot being focused rather than a
-	   panel appearing. The delayed keyframe is the backstop, and it is CSS on
-	   purpose: it covers a board that never reports in, and it covers the
-	   prerendered page being served to someone whose script never runs, which no
-	   timer of ours could. Whichever fires first, the other is a no-op. */
-	.work.held {
-		opacity: 0;
-		transform: scale(1.06);
-		/* `forwards`, never `both`: a backwards fill would own opacity through the
-		   whole delay, and an animated property cannot be transitioned — the
-		   release would snap instead of easing. With no fill before it starts,
-		   the two declarations below hold and the transition is free to run. */
-		animation: composite-in 900ms cubic-bezier(0.16, 1, 0.3, 1) 3s forwards;
+	/* Not a fade. The frame is there from the first moment and only its exposure
+	   is wrong: black, flat and soft, then the level comes up, runs slightly past
+	   itself and settles. Written in the same three properties hero-camera hunts
+	   in, and landing on brightness(1) contrast(1) blur(0) — that loop's own 0%
+	   keyframe — so the handoff into it is not a handoff at all. */
+	@keyframes expose {
+		0% {
+			filter: brightness(0) contrast(0.55) blur(16px);
+		}
+		30% {
+			filter: brightness(0.45) contrast(0.72) blur(6px);
+		}
+		55% {
+			filter: brightness(0.95) contrast(0.92) blur(1.8px);
+		}
+		/* past the level, and the lens all but there */
+		70% {
+			filter: brightness(1.13) contrast(1.05) blur(0.5px);
+		}
+		/* focus lands first; the level is still coming back down behind it */
+		82% {
+			filter: brightness(1.09) contrast(1.02) blur(0);
+		}
+		100% {
+			filter: brightness(1) contrast(1) blur(0);
+		}
 	}
-	@keyframes composite-in {
+	/* Underneath and longer than the exposure, so it is still creeping after the
+	   level has settled — felt rather than seen. */
+	@keyframes lens-settle {
+		from {
+			transform: scale(1.04);
+		}
 		to {
-			opacity: 1;
+			transform: none;
+		}
+	}
+	.work:not(.held) {
+		animation:
+			expose 2400ms cubic-bezier(0.4, 0, 0.2, 1) both,
+			lens-settle 2900ms cubic-bezier(0.25, 0.1, 0.2, 1) both;
+	}
+	/* Held black and soft until the photograph has decoded and the board has
+	   painted its first flaps. `uncover` is the no-script backstop and nothing
+	   else: the prerendered page is served to people whose JS never runs, and a
+	   hero that sits black forever is worse than one that arrives unannounced.
+	   A separate name on purpose — reusing `expose` here would leave one running
+	   animation whose delay merely changes when the class drops, and it would
+	   jump to wherever its clock had already reached instead of starting. */
+	.work.held {
+		filter: brightness(0) contrast(0.55) blur(16px);
+		transform: scale(1.04);
+		animation: uncover 1ms linear 4s forwards;
+	}
+	@keyframes uncover {
+		to {
+			filter: none;
 			transform: none;
 		}
 	}
 	/* Motion goes, the hold stays. Revealing early here would only trade a long
 	   dead board for a short one, and the board settles instantly on this path
-	   anyway, so the wait costs nothing. The backstop keeps its 3s delay and
-	   loses only its duration. */
+	   anyway, so the wait costs nothing. */
 	@media (prefers-reduced-motion: reduce) {
-		.work {
-			transition: none;
-		}
 		.work.held {
+			filter: brightness(0);
 			transform: none;
-			animation-duration: 1ms;
+		}
+		.work:not(.held) {
+			animation: none;
 		}
 	}
 	.work {
