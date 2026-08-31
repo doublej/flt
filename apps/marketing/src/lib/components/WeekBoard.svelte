@@ -1,4 +1,5 @@
 <script lang="ts">
+import FlapText from '$lib/components/FlapText.svelte'
 import { SPREADS } from '$lib/scenarios'
 import { onMount } from 'svelte'
 
@@ -48,7 +49,10 @@ onMount(() => {
 <div class="board">
   <p class="head">
     <span class="route">{cur.from} → {cur.short}</span>
-    <span class="win flap-cell">{cur.window} · every departure date</span>
+    <span class="win">
+      <FlapText text={cur.window} variant="night" size="0.6rem" />
+      every departure date
+    </span>
   </p>
 
   <ol class="week">
@@ -92,8 +96,13 @@ onMount(() => {
     letter-spacing: -0.01em;
   }
   .win {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
     justify-self: start;
+    font-family: var(--font-mono);
     font-size: 0.72rem;
+    color: rgb(242 244 236 / 0.6);
   }
 
   .week {

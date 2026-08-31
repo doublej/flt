@@ -1,4 +1,5 @@
 <script lang="ts">
+import FlapText from '$lib/components/FlapText.svelte'
 import { AVOIDING, LAYOVER_TOP } from '$lib/scenarios'
 
 /** One dot per option that came back. The gold dots are the ones that connect
@@ -46,7 +47,7 @@ const maxLayover = Math.max(...LAYOVER_TOP.map((l) => l.count))
 </div>
 
 <div class="hubs">
-  <h4 class="flap-cell">Where the connections actually happen</h4>
+  <h4><FlapText text="Where the connections actually happen" size="0.5rem" /></h4>
   <ul>
     {#each LAYOVER_TOP as l (l.code)}
       <li>
@@ -164,9 +165,6 @@ const maxLayover = Math.max(...LAYOVER_TOP.map((l) => l.count))
     max-width: 32rem;
   }
   h4 {
-    font-size: 0.7rem;
-    font-weight: 500;
-    text-transform: uppercase;
     margin-bottom: var(--space-3);
   }
   .hubs ul {

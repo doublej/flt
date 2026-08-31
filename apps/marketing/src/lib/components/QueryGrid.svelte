@@ -1,4 +1,5 @@
 <script lang="ts">
+import FlapText from '$lib/components/FlapText.svelte'
 import { MANUAL_S, SCENARIOS, TOTALS, byHandHours } from '$lib/scenarios'
 
 /** One square per search actually run. Each job's grid is its real shape:
@@ -13,7 +14,7 @@ const hours = byHandHours(TOTALS.queries)
     <figure>
       <blockquote>{s.ask}</blockquote>
       <p class="route">{s.route}</p>
-      <p class="win flap-cell">{s.window}</p>
+      <p class="win"><FlapText text={s.window} size="0.55rem" /></p>
 
       <div class="grid" style:--cols={s.grid.cols}>
         {#each Array(s.queries) as _, i (i)}

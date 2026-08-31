@@ -1,4 +1,5 @@
 <script lang="ts">
+import FlapText from '$lib/components/FlapText.svelte'
 import { TIERS } from '$lib/tiers'
 
 let { selected = $bindable('survey') }: { selected?: string } = $props()
@@ -13,7 +14,7 @@ let { selected = $bindable('survey') }: { selected?: string } = $props()
       aria-pressed={selected === tier.id}
     >
       <span class="name">{tier.name}</span>
-      <span class="price flap-cell">{tier.price}</span>
+      <span class="price"><FlapText text={tier.price} size="1.05rem" /></span>
       <span class="scope">{tier.scope}</span>
       <span class="meta">{tier.searches} · {tier.time}</span>
     </button>

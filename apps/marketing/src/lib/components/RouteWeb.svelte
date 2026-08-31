@@ -1,4 +1,5 @@
 <script lang="ts">
+import FlapText from '$lib/components/FlapText.svelte'
 import { DISCOVERY, GRAPH } from '$lib/scenarios'
 
 /** A drawing of the route graph, not of anything bookable. Each line is one
@@ -131,7 +132,7 @@ const hubR = (load: number) => 1.1 + Math.sqrt(load) * 0.55
       <div class="mag" style="--f:{p.mag}"></div>
       <figcaption>
         <span class="k">Up to {p.stops} {p.stops === 1 ? 'stop' : 'stops'}</span>
-        <b class="flap-cell">{nf.format(p.routes)}</b>
+        <b><FlapText text={String(p.routes)} size="0.72rem" /></b>
       </figcaption>
     </figure>
   {/each}
