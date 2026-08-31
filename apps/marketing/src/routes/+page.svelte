@@ -463,28 +463,30 @@ const LIMITS = copy.brief.limits
     /* over-hangs the frame so the grain can crawl without showing its own edge */
     inset: -90px;
     pointer-events: none;
-    opacity: 0.09;
+    opacity: var(--hero-grain-opacity, 0.09);
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
+  /* Every number below is also a control in the ?tune pane, which writes these
+     properties onto :root — the only host that is an ancestor of the stage, its
+     ::after and the photo at once. The fallbacks are the values that were baked
+     in here, so a page that never opens the pane is unchanged. Play state is
+     decided in the pane too, which is what pauses the loops while tuning. */
   @media (prefers-reduced-motion: no-preference) {
     .stage {
-      animation: hero-drift 29s ease-in-out infinite;
+      animation: hero-drift var(--hero-drift-dur, 29s) ease-in-out infinite;
+      animation-play-state: var(--hero-drift-play, running);
     }
     .stage :global(.photo) {
       animation:
-        hero-handheld 4.9s ease-in-out infinite,
-        hero-camera 15s ease-in-out infinite;
+        hero-handheld var(--hero-shake-dur, 4.9s) ease-in-out infinite,
+        hero-camera var(--hero-cam-dur, 15s) ease-in-out infinite;
+      animation-play-state: var(--hero-shake-play, running), var(--hero-cam-play, running);
     }
     .stage::after {
-      animation: hero-grain 0.45s steps(1) infinite;
+      animation: hero-grain var(--hero-grain-dur, 0.45s) steps(1) infinite;
+      animation-play-state: var(--hero-grain-play, running);
     }
-  }
-  /* tuning fights a moving target */
-  .hero.tune .stage,
-  .hero.tune .stage :global(.photo),
-  .hero.tune .stage::after {
-    animation: none;
   }
   @keyframes hero-drift {
     0%,
@@ -492,13 +494,19 @@ const LIMITS = copy.brief.limits
       transform: scale(1.015) translate3d(0, 0, 0) rotate(0deg);
     }
     23% {
-      transform: scale(1.019) translate3d(-0.17%, 0.12%, 0) rotate(0.07deg);
+      transform: scale(calc(1.015 + 0.004 * var(--hero-drift-amp, 1)))
+        translate3d(calc(-0.17% * var(--hero-drift-amp, 1)), calc(0.12% * var(--hero-drift-amp, 1)), 0)
+        rotate(calc(0.07deg * var(--hero-drift-amp, 1)));
     }
     47% {
-      transform: scale(1.015) translate3d(0.13%, 0.18%, 0) rotate(-0.06deg);
+      transform: scale(1.015)
+        translate3d(calc(0.13% * var(--hero-drift-amp, 1)), calc(0.18% * var(--hero-drift-amp, 1)), 0)
+        rotate(calc(-0.06deg * var(--hero-drift-amp, 1)));
     }
     71% {
-      transform: scale(1.02) translate3d(0.19%, -0.1%, 0) rotate(0.05deg);
+      transform: scale(calc(1.015 + 0.005 * var(--hero-drift-amp, 1)))
+        translate3d(calc(0.19% * var(--hero-drift-amp, 1)), calc(-0.1% * var(--hero-drift-amp, 1)), 0)
+        rotate(calc(0.05deg * var(--hero-drift-amp, 1)));
     }
   }
   @keyframes hero-handheld {
@@ -507,19 +515,19 @@ const LIMITS = copy.brief.limits
       transform: translate3d(0, 0, 0);
     }
     17% {
-      transform: translate3d(0.7px, -1.3px, 0);
+      transform: translate3d(calc(0.7px * var(--hero-shake-amp, 1)), calc(-1.3px * var(--hero-shake-amp, 1)), 0);
     }
     34% {
-      transform: translate3d(-1.4px, 0.5px, 0);
+      transform: translate3d(calc(-1.4px * var(--hero-shake-amp, 1)), calc(0.5px * var(--hero-shake-amp, 1)), 0);
     }
     52% {
-      transform: translate3d(1px, 1.1px, 0);
+      transform: translate3d(calc(1px * var(--hero-shake-amp, 1)), calc(1.1px * var(--hero-shake-amp, 1)), 0);
     }
     68% {
-      transform: translate3d(-0.6px, -0.8px, 0);
+      transform: translate3d(calc(-0.6px * var(--hero-shake-amp, 1)), calc(-0.8px * var(--hero-shake-amp, 1)), 0);
     }
     85% {
-      transform: translate3d(1.3px, 0.3px, 0);
+      transform: translate3d(calc(1.3px * var(--hero-shake-amp, 1)), calc(0.3px * var(--hero-shake-amp, 1)), 0);
     }
   }
   /* Exposure hunts slowly; focus goes twice, and a focus hunt is quick — the
@@ -530,28 +538,28 @@ const LIMITS = copy.brief.limits
       filter: brightness(1) contrast(1) blur(0px);
     }
     12% {
-      filter: brightness(1.07) contrast(0.97) blur(0px);
+      filter: brightness(calc(1 + 0.07 * var(--hero-cam-amp, 1))) contrast(calc(1 + -0.03 * var(--hero-cam-amp, 1))) blur(0px);
     }
     24% {
-      filter: brightness(1.02) contrast(1) blur(0px);
+      filter: brightness(calc(1 + 0.02 * var(--hero-cam-amp, 1))) contrast(1) blur(0px);
     }
     27% {
-      filter: brightness(1.015) contrast(1) blur(1.2px);
+      filter: brightness(calc(1 + 0.015 * var(--hero-cam-amp, 1))) contrast(1) blur(calc(1.2px * var(--hero-cam-hunt, 1)));
     }
     31% {
-      filter: brightness(1.008) contrast(1.015) blur(0px);
+      filter: brightness(calc(1 + 0.008 * var(--hero-cam-amp, 1))) contrast(calc(1 + 0.015 * var(--hero-cam-amp, 1))) blur(0px);
     }
     56% {
-      filter: brightness(0.93) contrast(1.05) blur(0px);
+      filter: brightness(calc(1 + -0.07 * var(--hero-cam-amp, 1))) contrast(calc(1 + 0.05 * var(--hero-cam-amp, 1))) blur(0px);
     }
     71% {
-      filter: brightness(0.98) contrast(1.01) blur(0px);
+      filter: brightness(calc(1 + -0.02 * var(--hero-cam-amp, 1))) contrast(calc(1 + 0.01 * var(--hero-cam-amp, 1))) blur(0px);
     }
     74% {
-      filter: brightness(0.99) contrast(1) blur(0.8px);
+      filter: brightness(calc(1 + -0.01 * var(--hero-cam-amp, 1))) contrast(1) blur(calc(0.8px * var(--hero-cam-hunt, 1)));
     }
     78% {
-      filter: brightness(1.02) contrast(0.99) blur(0px);
+      filter: brightness(calc(1 + 0.02 * var(--hero-cam-amp, 1))) contrast(calc(1 + -0.01 * var(--hero-cam-amp, 1))) blur(0px);
     }
   }
   @keyframes hero-grain {
@@ -774,7 +782,10 @@ const LIMITS = copy.brief.limits
   .weekband {
     margin: 0 var(--gutter) var(--gutter);
     border-radius: clamp(6rem, 12vw, 11rem);
-    background: #0c1512;
+    /* The ground the two cards sit on, and the darkest thing here: a raised
+       object catches more light than what it lies on, so the stack reads
+       panel -> board -> copy, darkest to lightest, in that order. */
+    background: #070d0b;
     color: #edf3ef;
     /* one of the two cards is deliberately pushed past the panel's edge, and
        this is what crops it against that radius */
@@ -784,6 +795,12 @@ const LIMITS = copy.brief.limits
     max-width: 74rem;
     margin: 0 auto;
     padding: clamp(var(--space-5), 6vw, var(--space-6)) clamp(var(--gutter), 4vw, var(--space-5));
+    /* How far the copy laps over the board, and how far the board runs past
+       the panel's inner edge. Both cards add these back as padding, so an
+       overlap and a crop can only ever eat empty card, never a glyph. */
+    --lap: clamp(1.5rem, 3vw, 4rem);
+    --run: clamp(2rem, 5vw, 7rem);
+    --card-pad: clamp(1.75rem, 3vw, 2.75rem);
     display: grid;
     grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.18fr);
     align-items: center;
@@ -800,13 +817,14 @@ const LIMITS = copy.brief.limits
   .card {
     position: relative;
     border-radius: clamp(2rem, 4.2vw, 3.75rem);
-    padding: clamp(1.75rem, 3vw, 2.75rem);
+    padding: var(--card-pad);
   }
+  /* The raised one, so the lightest, and the only one that casts. */
   .weekband-copy.card {
     z-index: 1;
-    background: #0a1310;
-    box-shadow: 0 2rem 5rem rgb(0 0 0 / 0.45);
-    margin-right: clamp(-4rem, -3vw, -1.5rem);
+    background: #1a2822;
+    box-shadow: 0 2rem 5rem rgb(0 0 0 / 0.5);
+    margin-right: calc(-1 * var(--lap));
     transform: translateY(clamp(-2.5rem, -2vw, -1rem));
   }
   /* Lighter than the panel, not darker: it has to be visibly a separate object
@@ -814,10 +832,17 @@ const LIMITS = copy.brief.limits
      far enough right that the panel's radius takes a real bite out of it —
      a card that merely reaches the edge reads as a mistake, one that is plainly
      cut reads as deliberate. */
+  /* Sits between the two in value, so it separates from the panel behind it
+     and still reads as lying under the copy. The lap and the run are added
+     back as padding on the sides they happen on: whatever the copy covers on
+     the left and whatever the panel's radius bites off on the right is empty
+     card by construction, not by luck. */
   .wb-card {
-    background: #16241e;
-    border: 1px solid rgb(237 243 239 / 0.07);
-    margin-right: calc(-1 * clamp(var(--gutter), 4vw, var(--space-5)) - 7rem);
+    background: #101b17;
+    border: 1px solid rgb(237 243 239 / 0.06);
+    padding-left: calc(var(--card-pad) + var(--lap));
+    padding-right: calc(var(--card-pad) + var(--run));
+    margin-right: calc(-1 * clamp(var(--gutter), 4vw, var(--space-5)) - var(--run));
     transform: translateY(clamp(1rem, 2vw, 2.5rem));
   }
   @media (max-width: 900px) {
