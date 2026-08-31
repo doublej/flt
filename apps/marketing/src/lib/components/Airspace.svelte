@@ -83,15 +83,23 @@ onMount(() => {
 <div class="airspace" aria-hidden="true" bind:this={root}>
   <svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
     {#each plan.clouds as c, i (i)}
-      <path
-        class="cloud"
-        d={BLOB_LIST[c.blob % BLOB_LIST.length]}
-        data-depth={c.depth}
-        transform="translate({c.x} {c.y}) scale({c.w} {c.h})"
-      />
+      <g
+        class="drift"
+        style="--dx:{(9 * c.depth).toFixed(1)}px; --dy:{(-5 * c.depth).toFixed(
+          1,
+        )}px; --dur:{(26 + c.depth * 11).toFixed(0)}s; --delay:{-7.5 * i}s"
+      >
+        <path
+          class="cloud"
+          d={BLOB_LIST[c.blob % BLOB_LIST.length]}
+          data-depth={c.depth}
+          transform="translate({c.x} {c.y}) scale({c.w} {c.h})"
+        />
+      </g>
     {/each}
     {#each plan.trails as d, i (i)}
       <path class="trail" {d} />
+      <path class="pulse" {d} pathLength="1" style="--dur:{9 + i * 3.5}s; --delay:{-4 * i}s" />
     {/each}
   </svg>
 </div>
@@ -134,5 +142,61 @@ onMount(() => {
     stroke-width: 1.5;
     stroke-linecap: round;
     vector-effect: non-scaling-stroke;
+  }
+
+  /* The scroll work above owns the cloud's own transform attribute and the
+     trail's dash offset, so the constant motion is put on properties neither
+     of them touches: a wrapper <g> that drifts, and a second copy of the path
+     that carries a single travelling dash. Nothing here needs to know the
+     path's real length — pathLength="1" normalises it, so one dash cycle is
+     exactly one offset of 1 whatever the curve. */
+  .drift {
+    animation-name: drift;
+    animation-duration: var(--dur, 30s);
+    animation-delay: var(--delay, 0s);
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    will-change: transform;
+  }
+  @keyframes drift {
+    0%,
+    100% {
+      transform: translate(0, 0);
+    }
+    34% {
+      transform: translate(var(--dx), var(--dy));
+    }
+    67% {
+      transform: translate(calc(var(--dx) * -0.65), calc(var(--dy) * -0.8));
+    }
+  }
+  .pulse {
+    fill: none;
+    stroke: color-mix(in oklab, var(--color-primary) 60%, var(--color-bg));
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+    stroke-dasharray: 0.03 0.97;
+    animation-name: run;
+    animation-duration: var(--dur, 9s);
+    animation-delay: var(--delay, 0s);
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  @keyframes run {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .drift {
+      animation: none;
+    }
+    .pulse {
+      display: none;
+    }
   }
 </style>
