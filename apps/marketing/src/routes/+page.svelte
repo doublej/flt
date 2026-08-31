@@ -52,30 +52,30 @@ const DEP_COLS: Column[] = [
 
 /* Solved on /labs/splitflap/terminal — fractions of the intrinsic 2000x853. */
 let CORNERS = $state<Point[]>([
-  { x: 0.3565, y: 0.427 },
-  { x: 0.6445, y: 0.427 },
-  { x: 0.6445, y: 0.633 },
-  { x: 0.3565, y: 0.633 },
+  { x: 0.3582, y: 0.4273 },
+  { x: 0.6462, y: 0.4273 },
+  { x: 0.6462, y: 0.6333 },
+  { x: 0.3582, y: 0.6333 },
 ])
 
 /* Grade tuned against the photograph itself, at full size, on the page. */
 let LOOK = $state({
   renderer: 'canvas',
-  exposure: 0.69,
-  contrast: 1.31,
-  warmth: -0.17,
-  angle: 180,
+  exposure: 0.78,
+  contrast: 1.25,
+  warmth: -0.15,
+  angle: 179,
   multiply: '#00000000',
-  screen: '#ffca0018',
-  grain: 1,
-  aberration: 1.3,
-  vignette: 0.13,
-  blur: 0.9,
-  supersample: 4,
+  screen: '#ffc90019',
+  grain: 0.56,
+  aberration: 0.75,
+  vignette: 0,
+  blur: 0.85,
+  supersample: 1,
   glass: false,
-  bg: '#000000ff',
-  pad: 0.42000000000000004,
-  face: '#131313',
+  bg: '#2d2d2dff',
+  pad: 0.42,
+  face: '#1d1d1d',
   ink: '#dfd6c4',
   aspect: 0.495,
   glyph: 1.07,
@@ -98,7 +98,7 @@ let LOOK = $state({
   signDown: 0,
   signIcon: false,
   signX: 0,
-  signY: -0.0001999999999999988,
+  signY: -0.0002,
   signW: 1.014,
   signH: 0.1656,
   signPad: 0.55,
@@ -231,7 +231,7 @@ const LIMITS = copy.brief.limits
 
 <section class="weekband">
   <div class="weekband-inner">
-    <div class="weekband-copy">
+    <div class="weekband-copy card">
       <h2>{copy.weekband.heading(FLEX.best)}</h2>
       <p>{copy.weekband.body(FLEX.best, FLEX.worst)}</p>
       <div class="weekband-actions">
@@ -247,7 +247,9 @@ const LIMITS = copy.brief.limits
         )}
       </p>
     </div>
-    <WeekBoard />
+    <div class="wb-card card">
+      <WeekBoard />
+    </div>
   </div>
 </section>
 
@@ -424,7 +426,7 @@ const LIMITS = copy.brief.limits
        edges: inset by the gutter and rounded hard, so the photograph reads as
        a held object and the page's own ground frames it. */
     margin: 0 var(--gutter) var(--gutter);
-    border-radius: clamp(1.5rem, 3vw, 2.75rem);
+    border-radius: clamp(6rem, 12vw, 11rem);
     isolation: isolate;
     background: #000;
     /* the camera moves, so the stage is oversized and the hero clips it — and
@@ -771,23 +773,63 @@ const LIMITS = copy.brief.limits
      still legible. */
   .weekband {
     margin: 0 var(--gutter) var(--gutter);
-    border-radius: clamp(1.5rem, 3vw, 2.75rem);
+    border-radius: clamp(6rem, 12vw, 11rem);
     background: #0c1512;
     color: #edf3ef;
+    /* one of the two cards is deliberately pushed past the panel's edge, and
+       this is what crops it against that radius */
+    overflow: hidden;
   }
   .weekband-inner {
     max-width: 74rem;
     margin: 0 auto;
-    padding: clamp(var(--space-6), 9vw, var(--space-7)) clamp(var(--gutter), 4vw, var(--space-5));
+    padding: clamp(var(--space-5), 6vw, var(--space-6)) clamp(var(--gutter), 4vw, var(--space-5));
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.18fr);
     align-items: center;
-    gap: var(--space-6);
+    /* no gap: the two cards overlap instead, and the overlap is the point */
+    gap: 0;
+  }
+
+  /* The two columns are cards now, not bare columns. Their radius is the
+     panel's, taken down by the ratio of their width to its own, so a 480px card
+     inside a 1296px panel reads as the same curvature rather than the same
+     number of pixels. The pair is placed off the grid on purpose: the copy sits
+     high and rides over the board, the board sits low and runs off the right
+     edge to be cropped by the panel. One held, one leaving. */
+  .card {
+    position: relative;
+    border-radius: clamp(2rem, 4.2vw, 3.75rem);
+    padding: clamp(1.75rem, 3vw, 2.75rem);
+  }
+  .weekband-copy.card {
+    z-index: 1;
+    background: #0a1310;
+    box-shadow: 0 2rem 5rem rgb(0 0 0 / 0.45);
+    margin-right: clamp(-4rem, -3vw, -1.5rem);
+    transform: translateY(clamp(-2.5rem, -2vw, -1rem));
+  }
+  /* Lighter than the panel, not darker: it has to be visibly a separate object
+     for the crop to mean anything, and it is the specimen being shown. Pushed
+     far enough right that the panel's radius takes a real bite out of it —
+     a card that merely reaches the edge reads as a mistake, one that is plainly
+     cut reads as deliberate. */
+  .wb-card {
+    background: #16241e;
+    border: 1px solid rgb(237 243 239 / 0.07);
+    margin-right: calc(-1 * clamp(var(--gutter), 4vw, var(--space-5)) - 7rem);
+    transform: translateY(clamp(1rem, 2vw, 2.5rem));
   }
   @media (max-width: 900px) {
     .weekband-inner {
       grid-template-columns: 1fr;
       gap: var(--space-4);
+    }
+    /* the overlap is a two-column idea; stacked it is just a broken layout */
+    .weekband-copy.card,
+    .wb-card {
+      margin-right: 0;
+      transform: none;
     }
   }
   /* Not --text-h2: that is sized for the full 74rem measure, and this headline
