@@ -2,8 +2,8 @@
  *  jittered off a fixed seed and then normalised so the curve's own bounds
  *  fill the unit box. Coordinates are 0..1, which means one path serves any
  *  size or proportion: as a `clipPathUnits="objectBoundingBox"` clip on a
- *  photograph, or scaled into a viewBox as a cloud. Regenerate with
- *  scripts/blobs.py. */
+ *  photograph, or scaled into a viewBox as a cloud. Hand-maintained — the
+ *  generator these came out of is gone, so edit the numbers in place. */
 export const BLOBS = {
   gateway:
     'M0.9998,0.4711C0.9969,0.5980 0.9530,0.7556 0.8635,0.8436C0.7739,0.9317 0.5863,1.0085 0.4625,0.9993C0.3387,0.9901 0.1977,0.8767 0.1207,0.7887C0.0437,0.7007 0.0050,0.5811 0.0006,0.4711C-0.0039,0.3611 0.0171,0.2069 0.0941,0.1288C0.1711,0.0506 0.3314,0.0099 0.4625,0.0022C0.5937,-0.0056 0.7915,0.0041 0.8810,0.0823C0.9706,0.1605 1.0027,0.3442 0.9998,0.4711Z',

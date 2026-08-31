@@ -8,8 +8,7 @@
 
 /* Two spot colours on clean stock: the pine has been lifted out of the mud and
    the paper cooled, so the page reads as daylight rather than as an old
-   timetable. Signal red is still used once per screen, for the number that
-   carries the argument. */
+   timetable. */
 :root {
   --color-bg: #f4f7f3;
   --color-surface: #ffffff;
@@ -18,7 +17,6 @@
   --color-muted: #5d6f68;
   --color-primary: #0a7a62;
   --color-primary-hover: #075f4c;
-  --color-signal: #c73e20;
   /* Amber twice: bright enough to read as a fill, dark enough to read as text.
      The 0.9rem saving figures need the second one. */
   --color-saving: #c96a12;
@@ -26,8 +24,8 @@
   --color-saving-soft: #f7ecd0;
   --color-border: #dfe7e0;
   --color-track: #e7eee8;
-  /* Referenced by four glows that have been dead since they were written: the
-     token was never defined, so every one of those box-shadows was dropped. */
+  /* The focus/attention glow: BriefForm's focused field, ReportShowcase's page
+     edge and the status page's working pip. */
   --color-amber-glow: rgb(255 197 94 / 0.38);
   --radius: 3px;
   --radius-lg: 4px;
@@ -39,7 +37,6 @@
   --font-display: "Archivo", system-ui, sans-serif;
   --display-wide: 112%;
 
-  --text-display: clamp(3rem, 8vw, 6.25rem);
   --text-h2: clamp(2.1rem, 4.8vw, 3.75rem);
   --text-h3: clamp(1.2rem, 2vw, 1.6rem);
   --text-lead: clamp(1.08rem, 1.6vw, 1.3rem);
@@ -53,7 +50,6 @@
   --space-4: 2rem;
   --space-5: 3.5rem;
   --space-6: 6rem;
-  --space-7: 10rem;
 
   --section-y: clamp(6.5rem, 13vw, 13rem);
   --gutter: clamp(1.5rem, 5vw, 4.5rem);
@@ -66,6 +62,10 @@
      stub, and below 1024 the container is already narrower than this, so nothing
      changes there. */
   --measure-heading: 50rem;
+
+  /* The reveal curve. Durations stay literal — they are self-documenting and they
+     differ on purpose — but this one is four numbers nobody can proofread. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html {

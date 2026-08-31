@@ -147,7 +147,7 @@ const nf = $derived(new Intl.NumberFormat(getLocale() === 'nl' ? 'nl-NL' : 'en-G
   .track span {
     display: block;
     height: 100%;
-    transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+    transition: width 0.45s var(--ease-out), opacity 0.3s ease;
   }
   .gulf {
     background: var(--color-saving);

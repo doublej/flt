@@ -147,7 +147,7 @@ onMount(() => {
     align-self: end;
     background: rgb(237 243 239 / 0.28);
     border-radius: 1px;
-    transition: height 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: height 0.45s var(--ease-out);
   }
   .week li.best .col {
     background: var(--color-saving);

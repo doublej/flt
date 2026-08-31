@@ -787,7 +787,7 @@ const LIMITS = $derived(copy.brief.limits)
     color: #f0d489;
     text-shadow: 0 0.08em 0.7em rgb(0 0 0 / 0.7);
     margin-bottom: 1.1em;
-    animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation: rise 0.7s var(--ease-out) backwards;
   }
   .rotor h1 {
     font-family: var(--font-display);
@@ -811,7 +811,7 @@ const LIMITS = $derived(copy.brief.limits)
     line-height: 0.8;
     letter-spacing: -0.055em;
     text-shadow: 0 0.045em 0.34em rgb(0 0 0 / 0.55);
-    animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation: rise 0.7s var(--ease-out) backwards;
     animation-delay: 90ms;
   }
   .rotor h1 .clause {
@@ -824,7 +824,7 @@ const LIMITS = $derived(copy.brief.limits)
     line-height: 1.22;
     letter-spacing: -0.012em;
     color: rgb(237 243 239 / 0.72);
-    animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation: rise 0.7s var(--ease-out) backwards;
     animation-delay: 190ms;
   }
   @keyframes rise {
