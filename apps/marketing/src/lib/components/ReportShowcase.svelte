@@ -1,11 +1,12 @@
 <script lang="ts">
-import { en as copy } from '$lib/i18n/en'
+import { getCopy } from '$lib/i18n/copy.svelte'
 
-const PAGES = [
+const copy = $derived(getCopy())
+const PAGES = $derived([
   { id: 'cover', label: copy.report.showcase.cover, caption: copy.report.showcase.coverCaption },
   { id: 'chart', label: copy.report.showcase.chart, caption: copy.report.showcase.chartCaption },
   { id: 'table', label: copy.report.showcase.table, caption: copy.report.showcase.tableCaption },
-]
+])
 
 let active = $state('cover')
 const current = $derived(PAGES.find((p) => p.id === active) ?? PAGES[0])

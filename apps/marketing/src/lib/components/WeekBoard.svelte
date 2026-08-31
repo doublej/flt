@@ -1,7 +1,9 @@
 <script lang="ts">
-import { en as copy } from '$lib/i18n/en'
+import { getCopy } from '$lib/i18n/copy.svelte'
 import { SPREADS } from '$lib/scenarios'
 import { onMount } from 'svelte'
+
+const copy = $derived(getCopy())
 
 /** The hero's argument on a loop: a route turns up, and you see what each of
  *  its seven departure days cost. The fares and the destinations are real runs

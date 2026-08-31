@@ -1,6 +1,8 @@
 <script lang="ts">
-import { en as copy } from '$lib/i18n/en'
+import { getCopy } from '$lib/i18n/copy.svelte'
 import { SPREADS } from '$lib/scenarios'
+
+const copy = $derived(getCopy())
 
 /** One bar per route, drawn to the dearest fare and split where the cheapest
  *  day ends. The dark part is what you pay if you are flexible; the gold part

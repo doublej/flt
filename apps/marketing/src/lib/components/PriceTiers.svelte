@@ -1,6 +1,8 @@
 <script lang="ts">
-import { en as copy } from '$lib/i18n/en'
+import { getCopy } from '$lib/i18n/copy.svelte'
 import { TIERS } from '$lib/tiers'
+
+const copy = $derived(getCopy())
 
 /** A schedule of charges, not three cards to choose between. Three cards put
  *  the prices next to each other, where the only scale on offer is €3 to €10;
