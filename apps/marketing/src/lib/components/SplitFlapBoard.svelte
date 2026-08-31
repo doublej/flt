@@ -51,6 +51,7 @@ import {
   tick,
 } from '$lib/splitflap'
 import { type Leaf, type Skin, paintCell, widestFlap } from '$lib/splitflap-canvas'
+import type { Snippet } from 'svelte'
 
 let {
   rows,
@@ -60,6 +61,9 @@ let {
   flapMs = 62,
   renderer = 'dom',
   skinKey,
+  sign,
+  signGap = 1,
+  signHead = 5,
 }: {
   rows: Record<string, string>[]
   columns: Column[]
@@ -71,6 +75,19 @@ let {
   /** Change this whenever a --sf-* variable changes. CSS restyles the DOM path
    *  on its own, but the canvas painter and the width budget have to be told. */
   skinKey?: string | number
+  /** A header fixture bolted above the flaps — a lit sign, usually. It rides
+   *  inside the same homography and the same lens as the board, because on a
+   *  real wall it is the same object; anything pinned separately reads as a
+   *  sticker. */
+  sign?: Snippet
+  /** clearance between that fixture and the top row, in cell heights */
+  signGap?: number
+  /** How much room the fixture needs above the board, in cell heights, INCLUDING
+   *  anything it spills past its own box. The lens filter region is grown to
+   *  match; a fixture taller than this keeps its geometry but loses grain and
+   *  aberration above the cut, because an SVG filter simply stops there.
+   *  5 covers a LightBox at its default glow. */
+  signHead?: number
 } = $props()
 
 /* Every internal dimension is a ratio of the cell, so the board is the same
@@ -427,6 +444,10 @@ $effect(() => {
 
 /* --- compositing -------------------------------------------------------- */
 
+/* the filter region is a percentage of the filtered box, so a fixture standing
+   proud of the board has to be paid for in percent of the board's own height */
+const head = $derived(sign && bh > 0 ? Math.min(400, (signHead * cellH * 100) / bh) : 0)
+
 const pin = $derived(composite?.corners ? cornerPinMatrix(bw, bh, composite.corners) : null)
 const grade = $derived(composite?.grade)
 const lens = $derived(composite?.lens)
@@ -450,6 +471,9 @@ const lensCss = $derived(
 >
 	<div class="root" style:transform={pin ?? undefined} style:filter={rootCss}>
 		<div class="optics" style:filter={lensCss}>
+			{#if sign}
+				<div class="fixture" style:--gap="calc(var(--ch) * {signGap})">{@render sign()}</div>
+			{/if}
 			<div class="board" style:mask-image={composite?.mask} aria-hidden="true">
 				{#if hasLabels}
 					<div class="labels">
@@ -518,7 +542,14 @@ const lensCss = $derived(
 
 	{#if optics}
 		<svg class="defs" aria-hidden="true" focusable="false">
-			<filter {id} x="-4%" y="-4%" width="108%" height="108%" color-interpolation-filters="sRGB">
+			<filter
+				{id}
+				x="-4%"
+				y="{-4 - head}%"
+				width="108%"
+				height="{108 + head}%"
+				color-interpolation-filters="sRGB"
+			>
 				{#if lens?.aberration}
 					<feColorMatrix
 						in="SourceGraphic"
@@ -669,6 +700,19 @@ const lensCss = $derived(
 		box-shadow: none;
 	}
 
+	.optics {
+		/* the fixture hangs off the top of this box, so it has to be the one that
+		   positions it — a filter alone only does that while a filter is set */
+		position: relative;
+	}
+	/* the sign sits above the flaps without joining their grid: the board's own
+	   height still drives the pin, so adding one does not move the board */
+	.fixture {
+		position: absolute;
+		bottom: calc(100% + var(--gap));
+		left: 0;
+		right: 0;
+	}
 	.root {
 		transform-origin: 0 0;
 	}

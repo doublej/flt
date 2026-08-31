@@ -25,7 +25,7 @@ export const SCENARIOS: Scenario[] = [
   {
     id: 'gateway',
     grid: { rows: 5, cols: 1, rowKind: 'departure airports' },
-    ask: 'Hanoi in November. I can start from any airport I can reach by train.',
+    ask: "Hanoi in November. I can train it to Brussels or Frankfurt if that's cheaper, I really don't mind.",
     route: 'Amsterdam · Brussels · Paris · Düsseldorf · Frankfurt → Hanoi',
     window: '3 November',
     queries: 5,
@@ -40,7 +40,7 @@ export const SCENARIOS: Scenario[] = [
   {
     id: 'ski',
     grid: { rows: 4, cols: 7, rowKind: 'destinations' },
-    ask: 'Somewhere with snow, some time in the third week of January.',
+    ask: "Somewhere with snow, third week of January? Don't mind where as long as it isn't a fortune to get to.",
     route: 'Amsterdam → Geneva · Innsbruck · Lyon · Turin',
     window: '16–22 January',
     queries: 28,
@@ -55,7 +55,7 @@ export const SCENARIOS: Scenario[] = [
   {
     id: 'cabin',
     grid: { rows: 2, cols: 7, rowKind: 'cabins' },
-    ask: 'Singapore in November. Is premium economy worth the money that week?',
+    ask: 'Singapore in November. Is premium economy actually worth it that week, or am I paying €500 for a bigger seat?',
     route: 'Amsterdam → Singapore, economy and premium economy',
     window: '3–9 November',
     queries: 14,
@@ -70,7 +70,7 @@ export const SCENARIOS: Scenario[] = [
   {
     id: 'holidays',
     grid: { rows: 4, cols: 7, rowKind: 'destinations' },
-    ask: 'New York for Christmas — or close enough that I can take a train in.',
+    ask: "New York for Christmas. Or Boston, or Philly if it's cheaper, anywhere I can get a train in from.",
     route: 'Amsterdam → JFK · Newark · Boston · Philadelphia',
     window: '19–25 December',
     queries: 28,

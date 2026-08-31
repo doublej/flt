@@ -51,6 +51,20 @@ const look = $state({
   rowgap: 0.07,
   grit: 0.05,
   pins: true,
+  /* the lit header, measured off the same photograph as everything else */
+  signFace: '#fedf8e',
+  signLip: '#ffc34e',
+  signFrame: '#974716',
+  signInk: '#cc6707',
+  signGlow: '#ff5a0f',
+  signAspect: 24.1,
+  signGap: 1.05,
+  signGlyph: 0.5,
+  signLetter: 0.16,
+  signBloom: 0.55,
+  signUp: 1.2,
+  signDown: 0.45,
+  signIcon: true,
 })
 </script>
 
@@ -61,6 +75,8 @@ const look = $state({
 	<p>
 		An amber board across a dark glass wall — a much harder light to match than the counter. Ink,
 		flap tone and the whole grade are sampled off the picture, then everything is yours to tune.
+		The lit header above the flaps is drawn too, not photographed: its diffuser, its letters and
+		the light it throws on the wall all came off the same pixels.
 	</p>
 	<CompositeStage
 		src="/img/terminal.jpg"
@@ -71,6 +87,7 @@ const look = $state({
 		columns={COLS}
 		bind:corners
 		{look}
+		sign="Terminal 3 — all departures"
 		editable
 		storageKey="lab-terminal"
 	/>

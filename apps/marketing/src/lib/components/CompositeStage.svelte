@@ -1,5 +1,7 @@
 <script lang="ts">
+import LightBox from '$lib/components/LightBox.svelte'
 import SplitFlapBoard, { type Column, type Point } from '$lib/components/SplitFlapBoard.svelte'
+import { SIGN_ASPECT } from '$lib/lightbox-canvas'
 import { shade } from '$lib/splitflap-canvas'
 import { loadTuning, saveTuning } from '$lib/tuning'
 import { onMount } from 'svelte'
@@ -14,6 +16,7 @@ let {
   columns,
   corners = $bindable(),
   look,
+  sign,
   editable = false,
   storageKey,
 }: {
@@ -30,6 +33,8 @@ let {
   /** TL, TR, BR, BL as fractions of the INTRINSIC image, never of the container */
   corners: Point[]
   look: Record<string, string | number | boolean>
+  /** Text for the lit sign above the board. Omit for a board with no header. */
+  sign?: string
   /** off: no pane, no handles, no tweakpane fetched. The page case. */
   editable?: boolean
   /** Names the saved tuning. Defaults to `src`, so two stages editing the SAME
@@ -127,6 +132,22 @@ const skinKey = $derived(
     look.renderer,
   ].join('|'),
 )
+
+/* the sign is lit, so it takes none of the board's palette — its own tones came
+   off the photograph and the two are only related by sitting on one wall */
+const SIGNSKIN = $derived({
+  face: str('signFace', '#fedf8e'),
+  lip: str('signLip', '#ffc34e'),
+  frame: str('signFrame', '#974716'),
+  ink: str('signInk', '#cc6707'),
+  glow: str('signGlow', '#ff5a0f'),
+  up: n('signUp', 1.2),
+  down: n('signDown', 0.45),
+  glyph: n('signGlyph', 0.5),
+  letter: n('signLetter', 0.16),
+  bloom: n('signBloom', 0.55),
+  icon: look.signIcon !== false,
+})
 
 const COMPOSITE = $derived({
   corners: pins,
@@ -355,6 +376,23 @@ onMount(() => {
     board.addBinding(look, 'rowgap', { min: 0, max: 0.4, step: 0.005 })
     board.addBinding(look, 'grit', { min: 0, max: 0.3, step: 0.005 })
 
+    if (sign) {
+      const lit = p.addFolder({ title: 'Sign' })
+      lit.addBinding(look, 'signFace', { view: 'color', label: 'diffuser' })
+      lit.addBinding(look, 'signInk', { view: 'color', label: 'letters' })
+      lit.addBinding(look, 'signGlow', { view: 'color', label: 'spill' })
+      lit.addBinding(look, 'signLip', { view: 'color', label: 'lip' })
+      lit.addBinding(look, 'signFrame', { view: 'color', label: 'frame' })
+      lit.addBinding(look, 'signAspect', { min: 6, max: 60, step: 0.1, label: 'w : h' })
+      lit.addBinding(look, 'signGap', { min: 0, max: 4, step: 0.05, label: 'gap (cells)' })
+      lit.addBinding(look, 'signGlyph', { min: 0.2, max: 0.9, step: 0.01, label: 'cap height' })
+      lit.addBinding(look, 'signLetter', { min: 0, max: 0.6, step: 0.01, label: 'tracking' })
+      lit.addBinding(look, 'signBloom', { min: 0, max: 1.4, step: 0.01, label: 'light bleed' })
+      lit.addBinding(look, 'signUp', { min: 0, max: 4, step: 0.05, label: 'spill up' })
+      lit.addBinding(look, 'signDown', { min: 0, max: 4, step: 0.05, label: 'spill down' })
+      lit.addBinding(look, 'signIcon', { label: 'pictogram' })
+    }
+
     const put = p.addFolder({ title: 'Place' })
     put.addBinding(place, 'x', { min: -1400, max: 1400, step: 1 })
     put.addBinding(place, 'y', { min: -1400, max: 1400, step: 1 })
@@ -421,6 +459,14 @@ onMount(() => {
 		>
 			<img class="scene" {src} alt="" draggable="false" style:object-position={objectPosition} />
 			<div class="pinned" style:width="{width}px">
+				{#snippet lit()}
+					<LightBox
+						text={sign}
+						aspect={n('signAspect', SIGN_ASPECT)}
+						sign={SIGNSKIN}
+						scale={n('supersample', 2)}
+					/>
+				{/snippet}
 				<SplitFlapBoard
 					{rows}
 					{columns}
@@ -428,6 +474,8 @@ onMount(() => {
 					renderer={look.renderer === 'canvas' ? 'canvas' : 'dom'}
 					{skinKey}
 					composite={COMPOSITE}
+					sign={sign ? lit : undefined}
+					signGap={n('signGap', 1)}
 				/>
 			</div>
 			{#if editable}

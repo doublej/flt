@@ -87,6 +87,21 @@ const LOOK = $state({
   rowgap: 0.19,
   grit: 0,
   pins: false,
+  /* the lit header. Its tones are the photograph's own, so it stays amber even
+     though the flaps beside it were graded cool. */
+  signFace: '#fedf8e',
+  signLip: '#ffc34e',
+  signFrame: '#974716',
+  signInk: '#cc6707',
+  signGlow: '#ff5a0f',
+  signAspect: 24.1,
+  signGap: 1.05,
+  signGlyph: 0.5,
+  signLetter: 0.16,
+  signBloom: 0.55,
+  signUp: 1.2,
+  signDown: 0.45,
+  signIcon: true,
 })
 
 const DEPARTURES = SPREADS.map((r) => {
@@ -174,6 +189,7 @@ const LIMITS = [
       columns={DEP_COLS}
       bind:corners={CORNERS}
       look={LOOK}
+      sign="Cheapest day by route"
       editable={tuning}
       storageKey="hero"
     />

@@ -1,12 +1,65 @@
 <script lang="ts">
 import { TIERS } from '$lib/tiers'
 
+/** A brief should be a minute of tapping, not a form to fill in. The
+ *  destination is the only thing we cannot guess. Every other row is chips,
+ *  and an empty row is a real answer: it means you have no view, so we use
+ *  ours. Tapping a chosen chip again clears it. */
 let { tier = 'survey' }: { tier?: string } = $props()
 
-let from = $state('')
+const ORIGINS = ['Amsterdam', 'Brussels', 'Paris', 'Düsseldorf', 'Frankfurt', 'Somewhere else']
+const LENGTHS = ['A long weekend', 'A week', 'Two weeks', 'Longer', 'One way']
+const DATES = ['Exact dates', 'Give or take a few days', 'Any week that month']
+const CABINS = ['Economy', 'Premium economy', 'Business']
+const PRIORITIES = [
+  'Price',
+  'Fewest stops',
+  'Shortest journey',
+  'Daytime flights',
+  'Bag included',
+  'An airline I know',
+]
+const DISLIKES = [
+  'Overnight flights',
+  'Layovers over four hours',
+  'Low-cost carriers',
+  'Departures before 8am',
+  'Changing airport in a city',
+]
+const DEALBREAKERS = [
+  'More than one stop',
+  'Gulf hubs',
+  'Overnight layovers',
+  'Landing after midnight',
+  'Separate tickets',
+]
+
+/** The next nine months by name, so nobody has to type a date. */
+const now = new Date()
+const MONTHS = Array.from({ length: 9 }, (_, n) => {
+  const d = new Date(now.getFullYear(), now.getMonth() + n, 1)
+  const m = d.toLocaleString('en-GB', { month: 'long' })
+  return d.getFullYear() === now.getFullYear() ? m : `${m} ${d.getFullYear()}`
+})
+
 let to = $state('')
-let when = $state('')
-let matters = $state('')
+let from = $state('Amsterdam')
+let elsewhere = $state('')
+let month = $state('')
+let length = $state('')
+let dates = $state('Give or take a few days')
+let cabin = $state('Economy')
+let priorities = $state<string[]>([])
+let dislikes = $state<string[]>([])
+let dealbreakers = $state<string[]>([])
+let notes = $state('')
+
+const origin = $derived(from === 'Somewhere else' ? elsewhere || 'anywhere' : from || 'anywhere')
+const when = $derived([month, length, dates].filter(Boolean).join(' · '))
+
+const only = (cur: string, v: string) => (cur === v ? '' : v)
+const also = (list: string[], v: string) =>
+  list.includes(v) ? list.filter((x) => x !== v) : [...list, v]
 
 /** idle → sheet (mock Apple Pay sheet) → done. No payment is taken anywhere. */
 let stage = $state<'idle' | 'sheet' | 'done'>('idle')
@@ -23,39 +76,69 @@ function confirm() {
 }
 </script>
 
-<form onsubmit={pay}>
-  <div class="row">
-    <label>
-      <span>Flying from</span>
-      <input bind:value={from} required placeholder="Amsterdam" autocomplete="off" />
-    </label>
-    <label>
-      <span>Going to</span>
-      <input
-        bind:value={to}
-        required
-        placeholder="Vietnam: Hanoi, Da Nang, anywhere sensible"
-        autocomplete="off"
-      />
-    </label>
+{#snippet row(
+  label: string,
+  items: string[],
+  picked: string[],
+  tap: (v: string) => void,
+  ranked: boolean,
+)}
+  <div class="field">
+    <span class="cap">{label}</span>
+    <div class="chips" role="group" aria-label={label}>
+      {#each items as it (it)}
+        {@const n = picked.indexOf(it)}
+        <button type="button" class:on={n >= 0} aria-pressed={n >= 0} onclick={() => tap(it)}>
+          {#if ranked && n >= 0}<i>{n + 1}</i>{/if}{it}
+        </button>
+      {/each}
+    </div>
   </div>
+{/snippet}
 
+<form onsubmit={pay}>
   <label>
-    <span>Roughly when</span>
+    <span>Where do you want to go?</span>
     <input
-      bind:value={when}
+      bind:value={to}
       required
-      placeholder="Late October, two weeks, flexible either side"
+      placeholder="Vietnam. Or Hanoi. Or anywhere warm in November."
       autocomplete="off"
     />
   </label>
 
+  {@render row('Where from', ORIGINS, [from], (v) => (from = only(from, v)), false)}
+  {#if from === 'Somewhere else'}
+    <label class="tuck">
+      <span>Which airport</span>
+      <input bind:value={elsewhere} placeholder="Berlin" autocomplete="off" />
+    </label>
+  {/if}
+
+  {@render row('Which month', MONTHS, [month], (v) => (month = only(month, v)), false)}
+  {@render row('How long', LENGTHS, [length], (v) => (length = only(length, v)), false)}
+  {@render row('Your dates', DATES, [dates], (v) => (dates = only(dates, v)), false)}
+  {@render row('Cabin', CABINS, [cabin], (v) => (cabin = only(cabin, v)), false)}
+
+  {@render row(
+    'What matters most, in the order you tap them',
+    PRIORITIES,
+    priorities,
+    (v) => (priorities = also(priorities, v)),
+    true,
+  )}
+  {@render row('Rather not', DISLIKES, dislikes, (v) => (dislikes = also(dislikes, v)), false)}
+  {@render row(
+    'Dealbreakers',
+    DEALBREAKERS,
+    dealbreakers,
+    (v) => (dealbreakers = also(dealbreakers, v)),
+    false,
+  )}
+
   <label>
-    <span>What matters to you</span>
-    <textarea
-      bind:value={matters}
-      rows="4"
-      placeholder="Cheap over fast. No more than one stop. I would rather leave a day early than pay another €200."
+    <span>Anything else</span>
+    <textarea bind:value={notes} rows="2" placeholder="Optional. We read every word of it."
     ></textarea>
   </label>
 
@@ -97,8 +180,14 @@ function confirm() {
         </div>
         <dl>
           <div><dt>Bureau</dt><dd>{chosen.name} report</dd></div>
-          <div><dt>Route</dt><dd>{from || '—'} to {to || '—'}</dd></div>
-          <div><dt>Dates</dt><dd>{when || '—'}</dd></div>
+          <div><dt>Route</dt><dd>{origin} to {to || '—'}</dd></div>
+          <div><dt>When</dt><dd>{when || 'you decide'}</dd></div>
+          {#if priorities.length}
+            <div><dt>In order</dt><dd>{priorities.join(', ')}</dd></div>
+          {/if}
+          {#if dealbreakers.length}
+            <div><dt>Never</dt><dd>{dealbreakers.join(', ')}</dd></div>
+          {/if}
           <div class="pay-total"><dt>Total</dt><dd>{chosen.price}</dd></div>
         </dl>
         <button class="confirm" onclick={confirm}>Confirm with Face ID</button>
@@ -128,11 +217,6 @@ function confirm() {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: clamp(1.25rem, 3vw, 2.25rem);
-  }
-  .row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
   }
   label {
     display: flex;
@@ -328,5 +412,58 @@ function confirm() {
     color: rgb(255 255 255 / 0.55);
     padding: 0.5rem;
     font-size: 0.9rem;
+  }
+  /* Chips: one tap per answer, and a second tap to take it back. */
+  .field {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .cap {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .chips button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.42rem 0.85rem;
+    font-size: 0.88rem;
+    color: var(--color-text);
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .chips button:hover {
+    border-color: var(--color-primary);
+  }
+  .chips button.on {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-surface);
+  }
+  /* The rank a priority was tapped in, carried on the chip itself. */
+  .chips i {
+    display: grid;
+    place-items: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-left: -0.2rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.22);
+    font-family: var(--font-mono);
+    font-style: normal;
+    font-size: 0.68rem;
+  }
+  .tuck {
+    max-width: 18rem;
   }
 </style>

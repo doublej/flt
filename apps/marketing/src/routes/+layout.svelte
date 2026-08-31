@@ -45,7 +45,7 @@ const ld = `<script type="application/ld+json">${JSON.stringify(schema)}<\/scrip
   <title>Bureau — flight research for people with flexible dates</title>
   <meta
     name="description"
-    content="Tell us where you want to go and roughly when. Bureau prices every date you could fly, ranks what comes back and sends you one report with a link to book each option. From €7, and we never book or ticket anything."
+    content="Tell us where you want to go and roughly when. Bureau prices every date you could fly, ranks what comes back and sends you one report with a link to book each option. From €3, and we never book or ticket anything."
   />
   {@html ld}
 </svelte:head>
