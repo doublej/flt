@@ -34,7 +34,7 @@ const HEADLINES = [
   },
   {
     kicker: 'AMSTERDAM-NEW YORK',
-    lines: ['€400 on the 22nd.', '€547 on the 19th.', '€147 to move one date.'],
+    lines: ['€400 on the 22nd.', '€547 on the 19th.', '€147 apart.'],
   },
   {
     kicker: 'AMSTERDAM-INNSBRUCK',
@@ -42,7 +42,7 @@ const HEADLINES = [
   },
   {
     kicker: 'SEVENTY-FIVE SEARCHES',
-    lines: ['Two hours in tabs.', '200 seconds in ours.', '2,942 options either way.'],
+    lines: ['75 searches.', 'Two hours in tabs.', '200 seconds here.'],
   },
 ]
 let held = $state(false)
@@ -653,7 +653,7 @@ const LIMITS = [
     padding: 6rem var(--gutter) var(--space-5)
       min(
         max(var(--gutter), calc((100vw - 74rem) / 2 + var(--gutter))),
-        calc(var(--board-x) - 27rem)
+        calc(var(--board-x) - 30rem)
       );
     min-height: max(30rem, min(82vh, 48vw));
     display: grid;
@@ -665,7 +665,7 @@ const LIMITS = [
      of the board — about 22rem once the container gutter is taken off. */
   .rotor {
     display: grid;
-    max-width: 24rem;
+    max-width: 27rem;
   }
   .slab {
     grid-area: 1 / 1;
@@ -674,7 +674,7 @@ const LIMITS = [
     font-family: var(--font-display);
     font-stretch: var(--display-wide);
     font-weight: 500;
-    font-size: clamp(2.1rem, 3.4vw, 3rem);
+    font-size: clamp(2rem, 3.1vw, 2.75rem);
     line-height: 1.04;
     letter-spacing: -0.015em;
     color: #edf3ef;
@@ -697,7 +697,7 @@ const LIMITS = [
 
   /* The hero says what the thing is, once, in the same glass as the headline. */
   .pitch {
-    max-width: 24rem;
+    max-width: 27rem;
     color: rgb(237 243 239 / 0.82);
     font-size: 1.02rem;
     line-height: 1.5;
@@ -773,7 +773,7 @@ const LIMITS = [
     margin: 0 auto;
     padding: var(--space-6) var(--gutter);
     display: grid;
-    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
     align-items: center;
     gap: var(--space-6);
   }
@@ -783,19 +783,22 @@ const LIMITS = [
       gap: var(--space-4);
     }
   }
+  /* Not --text-h2: that is sized for the full 74rem measure, and this headline
+     lives in a column half that wide, where 3.75rem wraps to five lines. */
   .weekband h2 {
     font-family: var(--font-display);
     font-stretch: var(--display-wide);
     font-weight: 500;
-    font-size: var(--text-h2);
-    line-height: 1.08;
+    font-size: clamp(1.85rem, 2.7vw, 2.3rem);
+    line-height: 1.1;
     letter-spacing: -0.02em;
+    text-wrap: balance;
     margin-bottom: var(--space-3);
   }
   .weekband-copy p {
     color: rgb(237 243 239 / 0.76);
     font-size: var(--text-lead);
-    max-width: 34ch;
+    max-width: 38ch;
   }
   .weekband-actions {
     display: flex;
@@ -828,8 +831,11 @@ const LIMITS = [
     font-size: 0.78rem;
     color: rgb(237 243 239 / 0.5);
   }
+  /* the measure cap above is for the lead paragraph; this line is one mono
+     sentence and fits the column unbroken without it */
   .weekband-copy .proof {
     font-size: 0.78rem;
+    max-width: none;
   }
 
   /* ---- page ------------------------------------------------------------ */
