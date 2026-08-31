@@ -387,6 +387,11 @@ onMount(() => {
   .shape {
     font-size: 0.95rem;
     color: var(--color-text);
+    /* English never needs this, but a Dutch compound like "vertrekluchthavens"
+       is one unbreakable word — without a hyphenation point it pushes this
+       narrow grid column past the viewport on mobile instead of wrapping. */
+    hyphens: auto;
+    overflow-wrap: break-word;
   }
   .sub {
     font-family: var(--font-mono);
