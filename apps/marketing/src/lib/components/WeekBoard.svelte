@@ -1,4 +1,5 @@
 <script lang="ts">
+import { en as copy } from '$lib/i18n/en'
 import { SPREADS } from '$lib/scenarios'
 import { onMount } from 'svelte'
 
@@ -50,7 +51,7 @@ onMount(() => {
     <span class="route">{cur.from} → {cur.short}</span>
     <span class="win">
       <b>{cur.window}</b>
-      every departure date
+      {copy.weekband.boardWindow}
     </span>
   </div>
 
@@ -65,8 +66,11 @@ onMount(() => {
   </ol>
 
   <p class="foot">
-    Cheapest day <b>€{cur.low}</b>, dearest <b>€{cur.high}</b> — being flexible was worth
-    <b class="save">€{cur.spread}</b> on this route. One-way economy.
+    {copy.weekband.boardFootLead} <b>€{cur.low}</b>{copy.weekband.boardFootDearest}
+    <b>€{cur.high}</b>
+    {copy.weekband.boardFootWorth}
+    <b class="save">€{cur.spread}</b>
+    {copy.weekband.boardFootTail}
   </p>
 </div>
 

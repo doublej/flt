@@ -1,5 +1,6 @@
 <script lang="ts">
 import FlapText from '$lib/components/FlapText.svelte'
+import { en as copy } from '$lib/i18n/en'
 import { TIERS } from '$lib/tiers'
 
 let { selected = $bindable('survey') }: { selected?: string } = $props()
@@ -8,7 +9,7 @@ let { selected = $bindable('survey') }: { selected?: string } = $props()
    cards read as one fixture rather than three differently sized ones. €3 and
    €10 would otherwise build boards a whole flap apart. */
 const digits = Math.max(...TIERS.map((t) => t.price.replace('€', '').length))
-const fare = (price: string) => `EUR ${price.replace('€', '').padStart(digits, ' ')}`
+const fare = (price: string) => copy.pricing.boardFare(price.replace('€', '').padStart(digits, ' '))
 </script>
 
 <div class="tiers">
@@ -19,19 +20,15 @@ const fare = (price: string) => `EUR ${price.replace('€', '').padStart(digits,
       onclick={() => (selected = tier.id)}
       aria-pressed={selected === tier.id}
     >
-      <span class="name">{tier.name}</span>
+      <span class="name">{copy.pricing.tiers[tier.id].name}</span>
       <span class="well"><FlapText text={fare(tier.price)} variant="night" size="1.35rem" /></span>
-      <span class="scope">{tier.scope}</span>
-      <span class="meta">{tier.searches} · {tier.time}</span>
+      <span class="scope">{copy.pricing.tiers[tier.id].scope}</span>
+      <span class="meta">{copy.pricing.tiers[tier.id].searches} · {copy.pricing.tiers[tier.id].time}</span>
     </button>
   {/each}
 </div>
 
-<p class="foot">
-  You pay for how much searching you ask for, because that is the part that takes the time. A
-  Survey is split across several runs, and return-trip date grids are capped at 21 departure and
-  return combinations; everything else is a matter of how much work you want done.
-</p>
+<p class="foot">{copy.pricing.tiersFoot}</p>
 
 <style>
   .tiers {

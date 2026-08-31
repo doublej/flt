@@ -1,4 +1,5 @@
 import { type Brief, briefAmount, newJob, packBrief } from '$lib/brief'
+import { en as copy } from '$lib/i18n/en'
 import { stripeClient } from '$lib/server/stripe'
 import { TIERS } from '$lib/tiers'
 import { error, json } from '@sveltejs/kit'
@@ -23,14 +24,13 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
   // The client sends a tier id, never a price. The amount comes off TIERS here.
   const tier = TIERS.find((t) => t.id === body.tier)
-  if (!tier) error(400, 'That is not one of the three tiers.')
+  if (!tier) error(400, copy.errors.badTier)
 
   const email = text(body.email, 200)
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
-    error(400, 'We need an email address to send the report to.')
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) error(400, copy.errors.noEmail)
 
   const to = text(body.to, 200)
-  if (!to) error(400, 'Tell us where you want to go.')
+  if (!to) error(400, copy.errors.noDestination)
 
   const fields = {
     tier: tier.id as Brief['tier'],
@@ -64,7 +64,10 @@ export const POST: RequestHandler = async ({ request, url }) => {
         price_data: {
           currency: 'eur',
           unit_amount: briefAmount(tier),
-          product_data: { name: `Bureau — ${tier.name} report`, description: tier.scope },
+          product_data: {
+            name: copy.brief.checkoutLineItem(copy.pricing.tiers[tier.id].name),
+            description: copy.pricing.tiers[tier.id].scope,
+          },
         },
       },
     ],
@@ -73,6 +76,6 @@ export const POST: RequestHandler = async ({ request, url }) => {
     cancel_url: `${url.origin}/#brief`,
   })
 
-  if (!session.url) error(502, 'Stripe did not hand back a checkout page.')
+  if (!session.url) error(502, copy.errors.noCheckoutUrl)
   return json({ url: session.url })
 }

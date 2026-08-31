@@ -1,4 +1,5 @@
 <script lang="ts">
+import { en as copy } from '$lib/i18n/en'
 import { SPREADS } from '$lib/scenarios'
 
 /** One bar per route, drawn to the dearest fare and split where the cheapest
@@ -18,18 +19,18 @@ const pct = (v: number) => `${(v / max) * 100}%`
 
 <figure>
   <figcaption>
-    <span><i class="key pay"></i>Cheapest day of the week</span>
-    <span><i class="key add"></i>What the dearest day adds</span>
+    <span><i class="key pay"></i>{copy.evidence.keyPay}</span>
+    <span><i class="key add"></i>{copy.evidence.keyAdd}</span>
   </figcaption>
 
   <table>
     <thead>
       <tr>
-        <th scope="col">Route</th>
-        <th scope="col" class="chart">One-way fare across the week</th>
-        <th scope="col" class="num">Cheapest</th>
-        <th scope="col" class="num">Dearest</th>
-        <th scope="col" class="num">You save</th>
+        <th scope="col">{copy.evidence.colRoute}</th>
+        <th scope="col" class="chart">{copy.evidence.colChart}</th>
+        <th scope="col" class="num">{copy.evidence.colCheapest}</th>
+        <th scope="col" class="num">{copy.evidence.colDearest}</th>
+        <th scope="col" class="num">{copy.evidence.colSave}</th>
       </tr>
     </thead>
     <tbody>
@@ -50,13 +51,7 @@ const pct = (v: number) => `${(v / max) * 100}%`
     </tbody>
   </table>
 
-  <p class="note">
-    Every route was searched on all seven of its departure dates, and the bars share one scale, so
-    the Alpine routes really are that much cheaper than the Atlantic ones. The percentage is the
-    saving measured against the cheapest fare, which is why Innsbruck beats New York on flexibility
-    while costing a tenth as much. Eight of the nine spreads beat the €10 a Survey costs. One-way
-    economy fares, the cheapest showing when we looked.
-  </p>
+  <p class="note">{copy.evidence.fareNote}</p>
 </figure>
 
 <style>

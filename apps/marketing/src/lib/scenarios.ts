@@ -1,13 +1,15 @@
+import type { en } from './i18n/en'
+
 /** Four real jobs, run end to end. Every number below came off disk after the
  *  run — session.json for the search log, the result cache for the offers.
  *  Regenerate with apps/cli/scripts/scenario-stats.py. */
 
 export type Scenario = {
-  id: string
+  /** Also the key its prose is filed under in `i18n/en.ts` — what the traveller
+   *  asked for, and what the grid's rows are counting. */
+  id: keyof typeof en.work.scenarios
   /** One square per search: rows x cols always equals queries. */
-  grid: { rows: number; cols: number; rowKind: string }
-  /** What the traveller actually asked for. */
-  ask: string
+  grid: { rows: number; cols: number }
   route: string
   window: string
   queries: number
@@ -24,8 +26,7 @@ export type Scenario = {
 export const SCENARIOS: Scenario[] = [
   {
     id: 'gateway',
-    grid: { rows: 5, cols: 1, rowKind: 'departure airports' },
-    ask: "Hanoi in November. I can train it to Brussels or Frankfurt if that's cheaper, I really don't mind.",
+    grid: { rows: 5, cols: 1 },
     route: 'Amsterdam · Brussels · Paris · Düsseldorf · Frankfurt → Hanoi',
     window: '3 November',
     queries: 5,
@@ -39,8 +40,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'ski',
-    grid: { rows: 4, cols: 7, rowKind: 'destinations' },
-    ask: "Somewhere with snow, third week of January? Don't mind where as long as it isn't a fortune to get to.",
+    grid: { rows: 4, cols: 7 },
     route: 'Amsterdam → Geneva · Innsbruck · Lyon · Turin',
     window: '16–22 January',
     queries: 28,
@@ -54,8 +54,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'cabin',
-    grid: { rows: 2, cols: 7, rowKind: 'cabins' },
-    ask: 'Singapore in November. Is premium economy actually worth it that week, or am I paying €500 for a bigger seat?',
+    grid: { rows: 2, cols: 7 },
     route: 'Amsterdam → Singapore, economy and premium economy',
     window: '3–9 November',
     queries: 14,
@@ -69,8 +68,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: 'holidays',
-    grid: { rows: 4, cols: 7, rowKind: 'destinations' },
-    ask: "New York for Christmas. Or Boston, or Philly if it's cheaper, anywhere I can get a train in from.",
+    grid: { rows: 4, cols: 7 },
     route: 'Amsterdam → JFK · Newark · Boston · Philadelphia',
     window: '19–25 December',
     queries: 28,

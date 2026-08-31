@@ -1,5 +1,6 @@
 <script lang="ts">
 import FlapText from '$lib/components/FlapText.svelte'
+import { en as copy } from '$lib/i18n/en'
 import { AVOIDING, LAYOVER_TOP } from '$lib/scenarios'
 
 /** One dot per option that came back. The gold dots are the ones that connect
@@ -14,9 +15,9 @@ const maxLayover = Math.max(...LAYOVER_TOP.map((l) => l.count))
 
 <div class="head">
   <button type="button" onclick={() => (avoid = !avoid)} aria-pressed={avoid}>
-    {avoid ? 'Gulf hubs excluded' : 'Everything we found'}
+    {avoid ? copy.avoid.toggleOn : copy.avoid.toggleOff}
   </button>
-  <p>Press to drop every option that connects in Dubai, Doha, Abu Dhabi, Bahrain, Muscat or Kuwait.</p>
+  <p>{copy.avoid.toggleHint}</p>
 </div>
 
 <div class="fields">
@@ -25,7 +26,7 @@ const maxLayover = Math.max(...LAYOVER_TOP.map((l) => l.count))
     <figure class:avoid>
       <figcaption>
         <span class="route">{a.route}</span>
-        <span class="n">{nf.format(avoid ? a.options - a.viaGulf : a.options)} options</span>
+        <span class="n">{copy.avoid.optionCount(nf.format(avoid ? a.options - a.viaGulf : a.options))}</span>
       </figcaption>
 
       <div class="dots">
@@ -35,11 +36,11 @@ const maxLayover = Math.max(...LAYOVER_TOP.map((l) => l.count))
       </div>
 
       <p class="price">
-        Cheapest <b>€{price}</b>
+        {copy.avoid.cheapest} <b>€{price}</b>
         {#if a.cheapestAvoiding > a.cheapest}
-          <em>{avoid ? `up €${a.cheapestAvoiding - a.cheapest}` : `€${a.cheapestAvoiding} without them`}</em>
+          <em>{avoid ? copy.avoid.up(a.cheapestAvoiding - a.cheapest) : copy.avoid.without(a.cheapestAvoiding)}</em>
         {:else}
-          <em>unchanged either way</em>
+          <em>{copy.avoid.unchanged}</em>
         {/if}
       </p>
     </figure>
@@ -47,7 +48,7 @@ const maxLayover = Math.max(...LAYOVER_TOP.map((l) => l.count))
 </div>
 
 <div class="hubs">
-  <h4><FlapText text="Where the connections actually happen" size="0.5rem" /></h4>
+  <h4><FlapText text={copy.avoid.hubsHeading} size="0.5rem" /></h4>
   <ul>
     {#each LAYOVER_TOP as l (l.code)}
       <li>
@@ -57,11 +58,7 @@ const maxLayover = Math.max(...LAYOVER_TOP.map((l) => l.count))
       </li>
     {/each}
   </ul>
-  <p class="note">
-    Connection counts across all 2,942 options, in which 66 different airports appeared. Excluding
-    a hub matches an option's connecting airports only, so it never rules out your origin or your
-    destination.
-  </p>
+  <p class="note">{copy.avoid.hubsNote}</p>
 </div>
 
 <style>

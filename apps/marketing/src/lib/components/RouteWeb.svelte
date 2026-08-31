@@ -1,5 +1,6 @@
 <script lang="ts">
 import FlapText from '$lib/components/FlapText.svelte'
+import { en as copy } from '$lib/i18n/en'
 import { DISCOVERY, GRAPH } from '$lib/scenarios'
 
 /** A drawing of the route graph, not of anything bookable. Each line is one
@@ -99,9 +100,7 @@ const hubR = (load: number) => 1.1 + Math.sqrt(load) * 0.55
       <svg
         viewBox="0 0 {W} {H}"
         role="img"
-        aria-label="{nf.format(p.routes)} routings within {p.stops} {p.stops === 1
-          ? 'stop'
-          : 'stops'}"
+        aria-label={copy.routes.webLabel(nf.format(p.routes), p.stops)}
         style="--ink:{p.ink}; --weight:{p.weight}"
       >
         <defs>
@@ -131,7 +130,7 @@ const hubR = (load: number) => 1.1 + Math.sqrt(load) * 0.55
       </svg>
       <div class="mag" style="--f:{p.mag}"></div>
       <figcaption>
-        <span class="k">Up to {p.stops} {p.stops === 1 ? 'stop' : 'stops'}</span>
+        <span class="k">{copy.routes.webUpTo(p.stops)}</span>
         <b><FlapText text={String(p.routes)} size="0.72rem" /></b>
       </figcaption>
     </figure>
@@ -139,14 +138,14 @@ const hubR = (load: number) => 1.1 + Math.sqrt(load) * 0.55
 </div>
 
 <p class="note">
-  Amsterdam to Hanoi, walked over a map of {nf.format(GRAPH.airports)} airports and {nf.format(
-    GRAPH.connections,
-  )} direct connections in {DISCOVERY.seconds} seconds. Nothing here is priced, timetabled or
-  bookable; it is a static snapshot of what connects to what, capped at {DISCOVERY.maxDetour}× the
-  direct distance, and we use it to decide which routes are worth searching. Rule the Gulf hubs
-  out and {nf.format(DISCOVERY.byStops[2].routes)} routings become {nf.format(
-    DISCOVERY.noGulfAt3,
-  )}.
+  {copy.routes.webNote(
+    nf.format(GRAPH.airports),
+    nf.format(GRAPH.connections),
+    DISCOVERY.seconds,
+    DISCOVERY.maxDetour,
+    nf.format(DISCOVERY.byStops[2].routes),
+    nf.format(DISCOVERY.noGulfAt3),
+  )}
 </p>
 
 <style>

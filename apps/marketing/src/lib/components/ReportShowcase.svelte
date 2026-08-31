@@ -1,22 +1,10 @@
 <script lang="ts">
+import { en as copy } from '$lib/i18n/en'
+
 const PAGES = [
-  {
-    id: 'cover',
-    label: 'Cover',
-    caption: 'Every route on one map, and a plain summary of what the numbers said.',
-  },
-  {
-    id: 'chart',
-    label: 'Price by date',
-    caption:
-      'Per route: the lowest fare each day against the day’s average, so you can see whether a cheap day is one lucky seat or the whole day.',
-  },
-  {
-    id: 'table',
-    label: 'Options',
-    caption:
-      'Ten options per date, each with airline, routing, total time, arrival day, and a booking link out.',
-  },
+  { id: 'cover', label: copy.report.showcase.cover, caption: copy.report.showcase.coverCaption },
+  { id: 'chart', label: copy.report.showcase.chart, caption: copy.report.showcase.chartCaption },
+  { id: 'table', label: copy.report.showcase.table, caption: copy.report.showcase.tableCaption },
 ]
 
 let active = $state('cover')
@@ -24,7 +12,7 @@ const current = $derived(PAGES.find((p) => p.id === active) ?? PAGES[0])
 </script>
 
 <div class="showcase">
-  <div class="switch" role="tablist" aria-label="Report pages">
+  <div class="switch" role="tablist" aria-label={copy.report.showcase.pagesLabel}>
     {#each PAGES as page}
       <button
         role="tab"
@@ -40,7 +28,7 @@ const current = $derived(PAGES.find((p) => p.id === active) ?? PAGES[0])
   <div class="frame">
     <picture>
       <source srcset="/report/{current.id}.webp" type="image/webp" />
-      <img src="/report/{current.id}.png" alt="Report page: {current.label}" />
+      <img src="/report/{current.id}.png" alt={copy.report.showcase.pageAlt(current.label)} />
     </picture>
   </div>
 

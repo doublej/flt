@@ -1,35 +1,16 @@
+import type { en } from './i18n/en'
+
+/** What a tier costs and nothing else. The name, the scope and the search count
+ *  are copy and live in `i18n/en.ts` under the same id; the price stays here
+ *  because `briefAmount` parses it into the cents Stripe charges, and a figure
+ *  a translation can reach is a figure that can be translated wrong. */
 export type Tier = {
-  id: string
-  name: string
+  id: keyof typeof en.pricing.tiers
   price: string
-  scope: string
-  searches: string
-  time: string
 }
 
 export const TIERS: Tier[] = [
-  {
-    id: 'enquiry',
-    name: 'Enquiry',
-    price: '€3',
-    scope: 'One route, one date.',
-    searches: '1 search',
-    time: 'under a minute',
-  },
-  {
-    id: 'flexible',
-    name: 'Flexible',
-    price: '€5',
-    scope: 'One route, up to 9 departure dates.',
-    searches: '~9 searches',
-    time: '1–2 minutes',
-  },
-  {
-    id: 'survey',
-    name: 'Survey',
-    price: '€10',
-    scope: 'Up to 5 destinations across a date window, economy and premium.',
-    searches: '~26 searches',
-    time: '3–5 minutes',
-  },
+  { id: 'enquiry', price: '€3' },
+  { id: 'flexible', price: '€5' },
+  { id: 'survey', price: '€10' },
 ]

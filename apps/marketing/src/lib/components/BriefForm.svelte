@@ -1,4 +1,5 @@
 <script lang="ts">
+import { en as copy } from '$lib/i18n/en'
 import { TIERS } from '$lib/tiers'
 
 /** A brief should be a minute of tapping, not a form to fill in. The
@@ -7,32 +8,16 @@ import { TIERS } from '$lib/tiers'
  *  ours. Tapping a chosen chip again clears it. */
 let { tier = 'survey' }: { tier?: string } = $props()
 
-const ORIGINS = ['Amsterdam', 'Brussels', 'Paris', 'Düsseldorf', 'Frankfurt', 'Somewhere else']
-const LENGTHS = ['A long weekend', 'A week', 'Two weeks', 'Longer', 'One way']
-const DATES = ['Exact dates', 'Give or take a few days', 'Any week that month']
-const CABINS = ['Economy', 'Premium economy', 'Business']
-const PRIORITIES = [
-  'Price',
-  'Fewest stops',
-  'Shortest journey',
-  'Daytime flights',
-  'Bag included',
-  'An airline I know',
-]
-const DISLIKES = [
-  'Overnight flights',
-  'Layovers over four hours',
-  'Low-cost carriers',
-  'Departures before 8am',
-  'Changing airport in a city',
-]
-const DEALBREAKERS = [
-  'More than one stop',
-  'Gulf hubs',
-  'Overnight layovers',
-  'Landing after midnight',
-  'Separate tickets',
-]
+const ORIGINS = copy.brief.origins
+const LENGTHS = copy.brief.lengths
+const DATES = copy.brief.dates
+const CABINS = copy.brief.cabins
+const PRIORITIES = copy.brief.priorities
+const DISLIKES = copy.brief.dislikes
+const DEALBREAKERS = copy.brief.dealbreakers
+/** The last origin is the escape hatch: picking it opens the free-text airport
+ *  field, so the two have to be the same string in every language. */
+const ELSEWHERE = ORIGINS[ORIGINS.length - 1]
 
 /** The next nine months by name, so nobody has to type a date. */
 const now = new Date()
@@ -44,18 +29,18 @@ const MONTHS = Array.from({ length: 9 }, (_, n) => {
 
 let to = $state('')
 let email = $state('')
-let from = $state('Amsterdam')
+let from = $state(ORIGINS[0])
 let elsewhere = $state('')
 let month = $state('')
 let length = $state('')
-let dates = $state('Give or take a few days')
-let cabin = $state('Economy')
+let dates = $state(DATES[1])
+let cabin = $state(CABINS[0])
 let priorities = $state<string[]>([])
 let dislikes = $state<string[]>([])
 let dealbreakers = $state<string[]>([])
 let notes = $state('')
 
-const origin = $derived(from === 'Somewhere else' ? elsewhere || 'anywhere' : from || 'anywhere')
+const origin = $derived(from === ELSEWHERE ? elsewhere || 'anywhere' : from || 'anywhere')
 
 const only = (cur: string, v: string) => (cur === v ? '' : v)
 const also = (list: string[], v: string) =>
@@ -94,7 +79,7 @@ async function pay(e: SubmitEvent) {
 
   if (!res?.ok) {
     const body = await res?.json().catch(() => null)
-    failed = body?.message ?? 'We could not reach the checkout. Try again in a moment.'
+    failed = body?.message ?? copy.errors.checkoutUnreachable
     busy = false
     return
   }
@@ -126,46 +111,47 @@ async function pay(e: SubmitEvent) {
 
 <form onsubmit={pay}>
   <label>
-    <span>Where do you want to go?</span>
-    <input
-      bind:value={to}
-      required
-      placeholder="Vietnam. Or Hanoi. Or anywhere warm in November."
-      autocomplete="off"
-    />
+    <span>{copy.brief.toLabel}</span>
+    <input bind:value={to} required placeholder={copy.brief.toPlaceholder} autocomplete="off" />
   </label>
 
-  {@render row('Where from', ORIGINS, [from], (v) => (from = only(from, v)), false)}
-  {#if from === 'Somewhere else'}
+  {@render row(copy.brief.fromLabel, ORIGINS, [from], (v) => (from = only(from, v)), false)}
+  {#if from === ELSEWHERE}
     <label class="tuck">
-      <span>Which airport</span>
-      <input bind:value={elsewhere} placeholder="Berlin" autocomplete="off" />
+      <span>{copy.brief.elsewhereLabel}</span>
+      <input bind:value={elsewhere} placeholder={copy.brief.elsewherePlaceholder} autocomplete="off" />
     </label>
   {/if}
 
-  {@render row('Which month', MONTHS, [month], (v) => (month = only(month, v)), false)}
-  {@render row('How long', LENGTHS, [length], (v) => (length = only(length, v)), false)}
+  {@render row(copy.brief.monthLabel, MONTHS, [month], (v) => (month = only(month, v)), false)}
+  {@render row(copy.brief.lengthLabel, LENGTHS, [length], (v) => (length = only(length, v)), false)}
 
   <!-- Everything below has a sane default, so it stays folded away. Opening it
        is a choice, not a step: the brief is complete without ever touching it. -->
   <details>
     <summary>
-      Fussy about anything?
-      <span>Optional — {dates.toLowerCase()}, {cabin.toLowerCase()}, no other rules</span>
+      {copy.brief.moreSummary}
+      <span>{copy.brief.moreHint(dates.toLowerCase(), cabin.toLowerCase())}</span>
     </summary>
     <div class="more">
-      {@render row('Your dates', DATES, [dates], (v) => (dates = only(dates, v)), false)}
-      {@render row('Cabin', CABINS, [cabin], (v) => (cabin = only(cabin, v)), false)}
+      {@render row(copy.brief.datesLabel, DATES, [dates], (v) => (dates = only(dates, v)), false)}
+      {@render row(copy.brief.cabinLabel, CABINS, [cabin], (v) => (cabin = only(cabin, v)), false)}
       {@render row(
-        'What matters most, in the order you tap them',
+        copy.brief.prioritiesLabel,
         PRIORITIES,
         priorities,
         (v) => (priorities = also(priorities, v)),
         true,
       )}
-      {@render row('Rather not', DISLIKES, dislikes, (v) => (dislikes = also(dislikes, v)), false)}
       {@render row(
-        'Dealbreakers',
+        copy.brief.dislikesLabel,
+        DISLIKES,
+        dislikes,
+        (v) => (dislikes = also(dislikes, v)),
+        false,
+      )}
+      {@render row(
+        copy.brief.dealbreakersLabel,
         DEALBREAKERS,
         dealbreakers,
         (v) => (dealbreakers = also(dealbreakers, v)),
@@ -173,41 +159,39 @@ async function pay(e: SubmitEvent) {
       )}
 
       <label>
-        <span>Anything else</span>
-        <textarea bind:value={notes} rows="2" placeholder="Optional. We read every word of it."
-        ></textarea>
+        <span>{copy.brief.notesLabel}</span>
+        <textarea bind:value={notes} rows="2" placeholder={copy.brief.notesPlaceholder}></textarea>
       </label>
     </div>
   </details>
 
   <label>
-    <span>Where the report goes</span>
+    <span>{copy.brief.emailLabel}</span>
     <input
       bind:value={email}
       type="email"
       required
-      placeholder="you@example.com"
+      placeholder={copy.brief.emailPlaceholder}
       autocomplete="email"
     />
   </label>
 
   <div class="total">
-    <span class="label">{chosen.name} · {chosen.searches}</span>
+    <span class="label">
+      {copy.brief.total(copy.pricing.tiers[chosen.id].name, copy.pricing.tiers[chosen.id].searches)}
+    </span>
     <span class="amount">{chosen.price}</span>
   </div>
 
   <button type="submit" class="pay" disabled={busy}>
-    {busy ? 'Opening checkout…' : `Pay ${chosen.price}`}
+    {busy ? copy.brief.payBusy : copy.brief.pay(chosen.price)}
   </button>
 
   {#if failed}
     <p class="failed" role="alert">{failed}</p>
   {/if}
 
-  <p class="note">
-    You finish on Stripe's checkout — card, Apple Pay or Google Pay, and a voucher code if you have
-    one. We never see the card. The report lands in your inbox in about {chosen.time}.
-  </p>
+  <p class="note">{copy.brief.note(copy.pricing.tiers[chosen.id].time)}</p>
 </form>
 
 <style>

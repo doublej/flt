@@ -1,5 +1,6 @@
 <script lang="ts">
 import { BLOBS as BLOB } from '$lib/blobs'
+import { en as copy } from '$lib/i18n/en'
 import { MANUAL_S, SCENARIOS, TOTALS, byHandHours } from '$lib/scenarios'
 import { onMount } from 'svelte'
 
@@ -183,21 +184,19 @@ onMount(() => {
 
       <div class="body">
         <p class="when">{s.window}</p>
-        <blockquote>{s.ask}</blockquote>
+        <blockquote>{copy.work.scenarios[s.id].ask}</blockquote>
         <p class="route">{s.route}</p>
 
         <div class="tally">
           <p class="count">
             <b>{s.queries}</b>
-            <span>searches</span>
+            <span>{copy.work.countUnit}</span>
           </p>
           <div class="of">
             <p class="shape">
-              {s.grid.rows}
-              {s.grid.rowKind} × {s.grid.cols}
-              {s.grid.cols === 1 ? 'date' : 'dates'}
+              {copy.work.shape(s.grid.rows, copy.work.scenarios[s.id].rowKind, s.grid.cols)}
             </p>
-            <p class="sub">{nf.format(s.options)} options · {s.seconds} seconds</p>
+            <p class="sub">{copy.work.jobTally(nf.format(s.options), s.seconds)}</p>
           </div>
         </div>
       </div>
@@ -206,12 +205,15 @@ onMount(() => {
 </div>
 
 <p class="total">
-  <b>{TOTALS.queries} searches</b> in {TOTALS.searchingSeconds} seconds of actual searching, which
-  returned {nf.format(TOTALS.options)} options across {TOTALS.carriers} airlines. Run by hand at a
-  generous {MANUAL_S} seconds each (type the route, wait for it, scan the results, write the price
-  down) the same {TOTALS.queries} searches take about {hours.toFixed(1)} hours. The largest of the
-  four — twenty-eight searches across four American cities — is a €10 Survey. That by-hand estimate
-  is the only number on this page we did not measure.
+  <b>{copy.work.totalLead(TOTALS.queries)}</b>
+  {copy.work.totalBody(
+    TOTALS.searchingSeconds,
+    nf.format(TOTALS.options),
+    TOTALS.carriers,
+    MANUAL_S,
+    TOTALS.queries,
+    hours.toFixed(1),
+  )}
 </p>
 
 <style>
