@@ -1,7 +1,7 @@
 # Bureau — split-flap board build prompt
 
 Paste the block below into a fresh Claude Code session opened at
-`~/Documents/development/multi-stack/flights/apps/marketing`.
+`~/dev/multi-stack/flights/apps/marketing`.
 
 ---
 
