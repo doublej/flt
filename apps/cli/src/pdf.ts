@@ -921,7 +921,8 @@ function renderItinerary(
   const legs = uniqueLegs(it.legs)
   if (legs.length > 0) {
     const mapW = Math.min(100, usable)
-    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 30)
+    const route: MapRoute = { label: it.title, color: ROUTE_COLORS[0], legs }
+    drawRouteMap(doc, [route], (W - mapW) / 2, cy, mapW, 30)
     cy += 36
   }
 
