@@ -15,6 +15,7 @@ export {
   type TripType,
   buildDatePairs,
   parseSearchQuery,
+  pickedFlights,
   rtStayDays,
   searchSingle,
   LONG_RT_STAY_DAYS,
@@ -39,6 +40,7 @@ export {
   type FlightLeg as ProtoFlightLeg,
   type GoogleFilters,
   type PassengerCounts,
+  type SelectedFlight,
   encodeFlightFilter,
 } from './proto'
 

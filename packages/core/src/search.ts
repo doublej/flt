@@ -4,7 +4,13 @@
  */
 
 import type { Flight } from './types'
-import { type GoogleFilters, type PassengerCounts, encodeFlightFilter } from './proto'
+import {
+  type FlightLeg,
+  type GoogleFilters,
+  type PassengerCounts,
+  type SelectedFlight,
+  encodeFlightFilter,
+} from './proto'
 import { type Fetcher, type ScrapeError, buildGoogleFlightsUrl, fetchFlights } from './scrape'
 
 export const MAX_RANGE_DAYS = 7
@@ -83,11 +89,26 @@ export function buildDatePairs(q: SearchQuery): Array<[string, string | null]> {
   return pairs.slice(0, MAX_TOTAL_SEARCHES) as Array<[string, string | null]>
 }
 
+/**
+ * The outbound's flights as Google's URL holds them once you pick it, or null when a
+ * leg has no date (results cached before flt read leg dates).
+ */
+export function pickedFlights(outbound: Flight): SelectedFlight[] | null {
+  const picked = outbound.legs.map((l) =>
+    l.departure_date
+      ? { from: l.departure_airport, date: l.departure_date, to: l.arrival_airport, airline: l.airline, flightNumber: l.flight_number }
+      : null,
+  )
+  return picked.every((p) => p !== null) ? picked : null
+}
+
+/** With `outbound` picked (see pickedFlights), Google lists the return flights, each priced for the whole trip. */
 export async function searchSingle(
   dep_date: string,
   ret_date: string | null,
   q: SearchQuery,
   fetcher: Fetcher = fetchFlights,
+  outbound?: SelectedFlight[],
 ): Promise<SearchResult> {
   const passengers: PassengerCounts = {
     adults: q.adults,
@@ -96,7 +117,7 @@ export async function searchSingle(
     infants_on_lap: q.infants_on_lap,
   }
 
-  const legs = [{ date: dep_date, from: q.from_airport, to: q.to_airport, maxStops: q.max_stops }]
+  const legs: FlightLeg[] = [{ date: dep_date, from: q.from_airport, to: q.to_airport, maxStops: q.max_stops, selected: outbound }]
   // Google prices an open-jaw as one multi-city ticket; the price covers both legs.
   const trip: TripType = !ret_date ? 'one-way' : q.return_from ? 'multi-city' : 'round-trip'
 

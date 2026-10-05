@@ -115,6 +115,11 @@ function formatDuration(minutes: number): string {
   return h ? `${h}h` : `${m}m`
 }
 
+function formatDate(d: NL): string | undefined {
+  if (!Array.isArray(d) || d.length < 3) return undefined
+  return `${d[0]}-${String(d[1]).padStart(2, '0')}-${String(d[2]).padStart(2, '0')}`
+}
+
 function daysAhead(dep: NL, arr: NL): string {
   if (!dep || !arr) return ''
   const diff = Math.round(
@@ -152,6 +157,7 @@ export function decodeLeg(leg: NL): FlightLeg | null {
   const arrival_airport = (at(leg, 6) as string) ?? ''
   const departure_time = formatTime(leg[8])
   const arrival_time = formatTime(leg[10])
+  const departure_date = formatDate(leg[20])
   const duration = (leg[11] as number) ?? 0
   const operator = (at(leg, 2) as string) || undefined
   const seat_pitch = (at(leg, 14) as string) || undefined
@@ -164,6 +170,7 @@ export function decodeLeg(leg: NL): FlightLeg | null {
     arrival_airport,
     departure_time,
     arrival_time,
+    departure_date,
     duration,
     operator,
     seat_pitch,

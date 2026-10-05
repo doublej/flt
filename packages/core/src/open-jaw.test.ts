@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { decodeResult } from './decode'
 import fixture from './fixtures/shopping-results.json'
 import { decodeShoppingResults } from './scrape'
-import { type SearchQuery, searchSingle } from './search'
+import { type SearchQuery, pickedFlights, searchSingle } from './search'
 import { buildCacheKey, buildCacheQuery } from './state'
 
 const query: SearchQuery = {
@@ -86,16 +86,49 @@ describe('separate tickets', () => {
   })
 })
 
-describe('open-jaw search', () => {
-  const encodedBy = async (q: SearchQuery) => {
-    let b64 = ''
-    await searchSingle(q.date, q.return_date ?? null, q, async (b) => {
+const encodedBy = async (q: SearchQuery, outbound?: Parameters<typeof searchSingle>[4]) => {
+  let b64 = ''
+  await searchSingle(
+    q.date,
+    q.return_date ?? null,
+    q,
+    async (b) => {
       b64 = b
       return { flights: [] }
-    })
-    return b64
-  }
+    },
+    outbound,
+  )
+  return b64
+}
 
+describe('return options', () => {
+  const thai = decodeResult(fixture.outbound.last).find((f) => f.name === 'THAI')!
+
+  it('picks the outbound by its flights, each with its own date', () => {
+    expect(pickedFlights({ ...thai, departure_date: '2026-11-06', return_date: null, countries: [] })).toEqual([
+      { from: 'AMS', date: '2026-11-06', to: 'BKK', airline: 'TG', flightNumber: '937' },
+      { from: 'BKK', date: '2026-11-07', to: 'SGN', airline: 'TG', flightNumber: '556' },
+    ])
+  })
+
+  it('cannot pick an outbound cached without leg dates', () => {
+    const legs = thai.legs.map(({ departure_date, ...leg }) => leg)
+    expect(pickedFlights({ ...thai, legs, departure_date: '2026-11-06', return_date: null, countries: [] })).toBeNull()
+  })
+
+  it('encodes the picked flights on the outbound leg', async () => {
+    // Loaded in headless Chrome on 5 Oct, this listed the returns for Turkish 18:30 on 6 Nov.
+    const turkish = [
+      { from: 'AMS', date: '2026-11-06', to: 'IST', airline: 'TK', flightNumber: '1954' },
+      { from: 'IST', date: '2026-11-07', to: 'SGN', airline: 'TK', flightNumber: '162' },
+    ]
+    expect(await encodedBy({ ...query, return_from: 'HAN' }, turkish)).toBe(
+      'Gl0SCjIwMjYtMTEtMDYiIAoDQU1TEgoyMDI2LTExLTA2GgNJU1QqAlRLMgQxOTU0Ih8KA0lTVBIKMjAyNi0xMS0wNxoDU0dOKgJUSzIDMTYyagUSA0FNU3IFEgNTR04aGhIKMjAyNi0xMi0wNWoFEgNIQU5yBRIDQU1TQAFIAZgBAw==',
+    )
+  })
+})
+
+describe('open-jaw search', () => {
   it('encodes a multi-city ticket home from return_from', async () => {
     // The exact filter Google Flights rendered as AMS→SGN 6 Nov + HAN→AMS 5 Dec.
     expect(await encodedBy({ ...query, return_from: 'HAN' })).toBe(

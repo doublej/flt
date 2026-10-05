@@ -14,6 +14,8 @@ export interface FlightLeg {
   arrival_airport: string
   departure_time: string
   arrival_time: string
+  /** YYYY-MM-DD; absent in results cached before flt read it. */
+  departure_date?: string
   duration: number
   operator?: string
   seat_pitch?: string

@@ -7,10 +7,11 @@
 // Field numbers from flights.proto
 // Info: data=3, passengers=8, seat=9, max_price=12, baggage=13,
 //   hide_separate_and_self_transfer=17, trip=19, exclude_basic_economy=25
-// FlightData: date=2, max_stops=5, airlines=6, earliest/latest_departure_hour=8/9,
+// FlightData: date=2, selected_flights=4, max_stops=5, airlines=6, earliest/latest_departure_hour=8/9,
 //   earliest/latest_arrival_hour=10/11, max_duration_minutes=12, from_flight=13,
 //   to_flight=14, connecting_airports=15, min/max_layover_minutes=17/18, emissions=19
 // Baggage: carry_on_bags=2, checked_bags=3
+// SelectedFlight: from_airport=1, date=2, to_airport=3, airline=5, flight_number=6
 // Airport: airport=2
 
 const SEAT = { economy: 1, 'premium-economy': 2, business: 3, first: 4 } as const
@@ -25,6 +26,18 @@ export interface FlightLeg {
   from: string
   to: string
   maxStops?: number
+  /** Flights already picked for this leg; Google then lists the options for the next leg. */
+  selected?: SelectedFlight[]
+}
+
+/** One flight of a picked itinerary, as the URL holds it after you click a result. */
+export interface SelectedFlight {
+  from: string
+  /** YYYY-MM-DD, the day this flight departs. */
+  date: string
+  to: string
+  airline: string
+  flightNumber: string
 }
 
 /**
@@ -115,9 +128,20 @@ function optionalInt(field: number, val: number | undefined): Uint8Array[] {
   return val === undefined ? [] : [int32Field(field, val)]
 }
 
+function encodeSelectedFlight(s: SelectedFlight): Uint8Array {
+  return concat(
+    stringField(1, s.from),
+    stringField(2, s.date),
+    stringField(3, s.to),
+    stringField(5, s.airline),
+    stringField(6, s.flightNumber),
+  )
+}
+
 function encodeFlightData(leg: FlightLeg, f: GoogleFilters): Uint8Array {
   const parts: Uint8Array[] = [
     stringField(2, leg.date),
+    ...(leg.selected ?? []).map((s) => lenDelim(4, encodeSelectedFlight(s))),
     lenDelim(13, encodeAirport(leg.from)),
     lenDelim(14, encodeAirport(leg.to)),
   ]
