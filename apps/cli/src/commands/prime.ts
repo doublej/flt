@@ -49,6 +49,8 @@ SEARCH:
     --carrier "<sub>"  --exclude-carrier "X,Y"  --exclude-hub "DXB,DOH"  --exclude-region "gulf,russia"
     --dep-after/before HH:MM  --arr-after/before HH:MM  --max-dur <min>
     --sort price|dur|stops|dep  --fmt jsonl|tsv|table|brief  --view min|std|full  --fields <csv>
+  Google-side (filters before Google picks results; the rest filter what came back):
+    --max-price <N>  --via "HND,NRT"  --min-layover/--max-layover <min>  --less-emissions  --exclude-basic-economy
   Open-jaw: \`flt search AMS SGN 2026-11-06 2026-12-05 --return-from HAN\` prices out-to-SGN + home-from-HAN as ONE ticket
     (price = whole trip). Often beats two one-ways. Loads via headless Chrome, so ~5s per search.
 

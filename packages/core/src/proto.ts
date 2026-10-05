@@ -46,7 +46,10 @@ export interface GoogleFilters {
   lessEmissionsOnly?: boolean
   /** In the search currency. */
   maxPrice?: number
-  /** Bag counts make Google include its estimated bag fees in prices. */
+  /**
+   * Bag counts should make Google add its bag fees to prices. Live check 2026-10-05:
+   * the ds:1 prices did not change, and neither did results with hideSelfTransfer.
+   */
   carryOnBags?: number
   checkedBags?: number
   hideSelfTransfer?: boolean

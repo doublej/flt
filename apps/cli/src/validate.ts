@@ -1,4 +1,4 @@
-import { isValidAirport, parseFlexDate } from '@flights/core'
+import { type GoogleFilters, isValidAirport, parseFlexDate } from '@flights/core'
 
 /**
  * Pure date check: flexible input → YYYY-MM-DD, or an error code.
@@ -44,6 +44,29 @@ export function parseReturnFrom(code: string | undefined, hasReturnDate: boolean
     process.exit(1)
   }
   return code.toUpperCase()
+}
+
+/** Whole number from an optional flag; exits with USAGE on anything else. */
+export function parseCount(s: string | undefined, flag: string): number | undefined {
+  if (s == null) return undefined
+  if (/^\d+$/.test(s)) return Number(s)
+  console.log(JSON.stringify({ err: 'USAGE', hint: `${flag} '${s}' must be a whole number.` }))
+  process.exit(1)
+}
+
+/** Google-side filters from the search flags; unset flags stay undefined. */
+export function parseGoogleFilters(args: Record<string, unknown>): GoogleFilters {
+  const str = (k: string) => args[k] as string | undefined
+  const via = str('via')?.split(',').map((c) => c.trim().toUpperCase())
+  for (const c of via ?? []) validateAirport(c, '--via airport')
+  return {
+    maxPrice: parseCount(str('max-price'), '--max-price'),
+    connectingAirports: via,
+    minLayoverMinutes: parseCount(str('min-layover'), '--min-layover'),
+    maxLayoverMinutes: parseCount(str('max-layover'), '--max-layover'),
+    lessEmissionsOnly: args['less-emissions'] === true,
+    excludeBasicEconomy: args['exclude-basic-economy'] === true,
+  }
 }
 
 export function parsePax(s: string) {

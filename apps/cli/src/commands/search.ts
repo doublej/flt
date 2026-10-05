@@ -2,6 +2,7 @@ import {
   LONG_RT_STAY_DAYS,
   type SearchQuery,
   type SeatType,
+  activeFilters,
   buildDatePairs,
   mergeExclusions,
   rtStayDays,
@@ -26,7 +27,7 @@ import {
   throttle,
 } from '../state'
 import type { Format, Offer, SortKey, View } from '../types'
-import { normalizeDate, parsePax, parseReturnFrom, validateAirport } from '../validate'
+import { normalizeDate, parseGoogleFilters, parsePax, parseReturnFrom, validateAirport } from '../validate'
 
 export const searchCommand = defineCommand({
   meta: { name: 'search', description: 'Search flights' },
@@ -69,6 +70,13 @@ export const searchCommand = defineCommand({
       type: 'string',
       description: 'Exclude hub regions: gulf, middleeast, russia, belarus (comma-separated, mixable with IATA codes)',
     },
+    // Google-side: sent in the request, so Google filters before it picks what to return.
+    'max-price': { type: 'string', description: 'Max price in --currency (Google-side)' },
+    via: { type: 'string', description: 'Only connect through these airports, comma-separated IATA (Google-side)' },
+    'min-layover': { type: 'string', description: 'Min layover in minutes (Google-side)' },
+    'max-layover': { type: 'string', description: 'Max layover in minutes (Google-side)' },
+    'less-emissions': { type: 'boolean', description: 'Lower-emission flights only (Google-side)', default: false },
+    'exclude-basic-economy': { type: 'boolean', description: 'Exclude basic economy fares (Google-side)', default: false },
     refresh: { type: 'boolean', description: 'Force fresh fetch (skip cache)', default: false },
   },
   async run({ args: rawArgs }) {
@@ -103,6 +111,7 @@ export const searchCommand = defineCommand({
       seat: args.seat as SeatType,
       max_stops: maxStops,
       currency: args.currency,
+      filters: parseGoogleFilters(args),
     }
 
     const pairs = buildDatePairs(query)
@@ -150,6 +159,10 @@ export const searchCommand = defineCommand({
         no_data:
           'Page loaded but flight data was missing. Google may have changed the page structure.',
         no_flights: 'No flights found for this route/date. Try different dates or fewer stops.',
+      }
+      if (activeFilters(query.filters)) {
+        hints.no_flights =
+          'No flights match the Google-side filters (--max-price, --via, layovers, ...). Relax them and retry.'
       }
       // Long-stay round trips often return nothing (fare max-stay rules) even
       // though both directions have flights — steer towards two one-ways.

@@ -4,6 +4,7 @@ import {
   type SearchQuery,
   type SeatType,
   type SortKey,
+  activeFilters,
   applyFilters,
   buildDatePairs,
   describeSearchRequest,
@@ -45,6 +46,16 @@ export const filterShape = {
     .optional()
     .describe('Exclude hub regions: gulf, middleeast, russia, belarus (comma-separated, mixable with IATA codes)'),
   maxDur: z.number().int().optional().describe('Max total duration in minutes'),
+}
+
+// Sent in the request, so Google filters before it picks what to return.
+const googleFilterShape = {
+  maxPrice: z.number().int().min(1).optional().describe('Max price in the search currency (Google-side)'),
+  via: z.string().optional().describe('Only connect through these airports, comma-separated IATA (Google-side)'),
+  minLayover: z.number().int().min(0).optional().describe('Min layover in minutes (Google-side)'),
+  maxLayover: z.number().int().min(0).optional().describe('Max layover in minutes (Google-side)'),
+  lessEmissions: z.boolean().default(false).describe('Lower-emission flights only (Google-side)'),
+  excludeBasicEconomy: z.boolean().default(false).describe('Exclude basic economy fares'),
 }
 
 export function toFilterOpts(a: {
@@ -101,6 +112,7 @@ export function registerSearch(server: McpServer): void {
         arrAfter: z.string().optional().describe('Arrive after HH:MM'),
         arrBefore: z.string().optional().describe('Arrive before HH:MM'),
         ...filterShape,
+        ...googleFilterShape,
         sort: z.enum(['price', 'dur', 'stops', 'dep']).default('price').describe('Sort key'),
         limit: z.number().int().min(1).max(200).default(50).describe('Max results returned'),
         view: z
@@ -134,6 +146,14 @@ export function registerSearch(server: McpServer): void {
         seat: a.seat as SeatType,
         max_stops: a.maxStops,
         currency: a.currency,
+        filters: {
+          maxPrice: a.maxPrice,
+          connectingAirports: a.via?.split(',').map((c) => assertAirport(c, 'Via airport')),
+          minLayoverMinutes: a.minLayover,
+          maxLayoverMinutes: a.maxLayover,
+          lessEmissionsOnly: a.lessEmissions,
+          excludeBasicEconomy: a.excludeBasicEconomy,
+        },
       }
 
       const pairs = buildDatePairs(query)
@@ -149,6 +169,9 @@ export function registerSearch(server: McpServer): void {
       if (allFlights.length === 0) {
         const err = results.find((r) => r.err)?.err ?? 'no_flights'
         let hint = SCRAPE_HINTS[err] ?? SCRAPE_HINTS.no_flights
+        if (activeFilters(query.filters)) {
+          hint = 'No flights match the Google-side filters (maxPrice, via, layovers, ...). Relax them and retry.'
+        }
         // Long-stay round trips often return nothing (fare max-stay rules).
         if (
           returnDate &&
