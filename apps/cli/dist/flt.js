@@ -38960,6 +38960,7 @@ async function runMain(cmd, opts = {}) {
 var SEAT = { economy: 1, "premium-economy": 2, business: 3, first: 4 };
 var TRIP = { "round-trip": 1, "one-way": 2, "multi-city": 3 };
 var PASSENGER = { adult: 1, child: 2, infant_in_seat: 3, infant_on_lap: 4 };
+var LESS_EMISSIONS = 1;
 function varint(n) {
   const buf = [];
   while (n > 127) {
@@ -38995,7 +38996,10 @@ function concat(...arrays) {
 function encodeAirport(iata) {
   return stringField(2, iata);
 }
-function encodeFlightData(leg) {
+function optionalInt(field, val) {
+  return val === undefined ? [] : [int32Field(field, val)];
+}
+function encodeFlightData(leg, f) {
   const parts = [
     stringField(2, leg.date),
     lenDelim(13, encodeAirport(leg.from)),
@@ -39003,12 +39007,20 @@ function encodeFlightData(leg) {
   ];
   if (leg.maxStops !== undefined)
     parts.push(int32Field(5, leg.maxStops));
+  for (const a of f.airlines ?? [])
+    parts.push(stringField(6, a));
+  parts.push(...optionalInt(8, f.earliestDepartureHour), ...optionalInt(9, f.latestDepartureHour), ...optionalInt(10, f.earliestArrivalHour), ...optionalInt(11, f.latestArrivalHour), ...optionalInt(12, f.maxDurationMinutes));
+  for (const a of f.connectingAirports ?? [])
+    parts.push(stringField(15, a));
+  parts.push(...optionalInt(17, f.minLayoverMinutes), ...optionalInt(18, f.maxLayoverMinutes));
+  if (f.lessEmissionsOnly)
+    parts.push(lenDelim(19, varint(LESS_EMISSIONS)));
   return concat(...parts);
 }
-function encodeInfo(legs, passengers, seat, trip) {
+function encodeInfo(legs, passengers, seat, trip, f) {
   const parts = [];
   for (const leg of legs) {
-    parts.push(lenDelim(3, encodeFlightData(leg)));
+    parts.push(lenDelim(3, encodeFlightData(leg, f)));
   }
   const pList = [
     ...Array(passengers.adults).fill(PASSENGER.adult),
@@ -39019,11 +39031,19 @@ function encodeInfo(legs, passengers, seat, trip) {
   for (const p of pList)
     parts.push(int32Field(8, p));
   parts.push(int32Field(9, SEAT[seat]));
+  parts.push(...optionalInt(12, f.maxPrice));
+  if (f.carryOnBags || f.checkedBags) {
+    parts.push(lenDelim(13, concat(int32Field(2, f.carryOnBags ?? 0), int32Field(3, f.checkedBags ?? 0))));
+  }
+  if (f.hideSelfTransfer)
+    parts.push(int32Field(17, 1));
   parts.push(int32Field(19, TRIP[trip]));
+  if (f.excludeBasicEconomy)
+    parts.push(int32Field(25, 1));
   return concat(...parts);
 }
 function encodeFlightFilter(params) {
-  const buf = encodeInfo(params.legs, params.passengers, params.seat, params.trip);
+  const buf = encodeInfo(params.legs, params.passengers, params.seat, params.trip, params.filters ?? {});
   let binary = "";
   for (const byte of buf)
     binary += String.fromCharCode(byte);
@@ -39368,12 +39388,12 @@ async function searchSingle(dep_date, ret_date, q, fetcher = fetchFlights) {
   if (ret_date) {
     legs.push({ date: ret_date, from: q.return_from ?? q.to_airport, to: q.from_airport, maxStops: q.max_stops });
   }
-  const b64 = encodeFlightFilter({ legs, passengers, seat: q.seat, trip });
+  const b64 = encodeFlightFilter({ legs, passengers, seat: q.seat, trip, filters: q.filters });
   const url = buildGoogleFlightsUrl(b64, q.currency);
   const result = await fetcher(b64, q.currency);
   if (result.error)
     return { dep_date, ret_date, flights: [], url, error: result.error };
-  const flights = result.flights.map((f) => ({
+  const flights = result.flights.filter((f) => !q.filters?.maxPrice || f.price).map((f) => ({
     ...f,
     departure_date: dep_date,
     return_date: ret_date,
@@ -49981,6 +50001,7 @@ function createEmptySession() {
   };
 }
 function buildCacheQuery(q, depDate, retDate) {
+  const filters = activeFilters(q.filters);
   return {
     from_airport: q.from_airport.toUpperCase(),
     to_airport: q.to_airport.toUpperCase(),
@@ -49993,7 +50014,8 @@ function buildCacheQuery(q, depDate, retDate) {
     infants_on_lap: q.infants_on_lap,
     seat: q.seat,
     max_stops: q.max_stops ?? null,
-    currency: q.currency.toUpperCase()
+    currency: q.currency.toUpperCase(),
+    ...filters ? { filters } : {}
   };
 }
 function buildCacheKey(params) {
@@ -50005,6 +50027,13 @@ function buildSearchRef(params) {
   const suffix = buildCacheKey(params).slice(0, 6).toUpperCase();
   return `${params.from_airport}-${params.to_airport}@${dep}${ret}#${suffix}`;
 }
+function activeFilters(f) {
+  const set = Object.entries(f ?? {}).filter(([, v]) => v !== undefined && v !== false && !(Array.isArray(v) && v.length === 0));
+  return set.length ? Object.fromEntries(set) : undefined;
+}
+function filtersLabel(f) {
+  return Object.entries(f).map(([k, v]) => `${k}=${Array.isArray(v) ? v.join("+") : v}`).join(" ");
+}
 function buildConcreteQuery(params) {
   const parts = [`${params.from_airport} ${params.to_airport} ${params.departure_date}`];
   if (params.return_date)
@@ -50013,6 +50042,8 @@ function buildConcreteQuery(params) {
   const stops = stopsLabel(params.max_stops);
   if (stops)
     parts.push(stops);
+  if (params.filters)
+    parts.push(filtersLabel(params.filters));
   return parts.join(" \xB7 ");
 }
 function describeSearchRequest(q) {
@@ -50023,6 +50054,9 @@ function describeSearchRequest(q) {
   const stops = stopsLabel(q.max_stops ?? null);
   if (stops)
     parts.push(stops);
+  const filters = activeFilters(q.filters);
+  if (filters)
+    parts.push(filtersLabel(filters));
   return parts.join(" \xB7 ");
 }
 async function saveSession(state) {
@@ -57805,6 +57839,28 @@ function parseReturnFrom(code, hasReturnDate) {
   }
   return code.toUpperCase();
 }
+function parseCount(s, flag) {
+  if (s == null)
+    return;
+  if (/^\d+$/.test(s))
+    return Number(s);
+  console.log(JSON.stringify({ err: "USAGE", hint: `${flag} '${s}' must be a whole number.` }));
+  process.exit(1);
+}
+function parseGoogleFilters(args) {
+  const str = (k) => args[k];
+  const via = str("via")?.split(",").map((c) => c.trim().toUpperCase());
+  for (const c of via ?? [])
+    validateAirport(c, "--via airport");
+  return {
+    maxPrice: parseCount(str("max-price"), "--max-price"),
+    connectingAirports: via,
+    minLayoverMinutes: parseCount(str("min-layover"), "--min-layover"),
+    maxLayoverMinutes: parseCount(str("max-layover"), "--max-layover"),
+    lessEmissionsOnly: args["less-emissions"] === true,
+    excludeBasicEconomy: args["exclude-basic-economy"] === true
+  };
+}
 function parsePax(s) {
   const ad = Number.parseInt(s.match(/(\d+)ad/)?.[1] ?? "1");
   const ch = Number.parseInt(s.match(/(\d+)ch/)?.[1] ?? "0");
@@ -58810,6 +58866,8 @@ SEARCH:
     --carrier "<sub>"  --exclude-carrier "X,Y"  --exclude-hub "DXB,DOH"  --exclude-region "gulf,russia"
     --dep-after/before HH:MM  --arr-after/before HH:MM  --max-dur <min>
     --sort price|dur|stops|dep  --fmt jsonl|tsv|table|brief  --view min|std|full  --fields <csv>
+  Google-side (filters before Google picks results; the rest filter what came back):
+    --max-price <N>  --via "HND,NRT"  --min-layover/--max-layover <min>  --less-emissions  --exclude-basic-economy
   Open-jaw: \`flt search AMS SGN 2026-11-06 2026-12-05 --return-from HAN\` prices out-to-SGN + home-from-HAN as ONE ticket
     (price = whole trip). Often beats two one-ways. Loads via headless Chrome, so ~5s per search.
 
@@ -59039,6 +59097,12 @@ var searchCommand = defineCommand({
       type: "string",
       description: "Exclude hub regions: gulf, middleeast, russia, belarus (comma-separated, mixable with IATA codes)"
     },
+    "max-price": { type: "string", description: "Max price in --currency (Google-side)" },
+    via: { type: "string", description: "Only connect through these airports, comma-separated IATA (Google-side)" },
+    "min-layover": { type: "string", description: "Min layover in minutes (Google-side)" },
+    "max-layover": { type: "string", description: "Max layover in minutes (Google-side)" },
+    "less-emissions": { type: "boolean", description: "Lower-emission flights only (Google-side)", default: false },
+    "exclude-basic-economy": { type: "boolean", description: "Exclude basic economy fares (Google-side)", default: false },
     refresh: { type: "boolean", description: "Force fresh fetch (skip cache)", default: false }
   },
   async run({ args: rawArgs }) {
@@ -59064,7 +59128,8 @@ var searchCommand = defineCommand({
       ...pax,
       seat: args.seat,
       max_stops: maxStops,
-      currency: args.currency
+      currency: args.currency,
+      filters: parseGoogleFilters(args)
     };
     const pairs = buildDatePairs(query);
     const session = await loadSession() ?? createEmptySession();
@@ -59100,6 +59165,9 @@ var searchCommand = defineCommand({
         no_data: "Page loaded but flight data was missing. Google may have changed the page structure.",
         no_flights: "No flights found for this route/date. Try different dates or fewer stops."
       };
+      if (activeFilters(query.filters)) {
+        hints.no_flights = "No flights match the Google-side filters (--max-price, --via, layovers, ...). Relax them and retry.";
+      }
       if (returnDate && !returnFrom && (err === "no_flights" || err === undefined) && rtStayDays(date, returnDate) > LONG_RT_STAY_DAYS) {
         hints.no_flights = `Round trips with stays over ~${LONG_RT_STAY_DAYS} days often return nothing (fare max-stay limits). Search each direction as a one-way: \`flt search ${query.from_airport} ${query.to_airport} ${date}\` + \`flt search ${query.to_airport} ${query.from_airport} ${returnDate}\`.`;
       }
