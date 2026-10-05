@@ -32,6 +32,12 @@ const isUp = () =>
     () => false,
   )
 
+/** The browser's own user agent without the "Headless" that marks it. */
+async function userAgent(): Promise<string> {
+  const version = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json()
+  return version['User-Agent'].replace('HeadlessChrome', 'Chrome')
+}
+
 async function ensureChrome(): Promise<void> {
   if (await isUp()) return
   spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, '--user-data-dir=/tmp/flights-chrome'], {
@@ -85,6 +91,9 @@ async function loadInTab(b64: string, currency: string): Promise<ScrapeResult> {
   }
 
   await send('Network.enable')
+  // Google answers the HeadlessChrome user agent with a cut-down list: no fares built from
+  // separate tickets and some rows unpriced (5 Oct, AMS→SGN + HAN→AMS: 10 rows vs the page's 11).
+  await send('Network.setUserAgentOverride', { userAgent: await userAgent() })
   for (const [name, value] of COOKIES)
     await send('Network.setCookie', { name, value, domain: '.google.com', path: '/', secure: true })
   await send('Fetch.enable', { patterns: [{ urlPattern: '*GetShoppingResults*', requestStage: 'Response' }] })
