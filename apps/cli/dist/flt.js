@@ -39254,6 +39254,7 @@ function extractDataArray(script) {
 }
 
 // ../../packages/core/src/scrape.ts
+var CONSENT_COOKIE = "CONSENT=PENDING+987; SOCS=CAESHAgBEhJnd3NfMjAyMzA4MTAtMF9SQzIaAmRlIAEaBgiAo_CmBg";
 var CHROME_HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
   Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
@@ -39267,7 +39268,7 @@ var CHROME_HEADERS = {
   "Sec-Fetch-Mode": "navigate",
   "Sec-Fetch-Site": "none",
   "Upgrade-Insecure-Requests": "1",
-  Cookie: "CONSENT=PENDING+987; SOCS=CAESHAgBEhJnd3NfMjAyMzA4MTAtMF9SQzIaAmRlIAEaBgiAo_CmBg"
+  Cookie: CONSENT_COOKIE
 };
 var MIN_INTERVAL_MS = 1500;
 var lastRequestTime = 0;
@@ -39276,6 +39277,15 @@ async function rateLimit() {
   if (wait > 0)
     await new Promise((r) => setTimeout(r, wait));
   lastRequestTime = Date.now();
+}
+function decodeShoppingResults(raw) {
+  const row = raw.split(`
+`).find((line) => line.startsWith('[["wrb.fr"'));
+  const payload = row ? JSON.parse(row)[0][2] : null;
+  if (typeof payload !== "string")
+    return { flights: [], error: "no_data" };
+  const flights = decodeResult(JSON.parse(payload));
+  return flights.length ? { flights } : { flights: [], error: "no_flights" };
 }
 async function fetchFlights(b64, currency) {
   const params = new URLSearchParams({ tfs: b64, hl: "en", tfu: "EgQIABABIgA", curr: currency });
@@ -39346,7 +39356,7 @@ function buildDatePairs(q) {
   }
   return pairs.slice(0, MAX_TOTAL_SEARCHES);
 }
-async function searchSingle(dep_date, ret_date, q) {
+async function searchSingle(dep_date, ret_date, q, fetcher = fetchFlights) {
   const passengers = {
     adults: q.adults,
     children: q.children,
@@ -39354,13 +39364,13 @@ async function searchSingle(dep_date, ret_date, q) {
     infants_on_lap: q.infants_on_lap
   };
   const legs = [{ date: dep_date, from: q.from_airport, to: q.to_airport, maxStops: q.max_stops }];
-  const trip = ret_date ? "round-trip" : "one-way";
+  const trip = !ret_date ? "one-way" : q.return_from ? "multi-city" : "round-trip";
   if (ret_date) {
-    legs.push({ date: ret_date, from: q.to_airport, to: q.from_airport, maxStops: q.max_stops });
+    legs.push({ date: ret_date, from: q.return_from ?? q.to_airport, to: q.from_airport, maxStops: q.max_stops });
   }
   const b64 = encodeFlightFilter({ legs, passengers, seat: q.seat, trip });
   const url = buildGoogleFlightsUrl(b64, q.currency);
-  const result = await fetchFlights(b64, q.currency);
+  const result = await fetcher(b64, q.currency);
   if (result.error)
     return { dep_date, ret_date, flights: [], url, error: result.error };
   const flights = result.flights.map((f) => ({
@@ -49976,6 +49986,7 @@ function buildCacheQuery(q, depDate, retDate) {
     to_airport: q.to_airport.toUpperCase(),
     departure_date: depDate,
     return_date: retDate,
+    ...q.return_from ? { return_from: q.return_from.toUpperCase() } : {},
     adults: q.adults,
     children: q.children,
     infants_in_seat: q.infants_in_seat,
@@ -49997,7 +50008,7 @@ function buildSearchRef(params) {
 function buildConcreteQuery(params) {
   const parts = [`${params.from_airport} ${params.to_airport} ${params.departure_date}`];
   if (params.return_date)
-    parts.push(`return ${params.return_date}`);
+    parts.push(`return ${params.return_from ? `from ${params.return_from} ` : ""}${params.return_date}`);
   parts.push(params.seat, paxLabel(params), params.currency);
   const stops = stopsLabel(params.max_stops);
   if (stops)
@@ -50007,7 +50018,7 @@ function buildConcreteQuery(params) {
 function describeSearchRequest(q) {
   const parts = [`${q.from_airport} ${q.to_airport} ${dateSpan(q.date, q.date_end)}`];
   if (q.return_date)
-    parts.push(`return ${dateSpan(q.return_date, q.return_date_end)}`);
+    parts.push(`return ${q.return_from ? `from ${q.return_from} ` : ""}${dateSpan(q.return_date, q.return_date_end)}`);
   parts.push(q.seat, paxLabel(q), q.currency.toUpperCase());
   const stops = stopsLabel(q.max_stops ?? null);
   if (stops)
@@ -57761,30 +57772,38 @@ function printWithLegend(output) {
   console.log(output);
 }
 // src/validate.ts
-function normalizeDate(d, label) {
-  const iso = parseFlexDate(d);
-  if (!iso) {
-    console.log(JSON.stringify({
-      err: "BAD_DATE",
-      hint: `${label} '${d}' is not a valid date. Use YYYY-MM-DD, DD/MM/YYYY, or 'tomorrow'.`
-    }));
-    process.exit(1);
-  }
+function tryNormalizeDate(d) {
   const today = new Date().toISOString().slice(0, 10);
-  if (iso < today) {
-    console.log(JSON.stringify({
-      err: "PAST_DATE",
-      hint: `${label} ${iso} is in the past (today: ${today}).`
-    }));
-    process.exit(1);
-  }
-  return iso;
+  const iso = parseFlexDate(d);
+  if (!iso)
+    return { err: "BAD_DATE", today };
+  if (iso < today)
+    return { err: "PAST_DATE", iso, today };
+  return { iso };
+}
+function normalizeDate(d, label) {
+  const res = tryNormalizeDate(d);
+  if (!("err" in res))
+    return res.iso;
+  const hint = res.err === "BAD_DATE" ? `${label} '${d}' is not a valid date. Use YYYY-MM-DD, DD/MM/YYYY, or 'tomorrow'.` : `${label} ${res.iso} is in the past (today: ${res.today}).`;
+  console.log(JSON.stringify({ err: res.err, hint }));
+  process.exit(1);
 }
 function validateAirport(code, label) {
   if (!isValidAirport(code)) {
     console.log(JSON.stringify({ err: "BAD_AIRPORT", hint: `${label} '${code}' is not a known IATA code.` }));
     process.exit(1);
   }
+}
+function parseReturnFrom(code, hasReturnDate) {
+  if (!code)
+    return;
+  validateAirport(code.toUpperCase(), "Return airport");
+  if (!hasReturnDate) {
+    console.log(JSON.stringify({ err: "USAGE", hint: "--return-from needs a return date." }));
+    process.exit(1);
+  }
+  return code.toUpperCase();
 }
 function parsePax(s) {
   const ad = Number.parseInt(s.match(/(\d+)ad/)?.[1] ?? "1");
@@ -58471,6 +58490,67 @@ var learningsCommand = defineCommand({
   }
 });
 
+// src/chrome.ts
+import { spawn } from "child_process";
+var PORT = 9222;
+var CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+var TIMEOUT_MS = 20000;
+var COOKIES = CONSENT_COOKIE.split("; ").map((c) => [c.slice(0, c.indexOf("=")), c.slice(c.indexOf("=") + 1)]);
+var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+var isUp = () => fetch(`http://127.0.0.1:${PORT}/json/version`).then((r) => r.ok, () => false);
+async function ensureChrome() {
+  if (await isUp())
+    return;
+  spawn(CHROME, ["--headless=new", `--remote-debugging-port=${PORT}`, "--user-data-dir=/tmp/flights-chrome"], {
+    detached: true,
+    stdio: "ignore"
+  }).unref();
+  for (let i = 0;i < 40; i++) {
+    if (await isUp())
+      return;
+    await sleep(250);
+  }
+  throw new Error(`Headless Chrome never answered on port ${PORT}. Is Google Chrome installed at ${CHROME}?`);
+}
+var fetcherFor = (q) => q.return_from ? fetchFlightsViaChrome : undefined;
+async function fetchFlightsViaChrome(b64, currency) {
+  await ensureChrome();
+  const tab = await (await fetch(`http://127.0.0.1:${PORT}/json/new?about:blank`, { method: "PUT" })).json();
+  const ws = new WebSocket(tab.webSocketDebuggerUrl);
+  await new Promise((r) => ws.onopen = r);
+  let id = 0;
+  const pending = new Map;
+  const send = (method, params = {}) => new Promise((r) => {
+    pending.set(++id, r);
+    ws.send(JSON.stringify({ id, method, params }));
+  });
+  let resolveBody = () => {};
+  const body = new Promise((r) => resolveBody = r);
+  ws.onmessage = async (e) => {
+    const m = JSON.parse(e.data);
+    if (m.id)
+      pending.get(m.id)?.(m.result);
+    if (m.method !== "Fetch.requestPaused")
+      return;
+    const res = await send("Fetch.getResponseBody", { requestId: m.params.requestId });
+    await send("Fetch.continueRequest", { requestId: m.params.requestId });
+    if (res)
+      resolveBody(res.base64Encoded ? Buffer.from(res.body, "base64").toString("utf8") : res.body);
+  };
+  await send("Network.enable");
+  for (const [name, value] of COOKIES)
+    await send("Network.setCookie", { name, value, domain: ".google.com", path: "/", secure: true });
+  await send("Fetch.enable", { patterns: [{ urlPattern: "*GetShoppingResults*", requestStage: "Response" }] });
+  await send("Page.navigate", { url: buildGoogleFlightsUrl(b64, currency) });
+  let timer;
+  const timeout = new Promise((r) => timer = setTimeout(() => r(null), TIMEOUT_MS));
+  const raw = await Promise.race([body, timeout]);
+  clearTimeout(timer);
+  ws.close();
+  await fetch(`http://127.0.0.1:${PORT}/json/close/${tab.id}`);
+  return raw === null ? { flights: [], error: "no_data" } : decodeShoppingResults(raw);
+}
+
 // src/commands/matrix.ts
 async function fetchAndCache(dep, ret, query, session) {
   const cached = await loadCachedSearch(query, dep, ret);
@@ -58479,7 +58559,7 @@ async function fetchAndCache(dep, ret, query, session) {
     return { offers: cached.offers, ref: cached.ref };
   }
   await throttle();
-  const result = await searchSingle(dep, ret, query);
+  const result = await searchSingle(dep, ret, query, fetcherFor(query));
   if (result.error || result.flights.length === 0) {
     return { offers: [], ref: "", err: result.error ?? "no_flights" };
   }
@@ -58552,6 +58632,10 @@ var matrixCommand = defineCommand({
     dateEnd: { type: "positional", description: "End date (YYYY-MM-DD)", required: true },
     returnStart: { type: "positional", description: "Return start date", required: false },
     returnEnd: { type: "positional", description: "Return end date", required: false },
+    "return-from": {
+      type: "string",
+      description: "Fly home from this airport instead (open-jaw, one ticket; needs return dates; loads via headless Chrome)"
+    },
     seat: { type: "string", default: "economy" },
     pax: { type: "string", default: "1ad" },
     "max-stops": { type: "string" },
@@ -58584,6 +58668,7 @@ var matrixCommand = defineCommand({
     const dateEnd = normalizeDate(args.dateEnd, "End date");
     const returnStart = args.returnStart && parseFlexDate(args.returnStart) ? normalizeDate(args.returnStart, "Return start") : undefined;
     const returnEnd = args.returnEnd && parseFlexDate(args.returnEnd) ? normalizeDate(args.returnEnd, "Return end") : undefined;
+    const returnFrom = parseReturnFrom(args["return-from"], !!returnStart);
     const pax = parsePax(args.pax);
     const maxStops = args["max-stops"] != null ? Number.parseInt(args["max-stops"]) : undefined;
     const maxDur = args["max-dur"] != null ? Number.parseInt(args["max-dur"]) : undefined;
@@ -58591,6 +58676,7 @@ var matrixCommand = defineCommand({
       from_airport: args.from.toUpperCase(),
       to_airport: args.to.toUpperCase(),
       date: dateStart,
+      return_from: returnFrom,
       ...pax,
       seat: args.seat,
       max_stops: maxStops,
@@ -58671,7 +58757,7 @@ var matrixCommand = defineCommand({
       console.log(`  ${formatLegend(codes)}
 `);
     printGrid(depDates, retDates, cells, args.fmt);
-    if (cells.some((c) => c.err === "no_flights" && c.ret && rtStayDays(c.dep, c.ret) > LONG_RT_STAY_DAYS)) {
+    if (!returnFrom && cells.some((c) => c.err === "no_flights" && c.ret && rtStayDays(c.dep, c.ret) > LONG_RT_STAY_DAYS)) {
       console.error(`note: stays over ~${LONG_RT_STAY_DAYS} days often return no round-trip fares (Google max-stay); try two one-way matrices.`);
     }
   }
@@ -58724,10 +58810,13 @@ SEARCH:
     --carrier "<sub>"  --exclude-carrier "X,Y"  --exclude-hub "DXB,DOH"  --exclude-region "gulf,russia"
     --dep-after/before HH:MM  --arr-after/before HH:MM  --max-dur <min>
     --sort price|dur|stops|dep  --fmt jsonl|tsv|table|brief  --view min|std|full  --fields <csv>
+  Open-jaw: \`flt search AMS SGN 2026-11-06 2026-12-05 --return-from HAN\` prices out-to-SGN + home-from-HAN as ONE ticket
+    (price = whole trip). Often beats two one-ways. Loads via headless Chrome, so ~5s per search.
 
 MATRIX:
   One-way: flt matrix <FROM> <TO> <START> <END>
   Round-trip: flt matrix <FROM> <TO> <DEP_START> <DEP_END> <RET_START> <RET_END>
+  Open-jaw: add \`--return-from <IATA>\` to the round-trip form.
   Same filter options as search. One-way supports \`--sort price\` and \`--limit N\`.
   Default output: table; \`--fmt jsonl\` for parsing.
 
@@ -58916,6 +59005,10 @@ var searchCommand = defineCommand({
     to: { type: "positional", description: "Destination airport (IATA)", required: true },
     date: { type: "positional", description: "Departure date (YYYY-MM-DD)", required: true },
     returnDate: { type: "positional", description: "Return date (YYYY-MM-DD)", required: false },
+    "return-from": {
+      type: "string",
+      description: "Fly home from this airport instead (open-jaw, one ticket; needs a return date; loads via headless Chrome)"
+    },
     "date-end": { type: "string", description: "Flexible departure end date" },
     "return-date-end": { type: "string", description: "Flexible return end date" },
     seat: { type: "string", description: "Cabin class", default: "economy" },
@@ -58957,6 +59050,7 @@ var searchCommand = defineCommand({
     const returnDate = args.returnDate ? normalizeDate(args.returnDate, "Return date") : undefined;
     const dateEnd = args["date-end"] ? normalizeDate(args["date-end"], "Departure end date") : undefined;
     const returnDateEnd = args["return-date-end"] ? normalizeDate(args["return-date-end"], "Return end date") : undefined;
+    const returnFrom = parseReturnFrom(args["return-from"], !!returnDate);
     const pax = parsePax(args.pax);
     const maxStops = args["max-stops"] != null ? Number.parseInt(args["max-stops"]) : undefined;
     const query = {
@@ -58966,6 +59060,7 @@ var searchCommand = defineCommand({
       return_date: returnDate,
       date_end: dateEnd,
       return_date_end: returnDateEnd,
+      return_from: returnFrom,
       ...pax,
       seat: args.seat,
       max_stops: maxStops,
@@ -58987,7 +59082,7 @@ var searchCommand = defineCommand({
         continue;
       }
       await throttle();
-      const res = await searchSingle(d, r, query);
+      const res = await searchSingle(d, r, query, fetcherFor(query));
       if (!res.flights.length) {
         results.push({ offers: [], ref: "", url: res.url, error: res.error });
         continue;
@@ -59005,7 +59100,7 @@ var searchCommand = defineCommand({
         no_data: "Page loaded but flight data was missing. Google may have changed the page structure.",
         no_flights: "No flights found for this route/date. Try different dates or fewer stops."
       };
-      if (returnDate && (err === "no_flights" || err === undefined) && rtStayDays(date, returnDate) > LONG_RT_STAY_DAYS) {
+      if (returnDate && !returnFrom && (err === "no_flights" || err === undefined) && rtStayDays(date, returnDate) > LONG_RT_STAY_DAYS) {
         hints.no_flights = `Round trips with stays over ~${LONG_RT_STAY_DAYS} days often return nothing (fare max-stay limits). Search each direction as a one-way: \`flt search ${query.from_airport} ${query.to_airport} ${date}\` + \`flt search ${query.to_airport} ${query.from_airport} ${returnDate}\`.`;
       }
       const code = err === "http" || err === "no_script" ? "BLOCKED" : (err ?? "NO_RESULTS").toUpperCase();
@@ -61054,91 +61149,97 @@ try {
 var anyWindow;
 var jsPDF;
 
-// src/pdf-map.ts
-var MAP_BG = "#f0f0f0";
-var MAP_BORDER = "#e0e0e0";
-var ARC = "#2266cc";
-var DOT = "#2a2a2a";
-var LABEL = "#2a2a2a";
-var PAD = 0.12;
-function drawRouteMap(doc, legs, x, y, width, height) {
-  const airports = new Set;
-  for (const l of legs) {
-    airports.add(l.departure_airport);
-    airports.add(l.arrival_airport);
-  }
-  if (airports.size < 2)
-    return;
-  const coords = new Map;
-  for (const iata of airports) {
-    const c = getCoords(iata);
-    if (c)
-      coords.set(iata, c);
-  }
-  if (coords.size < 2)
-    return;
-  const proj = buildProjection(coords, x, y, width, height);
-  doc.setFillColor(MAP_BG);
-  doc.setDrawColor(MAP_BORDER);
-  doc.setLineWidth(0.3);
-  doc.roundedRect(x, y, width, height, 3, 3, "FD");
-  doc.setDrawColor(ARC);
-  doc.setLineWidth(0.5);
-  for (const leg of legs) {
-    const from = coords.get(leg.departure_airport);
-    const to = coords.get(leg.arrival_airport);
-    if (!from || !to)
-      continue;
-    const pts = greatCirclePoints(from, to, 40);
-    for (let i = 1;i < pts.length; i++) {
-      const [x1, y1] = proj(pts[i - 1]);
-      const [x2, y2] = proj(pts[i]);
-      doc.line(x1, y1, x2, y2);
-    }
-  }
-  doc.setFontSize(7);
-  doc.setTextColor(LABEL);
-  for (const [iata, coord] of coords) {
-    const [px, py] = proj(coord);
-    doc.setFillColor(DOT);
-    doc.circle(px, py, 1.2, "F");
-    doc.text(iata, px + 2.5, py - 1.5);
-  }
+// src/pdf-chart.ts
+var INK = "#14181f";
+var MUTED = "#6b7280";
+var GRID = "#e8ebee";
+var LOW = "#0b5563";
+var AVG = "#a8c6cb";
+var FONT = "helvetica";
+function niceMax(value) {
+  const step = value > 2000 ? 500 : value > 800 ? 200 : value > 300 ? 100 : 50;
+  return Math.ceil(value / step) * step;
 }
-function buildProjection(coords, bx, by, bw, bh) {
-  const lats = [...coords.values()].map((c) => c[0]);
-  const lons = [...coords.values()].map((c) => c[1]);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLon = Math.min(...lons);
-  const maxLon = Math.max(...lons);
-  const padX = (maxLon - minLon) * PAD || 10;
-  const padY = (maxLat - minLat) * PAD || 5;
-  const lo = minLon - padX;
-  const hi = maxLon + padX;
-  const la = minLat - padY;
-  const ha = maxLat + padY;
-  const rangeX = hi - lo || 1;
-  const rangeY = ha - la || 1;
-  return ([lat, lon]) => [bx + (lon - lo) / rangeX * bw, by + (ha - lat) / rangeY * bh];
+function shortDate(iso) {
+  const d = new Date(`${iso}T00:00:00`);
+  return d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+}
+function drawPriceChart(doc, days, currency, x, y, w, h) {
+  if (days.length === 0)
+    return;
+  const axisW = 16;
+  const labelH = 9;
+  const plotX = x + axisW;
+  const plotW = w - axisW;
+  const plotH = h - labelH;
+  const max = niceMax(Math.max(...days.map((d) => d.avg)) * 1.08);
+  const yOf = (v) => y + plotH - v / max * plotH;
+  doc.setFontSize(6.5);
+  doc.setFont(FONT, "normal");
+  for (let i = 0;i <= 4; i++) {
+    const value = max / 4 * i;
+    const gy = yOf(value);
+    doc.setDrawColor(GRID);
+    doc.setLineWidth(0.2);
+    doc.line(plotX, gy, plotX + plotW, gy);
+    doc.setTextColor(MUTED);
+    doc.text(`${currency}${Math.round(value)}`, plotX - 2, gy + 1.2, { align: "right" });
+  }
+  const group = plotW / days.length;
+  const barW = Math.min(9, group * 0.3);
+  const showValues = days.length <= 10;
+  for (const [i, d] of days.entries()) {
+    const cx = plotX + group * i + group / 2;
+    const lowX = cx - barW - 0.8;
+    const avgX = cx + 0.8;
+    doc.setFillColor(LOW);
+    doc.rect(lowX, yOf(d.low), barW, plotH - (yOf(d.low) - y), "F");
+    doc.setFillColor(AVG);
+    doc.rect(avgX, yOf(d.avg), barW, plotH - (yOf(d.avg) - y), "F");
+    if (showValues) {
+      doc.setFontSize(6);
+      doc.setTextColor(INK);
+      doc.setFont(FONT, "bold");
+      doc.text(`${currency}${Math.round(d.low)}`, lowX + barW / 2, yOf(d.low) - 1.5, {
+        align: "center"
+      });
+      doc.setFont(FONT, "normal");
+      doc.setTextColor(MUTED);
+      doc.text(`${currency}${Math.round(d.avg)}`, avgX + barW / 2, yOf(d.avg) - 1.5, {
+        align: "center"
+      });
+    }
+    doc.setFontSize(6.5);
+    doc.setFont(FONT, "normal");
+    doc.setTextColor(MUTED);
+    doc.text(shortDate(d.date), cx, y + plotH + 4.5, { align: "center" });
+  }
+  doc.setDrawColor(MUTED);
+  doc.setLineWidth(0.3);
+  doc.line(plotX, y + plotH, plotX + plotW, y + plotH);
+}
+function drawChartLegend(doc, x, y) {
+  const items = [
+    [LOW, "Lowest fare that day"],
+    [AVG, "Average of all fares that day"]
+  ];
+  let lx = x;
+  doc.setFontSize(7);
+  doc.setFont(FONT, "normal");
+  for (const [color, label] of items) {
+    doc.setFillColor(color);
+    doc.rect(lx, y - 2.2, 3, 3, "F");
+    doc.setTextColor(MUTED);
+    doc.text(label, lx + 4.5, y);
+    lx += doc.getTextWidth(label) + 14;
+  }
 }
 
-// src/pdf.ts
-var TEXT = "#2a2a2a";
-var MUTED = "#888888";
-var ACCENT = "#2266cc";
-var BORDER = "#e0e0e0";
-var SURFACE = "#f5f5f5";
-var WARN = "#cc6600";
-var FONT = "helvetica";
-var MARGIN = 15;
-function safe(s) {
-  return s.replace(/\u2192/g, ">").replace(/\u2014/g, "-").replace(/\u00B7/g, "-");
-}
-function fmtStops(n) {
-  if (n === 0)
-    return "Nonstop";
-  return `${n} stop${n > 1 ? "s" : ""}`;
+// src/pdf-summary.ts
+function durationMin(o) {
+  const legs = o.legs.reduce((s, l) => s + l.duration, 0);
+  const layovers = o.layovers.reduce((s, l) => s + l.duration, 0);
+  return legs + layovers;
 }
 function fmtMinutes(minutes) {
   const h = Math.floor(minutes / 60);
@@ -61146,6 +61247,1117 @@ function fmtMinutes(minutes) {
   if (h && m)
     return `${h}h ${m}m`;
   return h ? `${h}h` : `${m}m`;
+}
+function cityName(code) {
+  return airportCity(code) ?? code;
+}
+function routeCities(o) {
+  if (o.legs.length === 0)
+    return "?";
+  const codes = [o.legs[0].departure_airport, ...o.legs.map((l) => l.arrival_airport)];
+  return codes.filter((c, i) => i === 0 || c !== codes[i - 1]).map(cityName).join(" to ");
+}
+function viaLabel(o) {
+  if (o.layovers.length === 0)
+    return "Nonstop";
+  return o.layovers.map((l) => `${cityName(l.airport)} ${fmtMinutes(l.duration)}`).join(", ");
+}
+function minBy(items, score2) {
+  return items.reduce((best, cur) => best === undefined || score2(cur) < score2(best) ? cur : best, undefined);
+}
+function bestValue(offers) {
+  if (offers.length === 0)
+    return;
+  const prices = offers.map((o) => parsePrice(o.price));
+  const durations = offers.map(durationMin);
+  const span = (xs) => Math.max(...xs) - Math.min(...xs) || 1;
+  const [pMin, dMin] = [Math.min(...prices), Math.min(...durations)];
+  const [pSpan, dSpan] = [span(prices), span(durations)];
+  const score2 = (o) => (parsePrice(o.price) - pMin) / pSpan + (durationMin(o) - dMin) / dSpan + o.stops * 0.01;
+  return minBy(offers, score2);
+}
+function pickHighlights(offers, pickId) {
+  if (offers.length === 0)
+    return [];
+  const cheapest = minBy(offers, (o) => parsePrice(o.price));
+  const fastest = fastestOffer(offers);
+  const picked = pickId ? offers.find((o) => o.id === pickId) : undefined;
+  const recommended = picked ?? bestValue(offers);
+  const out = [];
+  const add = (offer, label, why) => {
+    if (!offer)
+      return;
+    const existing = out.find((h) => h.offer.id === offer.id);
+    if (existing) {
+      existing.labels.push(label);
+      return;
+    }
+    out.push({ labels: [label], why, offer });
+  };
+  add(recommended, "Our pick", picked ? "Chosen for this trip" : "Best balance of price and travel time");
+  add(cheapest, "Lowest price", `Cheapest of ${offers.length} options found`);
+  const slowest = Math.max(...offers.map(durationMin));
+  add(fastest, "Fastest", fastest ? `${fmtMinutes(slowest - durationMin(fastest))} shorter than the slowest option` : "");
+  return out;
+}
+function rowBadges(offer, opts) {
+  const badges = [];
+  if (offer.id === opts.pickId)
+    badges.push("Our pick");
+  if (offer.id === opts.cheapestId)
+    badges.push("Cheapest");
+  if (offer.id === opts.fastestId)
+    badges.push("Fastest");
+  if (offer.stops === 0 && badges.length < 2)
+    badges.push("Nonstop");
+  return badges.slice(0, 2).join(" / ");
+}
+function cheapestId(offers) {
+  return minBy(offers, (o) => parsePrice(o.price))?.id;
+}
+function fastestId(offers) {
+  return fastestOffer(offers)?.id;
+}
+function fastestOffer(offers) {
+  return minBy(offers, (o) => durationMin(o) * 1e5 + parsePrice(o.price));
+}
+function coverSubtitle(searches) {
+  const offers = searches.flatMap(([, e]) => e.offers);
+  if (offers.length === 0)
+    return "";
+  const origins = new Set;
+  const destinations = [];
+  for (const [tag] of searches) {
+    const m = tag.match(/^([A-Z]{3})-([A-Z]{3})@/);
+    if (!m)
+      continue;
+    origins.add(cityName(m[1]));
+    const to = cityName(m[2]);
+    if (!destinations.includes(to))
+      destinations.push(to);
+  }
+  const dates = offers.map((o) => o.departure_date).sort();
+  const fmt = (d) => new Date(`${d}T00:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  const when = first === last ? fmt(first) : `${fmt(first)} - ${fmt(last)}`;
+  const route = origins.size === 1 && destinations.length > 0 ? `${[...origins][0]} to ${listWords(destinations)}` : destinations.join(", ");
+  return route ? `${route} - ${when}` : when;
+}
+function listWords(items) {
+  if (items.length <= 1)
+    return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+var COLUMN_GLOSSARY = [
+  ["#", "Position in this list. Cheapest first."],
+  ["Price", "Total fare for the passengers searched, in the currency shown."],
+  ["Airline", "Who markets the ticket. Two names means the trip is split across two carriers."],
+  [
+    "Via",
+    'The city where you change plane and how long you wait there. "Nonstop" means no change at all.'
+  ],
+  ["Total time", "Door-to-door travel time, including time spent connecting."],
+  ["Depart / Arrive", 'Local times at each airport. "+1" means you land the next calendar day.'],
+  ["ID", "Stable code for this exact flight. Quote it to pull up full detail or to book."],
+  ["Note", "Why the row stands out: our pick, cheapest, fastest, or nonstop."]
+];
+var READING_TIPS = [
+  "Connections under 1h 30m are tight for an international transfer. One delayed inbound and the onward flight is gone.",
+  "Two rows at the same price with very different total times differ by layover length, not by route quality.",
+  "Prices are what the search showed at the time stamped on each section. They move daily.",
+  "Baggage allowance, fare rules and seat selection are not covered here. Check them before you pay."
+];
+function pricePerDay(searches) {
+  const byDate = new Map;
+  let currency = "";
+  for (const [, entry] of searches) {
+    for (const o of entry.offers) {
+      const price = parsePrice(o.price);
+      if (!Number.isFinite(price))
+        continue;
+      if (!currency)
+        currency = o.price.replace(/[0-9.,\s]/g, "");
+      const day = byDate.get(o.departure_date) ?? new Map;
+      day.set(o.id, Math.min(day.get(o.id) ?? price, price));
+      byDate.set(o.departure_date, day);
+    }
+  }
+  const days = [...byDate.entries()].filter(([, offers]) => offers.size > 0).map(([date, offers]) => {
+    const prices = [...offers.values()];
+    const sum = prices.reduce((a, b) => a + b, 0);
+    return { date, low: Math.min(...prices), avg: sum / prices.length, count: prices.length };
+  }).sort((a, b) => a.date.localeCompare(b.date));
+  return { days, currency: currency || "" };
+}
+function groupByRoute(searches) {
+  const groups = new Map;
+  for (const item of searches) {
+    const key = item[0].match(/^([A-Z]{3}-[A-Z]{3})@/)?.[1] ?? item[0];
+    groups.set(key, [...groups.get(key) ?? [], item]);
+  }
+  return [...groups.entries()].map(([key, items]) => {
+    const offers = items.flatMap(([, e]) => e.offers);
+    const priced = offers.map((o) => parsePrice(o.price)).filter(Number.isFinite);
+    const [from, to] = key.split("-");
+    return {
+      key,
+      label: to ? `${cityName(from)} to ${cityName(to)}` : key,
+      searches: items,
+      offers,
+      cheapest: priced.length ? Math.min(...priced) : Number.NaN
+    };
+  }).sort((a, b) => (a.cheapest || Number.POSITIVE_INFINITY) - (b.cheapest || Number.POSITIVE_INFINITY));
+}
+
+// src/world-land.ts
+var WORLD_LAND = [
+  [
+    [107, 77],
+    [114.1, 75.8],
+    [109.4, 74.2],
+    [127, 73.6],
+    [131.3, 70.8],
+    [139.9, 71.5],
+    [140.5, 72.8],
+    [169.6, 68.7],
+    [170.5, 70.1],
+    [175.7, 69.9],
+    [180, 69],
+    [180, 65],
+    [177.4, 64.6],
+    [179.2, 62.3],
+    [163.5, 59.9],
+    [162.1, 54.9],
+    [156.8, 51],
+    [155.9, 56.8],
+    [164.5, 62.6],
+    [160.1, 60.5],
+    [156.7, 61.4],
+    [155, 59.1],
+    [142.2, 59],
+    [135.1, 54.7],
+    [139.9, 54.2],
+    [141.4, 52.2],
+    [138.2, 46.3],
+    [127.5, 39.8],
+    [129.1, 35.1],
+    [126.5, 34.4],
+    [125.3, 39.6],
+    [121.1, 38.9],
+    [121.6, 40.9],
+    [118, 39.2],
+    [118.9, 37.4],
+    [122.4, 37.5],
+    [119.2, 34.9],
+    [121.9, 31.7],
+    [121.7, 28.2],
+    [115.9, 22.8],
+    [110.4, 20.3],
+    [108.5, 21.7],
+    [105.9, 19.8],
+    [109.3, 13.4],
+    [105.2, 8.6],
+    [100.1, 13.4],
+    [99.2, 9.2],
+    [103, 5.5],
+    [104.2, 1.3],
+    [101.4, 2.8],
+    [98.3, 7.8],
+    [97.2, 16.9],
+    [94.2, 16],
+    [91.4, 22.8],
+    [87, 21.5],
+    [80.3, 15.9],
+    [79.9, 10.4],
+    [77.5, 8],
+    [72.6, 21.4],
+    [70.5, 20.9],
+    [66.4, 25.4],
+    [57.4, 25.7],
+    [48, 30],
+    [51.8, 24],
+    [56.4, 26.4],
+    [59.8, 22.3],
+    [55.3, 17.2],
+    [43.5, 12.6],
+    [42.6, 16.8],
+    [34.9, 29.5],
+    [33.9, 27.6],
+    [32.4, 29.9],
+    [37.5, 18.6],
+    [42.7, 11.7],
+    [44.6, 10.4],
+    [51.1, 12],
+    [51, 10.6],
+    [47.7, 4.2],
+    [39.2, -4.7],
+    [40.8, -14.7],
+    [34.8, -19.8],
+    [35.6, -23.7],
+    [32.6, -25.7],
+    [32.2, -28.8],
+    [25.8, -33.9],
+    [18.4, -34.1],
+    [11.8, -18.1],
+    [13.7, -10.7],
+    [8.8, -1.1],
+    [9.4, 3.7],
+    [4.3, 6.3],
+    [-9, 4.8],
+    [-16.6, 12.2],
+    [-17, 21.9],
+    [-5.9, 35.8],
+    [9.5, 37.4],
+    [11.1, 36.9],
+    [10.3, 33.8],
+    [19.1, 30.3],
+    [21.5, 32.8],
+    [33.8, 31],
+    [36.2, 36.7],
+    [27.6, 36.7],
+    [26.2, 39.5],
+    [33.5, 42],
+    [41.7, 42],
+    [36.7, 45.2],
+    [39.1, 47.3],
+    [35, 46.3],
+    [36.3, 45.1],
+    [33.9, 44.4],
+    [30.7, 46.6],
+    [27.7, 42.6],
+    [28.8, 41.1],
+    [22.6, 40.3],
+    [24, 37.7],
+    [22.5, 36.4],
+    [19.5, 41.7],
+    [13.1, 45.7],
+    [12.6, 44.1],
+    [18.5, 40.2],
+    [16.9, 40.4],
+    [16.1, 38],
+    [8.9, 44.4],
+    [3.1, 43.1],
+    [-2.1, 36.7],
+    [-8.9, 36.9],
+    [-9.4, 43],
+    [-1.4, 44],
+    [-1.2, 46],
+    [-4.6, 48.7],
+    [8.1, 53.5],
+    [8.5, 57.1],
+    [10.6, 57.7],
+    [9.7, 55.5],
+    [10.9, 54],
+    [19.7, 54.4],
+    [21.6, 57.4],
+    [24.1, 57],
+    [23.3, 59.2],
+    [29.1, 60],
+    [21.3, 60.7],
+    [21.5, 63.2],
+    [25.4, 65.1],
+    [22.2, 65.7],
+    [17.8, 62.7],
+    [17.1, 61.3],
+    [18.8, 60.1],
+    [15.9, 56.1],
+    [12.9, 55.4],
+    [10.4, 59.5],
+    [5.7, 58.6],
+    [5, 62],
+    [14.8, 67.8],
+    [24.5, 71],
+    [41.1, 67.5],
+    [38.4, 66],
+    [33.2, 66.6],
+    [37, 63.8],
+    [37.2, 65.1],
+    [43.9, 66.1],
+    [43.5, 68.6],
+    [46.3, 68.3],
+    [46.3, 66.7],
+    [53.7, 68.9],
+    [59.9, 68.3],
+    [60.6, 69.9],
+    [68.5, 68.1],
+    [66.7, 71],
+    [72.6, 72.8],
+    [73.7, 68.4],
+    [71.3, 66.3],
+    [72.4, 66.2],
+    [75.1, 67.8],
+    [73.1, 71.4],
+    [74.7, 72.8],
+    [76.4, 71.2],
+    [81.5, 71.8],
+    [80.5, 73.6],
+    [87.2, 75.1],
+    [107, 77]
+  ],
+  [
+    [-90.5, 69.5],
+    [-87.4, 67.2],
+    [-85.5, 69.9],
+    [-82.6, 69.7],
+    [-81.3, 67.6],
+    [-93.2, 62],
+    [-94.7, 58.9],
+    [-92.3, 57.1],
+    [-82.3, 55.1],
+    [-79.9, 51.2],
+    [-78.6, 52.6],
+    [-79.8, 54.7],
+    [-76.5, 56.5],
+    [-78.5, 58.8],
+    [-78.1, 62.3],
+    [-73.8, 62.4],
+    [-69.6, 61.1],
+    [-67.6, 58.2],
+    [-64.6, 60.3],
+    [-55.7, 52.1],
+    [-60, 50.2],
+    [-66.4, 50.2],
+    [-71.1, 46.8],
+    [-65.1, 49.2],
+    [-64.5, 46.2],
+    [-59.8, 45.9],
+    [-65.4, 43.5],
+    [-66.2, 44.5],
+    [-64.4, 45.3],
+    [-67.1, 45.1],
+    [-70.7, 43],
+    [-70, 41.6],
+    [-75.5, 39.5],
+    [-75.9, 37.2],
+    [-76.3, 39.2],
+    [-75.7, 35.6],
+    [-81.3, 31.4],
+    [-80.4, 25.2],
+    [-84.1, 30.1],
+    [-96.6, 28.3],
+    [-97.9, 22.4],
+    [-96.3, 19.3],
+    [-92, 18.7],
+    [-90.3, 21],
+    [-87.1, 21.5],
+    [-88.9, 15.9],
+    [-83.4, 15.3],
+    [-83.8, 11.1],
+    [-81.4, 8.8],
+    [-76.8, 8.6],
+    [-71.8, 12.4],
+    [-71.7, 9.1],
+    [-69.9, 12.2],
+    [-68.2, 10.6],
+    [-61.9, 10.7],
+    [-57.1, 6],
+    [-51.3, 4.2],
+    [-50.4, -0.1],
+    [-40, -2.9],
+    [-35.6, -5.1],
+    [-34.7, -7.3],
+    [-38.7, -13.1],
+    [-40.9, -21.9],
+    [-47.6, -24.9],
+    [-53.8, -34.4],
+    [-58.4, -33.9],
+    [-56.8, -36.9],
+    [-65.1, -41.1],
+    [-63.5, -42.6],
+    [-67.3, -45.6],
+    [-66, -48.1],
+    [-69.1, -50.7],
+    [-68.2, -52.3],
+    [-71, -53.8],
+    [-74.9, -52.3],
+    [-75.6, -48.7],
+    [-74.1, -46.9],
+    [-75.6, -46.6],
+    [-72.7, -42.4],
+    [-74.3, -43.2],
+    [-70.2, -19.8],
+    [-76, -14.6],
+    [-81.2, -6.1],
+    [-79.8, -2.7],
+    [-80.9, -1.1],
+    [-77.1, 3.8],
+    [-78.2, 8.3],
+    [-80.9, 7.2],
+    [-85.7, 9.9],
+    [-87.5, 13.3],
+    [-103.5, 18.3],
+    [-114.8, 31.8],
+    [-109.4, 23.2],
+    [-112.2, 24.7],
+    [-117.3, 33],
+    [-120.6, 34.6],
+    [-124.4, 40.3],
+    [-124.7, 48.2],
+    [-122.6, 47.1],
+    [-122.8, 49],
+    [-127.4, 50.8],
+    [-134.1, 58.1],
+    [-147.1, 60.9],
+    [-151.7, 59.2],
+    [-150.6, 61.3],
+    [-158.4, 56],
+    [-164.8, 54.4],
+    [-157, 58.9],
+    [-162, 58.7],
+    [-166.1, 61.5],
+    [-160.8, 64.8],
+    [-168.1, 65.7],
+    [-161.7, 66.1],
+    [-166.8, 68.4],
+    [-156.6, 71.4],
+    [-136.5, 68.9],
+    [-128.1, 70.5],
+    [-108.9, 67.4],
+    [-106.2, 68.8],
+    [-96.1, 67.3],
+    [-94.2, 69.1],
+    [-96.5, 70.1],
+    [-95.2, 71.9],
+    [-90.5, 69.5]
+  ],
+  [
+    [-58.6, -64.2],
+    [-65.7, -68],
+    [-61.8, -70.7],
+    [-60.8, -73.7],
+    [-70.6, -76.6],
+    [-77.2, -76.7],
+    [-73.7, -77.9],
+    [-78, -79.2],
+    [-58.2, -83.2],
+    [-28.5, -80.3],
+    [-35.8, -78.3],
+    [-17.5, -75.1],
+    [-6.9, -70.9],
+    [27.1, -70.5],
+    [33.9, -68.5],
+    [38.6, -69.8],
+    [54.5, -65.8],
+    [61.4, -68],
+    [68.9, -67.9],
+    [67.9, -71.9],
+    [69.9, -72.3],
+    [88, -66.2],
+    [95.8, -67.4],
+    [102.8, -65.6],
+    [106.2, -66.9],
+    [113.6, -65.9],
+    [119.8, -67.3],
+    [135.1, -65.3],
+    [137.5, -67],
+    [145.5, -66.9],
+    [171.2, -71.7],
+    [163.6, -76.2],
+    [167, -78.8],
+    [161.8, -79.2],
+    [159.8, -80.9],
+    [180, -84.7],
+    [180, -90],
+    [-180, -90],
+    [-179.1, -84.1],
+    [-143.1, -85],
+    [-153.6, -83.7],
+    [-152.9, -82],
+    [-156.8, -81.1],
+    [-146.4, -80.3],
+    [-155.3, -79.1],
+    [-158.4, -76.9],
+    [-151.3, -77.4],
+    [-135.2, -74.3],
+    [-100.1, -74.9],
+    [-103.7, -72.6],
+    [-74.9, -73.9],
+    [-67.4, -72.5],
+    [-67.7, -67.3],
+    [-57.2, -63.5],
+    [-58.6, -64.2]
+  ],
+  [
+    [-27.1, 83.5],
+    [-20.8, 82.7],
+    [-31.9, 82.2],
+    [-12.2, 81.3],
+    [-20, 80.2],
+    [-17.7, 80.1],
+    [-19.7, 78.8],
+    [-18.5, 77],
+    [-21.7, 76.6],
+    [-19.4, 74.3],
+    [-24.8, 72.3],
+    [-21.8, 70.7],
+    [-25.5, 71.4],
+    [-26.4, 70.2],
+    [-22.3, 70.1],
+    [-39.8, 65.5],
+    [-43.4, 60.1],
+    [-48.3, 60.9],
+    [-51.6, 63.6],
+    [-54, 67.2],
+    [-50.9, 69.9],
+    [-54.7, 69.6],
+    [-51.4, 70.6],
+    [-55.8, 71.7],
+    [-54.7, 72.6],
+    [-58.6, 75.5],
+    [-68.5, 76.1],
+    [-71.4, 77],
+    [-66.8, 77.4],
+    [-73.3, 78],
+    [-65.7, 79.4],
+    [-68, 80.1],
+    [-62.7, 81.8],
+    [-27.1, 83.5]
+  ],
+  [
+    [143.6, -13.8],
+    [153.1, -26.1],
+    [152.9, -31.6],
+    [150, -37.4],
+    [146.3, -39],
+    [140.6, -38],
+    [138.2, -34.4],
+    [136.8, -35.3],
+    [137.8, -32.9],
+    [136, -34.9],
+    [131.3, -31.5],
+    [118, -35.1],
+    [115, -34.2],
+    [115.7, -31.6],
+    [113.3, -26.1],
+    [114.1, -21.8],
+    [120.9, -19.7],
+    [125.7, -14.2],
+    [129.6, -15],
+    [132.4, -11.1],
+    [136.5, -11.9],
+    [135.5, -15],
+    [140.2, -17.7],
+    [142.5, -10.7],
+    [143.6, -13.8]
+  ],
+  [
+    [-86.6, 73.2],
+    [-72.2, 71.6],
+    [-67, 69.2],
+    [-68.8, 68.7],
+    [-61.9, 66.9],
+    [-63.9, 65],
+    [-68, 66.3],
+    [-64.7, 63.4],
+    [-68.8, 63.7],
+    [-66.2, 61.9],
+    [-77.7, 64.2],
+    [-74, 65.5],
+    [-72.9, 67.7],
+    [-79, 70.2],
+    [-89.9, 71.2],
+    [-89.4, 73.1],
+    [-86.6, 73.2]
+  ],
+  [
+    [-68.5, 83.1],
+    [-61.9, 82.6],
+    [-76.9, 79.3],
+    [-75.4, 78.5],
+    [-80.6, 76.2],
+    [-89.5, 76.5],
+    [-88.3, 77.9],
+    [-85, 77.5],
+    [-88, 78.4],
+    [-85.1, 79.3],
+    [-86.9, 80.3],
+    [-81.8, 80.5],
+    [-91.6, 81.9],
+    [-68.5, 83.1]
+  ],
+  [
+    [134.1, -1.2],
+    [135.5, -3.4],
+    [138.3, -1.7],
+    [144.6, -3.9],
+    [150.7, -10.6],
+    [144.7, -7.6],
+    [142.6, -9.3],
+    [137.6, -8.4],
+    [137.9, -5.4],
+    [133, -4.1],
+    [132, -2.8],
+    [133.7, -2.2],
+    [130.5, -0.9],
+    [134.1, -1.2]
+  ],
+  [
+    [105.8, -5.9],
+    [102.6, -4.2],
+    [95.3, 5.5],
+    [103.8, 0.1],
+    [106.1, -3.1],
+    [105.8, -5.9]
+  ],
+  [
+    [141, 37.1],
+    [140.3, 35.1],
+    [135.8, 33.5],
+    [131, 33.9],
+    [132, 33.1],
+    [130.2, 31.4],
+    [129.4, 33.3],
+    [135.7, 35.5],
+    [141.4, 41.4],
+    [141, 37.1]
+  ],
+  [
+    [117.9, 1.8],
+    [119, 0.9],
+    [116.1, -4],
+    [110.2, -2.9],
+    [109.1, -0.5],
+    [109.7, 2],
+    [116.7, 6.9],
+    [119.2, 5.4],
+    [117.9, 1.8]
+  ],
+  [
+    [57.5, 70.7],
+    [51.5, 72],
+    [55.6, 75.1],
+    [68.9, 76.5],
+    [58.5, 74.3],
+    [55.4, 72.4],
+    [57.5, 70.7]
+  ],
+  [
+    [-114.2, 73.1],
+    [-108.2, 71.7],
+    [-108.4, 73.1],
+    [-106.5, 73.1],
+    [-101.1, 69.6],
+    [-113.3, 68.5],
+    [-117.3, 70],
+    [-112.4, 70.4],
+    [-119.4, 71.6],
+    [-114.2, 73.1]
+  ],
+  [
+    [50.1, -13.6],
+    [47.1, -24.9],
+    [44, -25],
+    [44.4, -16.2],
+    [49.2, -12],
+    [50.1, -13.6]
+  ],
+  [
+    [49.1, 41.3],
+    [50.4, 40.3],
+    [49.2, 37.6],
+    [53.8, 37],
+    [52.7, 40],
+    [54.7, 41],
+    [50.3, 44.6],
+    [53, 45.3],
+    [53, 46.9],
+    [46.7, 44.6],
+    [49.1, 41.3]
+  ],
+  [
+    [-3, 58.6],
+    [-3.1, 56],
+    [1.7, 52.7],
+    [1.4, 51.3],
+    [-5.2, 50],
+    [-3.4, 51.4],
+    [-5.3, 52],
+    [-4.6, 53.5],
+    [-2.9, 54],
+    [-6.1, 56.8],
+    [-3, 58.6]
+  ],
+  [
+    [-175, 66.6],
+    [-169.9, 66],
+    [-173, 64.3],
+    [-178.7, 66.1],
+    [-180, 65],
+    [-180, 69],
+    [-175, 66.6]
+  ],
+  [
+    [-94.7, 77.1],
+    [-79.8, 74.9],
+    [-89.8, 74.5],
+    [-97.1, 76.8],
+    [-94.7, 77.1]
+  ],
+  [
+    [173, -40.9],
+    [174.2, -41.3],
+    [173.1, -43.9],
+    [169.3, -46.6],
+    [166.7, -46.2],
+    [173, -40.9]
+  ],
+  [
+    [174.6, -36.2],
+    [178.5, -37.7],
+    [175.2, -41.7],
+    [172.6, -34.5],
+    [174.6, -36.2]
+  ],
+  [
+    [125.2, 1.4],
+    [120.2, 0.2],
+    [120.9, -1.4],
+    [123.3, -0.6],
+    [121.5, -1.9],
+    [123.2, -5.3],
+    [121, -2.6],
+    [119.4, -5.4],
+    [120, 0.6],
+    [125.2, 1.4]
+  ],
+  [
+    [-87, 79.7],
+    [-85.8, 79.3],
+    [-90.8, 78.2],
+    [-96.7, 80.2],
+    [-92.4, 81.3],
+    [-87, 79.7]
+  ],
+  [
+    [18.3, 79.7],
+    [21.5, 79],
+    [15.9, 76.8],
+    [10.4, 79.7],
+    [18.3, 79.7]
+  ],
+  [
+    [-14.5, 66.5],
+    [-13.6, 65.1],
+    [-18.7, 63.5],
+    [-24.3, 65.6],
+    [-14.5, 66.5]
+  ],
+  [
+    [-79.7, 22.8],
+    [-74.2, 20.3],
+    [-77.8, 19.9],
+    [-81.8, 22.6],
+    [-85, 21.9],
+    [-79.7, 22.8]
+  ],
+  [
+    [-56.1, 50.7],
+    [-53.5, 49.2],
+    [-53.1, 46.7],
+    [-59.3, 47.6],
+    [-55.4, 51.6],
+    [-56.1, 50.7]
+  ],
+  [
+    [-120.5, 71.4],
+    [-125.9, 71.9],
+    [-123.9, 73.7],
+    [-124.9, 74.3],
+    [-115.5, 73.5],
+    [-120.5, 71.4]
+  ],
+  [
+    [-67.8, -53.9],
+    [-65, -54.7],
+    [-69.2, -55.5],
+    [-74.7, -52.8],
+    [-67.8, -53.9]
+  ],
+  [
+    [121.3, 18.5],
+    [121.7, 14.3],
+    [124.1, 12.5],
+    [120.1, 15],
+    [121.3, 18.5]
+  ],
+  [
+    [-68.5, -71],
+    [-71.1, -72.5],
+    [-75, -71.7],
+    [-70.3, -68.9],
+    [-68.5, -71]
+  ],
+  [
+    [143.9, 44.2],
+    [145.5, 43.3],
+    [140, 41.6],
+    [142, 45.6],
+    [143.9, 44.2]
+  ],
+  [
+    [143.6, 50.7],
+    [144.7, 49],
+    [143.2, 49.3],
+    [143.5, 46.1],
+    [142.1, 46],
+    [142.2, 54.2],
+    [143.6, 50.7]
+  ],
+  [
+    [126.4, 8.4],
+    [125.4, 5.6],
+    [123.6, 7.8],
+    [121.9, 7.2],
+    [125.4, 9.8],
+    [126.4, 8.4]
+  ],
+  [
+    [-100.4, 73.8],
+    [-97.4, 73.8],
+    [-96.7, 71.7],
+    [-102.5, 72.5],
+    [-100.4, 73.8]
+  ],
+  [
+    [-6.8, 52.3],
+    [-10, 51.8],
+    [-9.7, 53.9],
+    [-6.7, 55.2],
+    [-6.8, 52.3]
+  ]
+];
+
+// src/pdf-map.ts
+var ROUTE_COLORS = ["#0b5563", "#a8600a", "#6b4d7d", "#2f6b3c", "#8c2f39", "#1f4f8b"];
+var OCEAN = "#eef2f4";
+var LAND = "#dde4e7";
+var LAND_EDGE = "#ccd6da";
+var MAP_BORDER = "#dfe3e8";
+var DOT = "#14181f";
+var LABEL = "#14181f";
+var LEADER = "#8b98a0";
+function drawRouteMap(doc, routes, x, y, width, height) {
+  const coords = new Map;
+  for (const route of routes) {
+    for (const l of route.legs) {
+      for (const iata of [l.departure_airport, l.arrival_airport]) {
+        const c = getCoords(iata);
+        if (c)
+          coords.set(iata, c);
+      }
+    }
+  }
+  if (coords.size < 2)
+    return;
+  const proj = buildProjection(coords, x, y, width, height);
+  doc.setFillColor(OCEAN);
+  doc.setDrawColor(MAP_BORDER);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(x, y, width, height, 3, 3, "FD");
+  drawLand(doc, proj, x, y, width, height);
+  for (const [i, route] of [...routes].entries().toArray().reverse()) {
+    doc.setDrawColor(route.color);
+    doc.setLineWidth(0.7 + i * 0.3);
+    for (const leg of route.legs) {
+      const from = coords.get(leg.departure_airport);
+      const to = coords.get(leg.arrival_airport);
+      if (!from || !to)
+        continue;
+      const pts = greatCirclePoints(from, to, 40);
+      for (let i2 = 1;i2 < pts.length; i2++) {
+        const [x1, y1] = proj(pts[i2 - 1]);
+        const [x2, y2] = proj(pts[i2]);
+        if (!inside(x1, y1, x, y, width, height) || !inside(x2, y2, x, y, width, height))
+          continue;
+        doc.line(x1, y1, x2, y2);
+      }
+    }
+  }
+  drawAirportLabels(doc, coords, proj, x, y, width, height);
+}
+function inside(px, py, x, y, w, h) {
+  return px >= x && px <= x + w && py >= y && py <= y + h;
+}
+function drawLand(doc, proj, x, y, width, height) {
+  doc.setFillColor(LAND);
+  doc.setDrawColor(LAND_EDGE);
+  doc.setLineWidth(0.15);
+  for (const ring of WORLD_LAND) {
+    const projected = ring.map(([lon, lat]) => proj([lat, lon]));
+    const clipped = clipPolygon(projected, x, y, x + width, y + height);
+    if (clipped.length < 3)
+      continue;
+    const [start, ...rest] = clipped;
+    doc.lines(rest.map(([px, py], i) => {
+      const [prevX, prevY] = i === 0 ? start : rest[i - 1];
+      return [px - prevX, py - prevY];
+    }), start[0], start[1], [1, 1], "FD", true);
+  }
+}
+function clipPolygon(points, minX, minY, maxX, maxY) {
+  const edges = [
+    [(p) => p[0] >= minX, (a, b) => lerpX(a, b, minX)],
+    [(p) => p[0] <= maxX, (a, b) => lerpX(a, b, maxX)],
+    [(p) => p[1] >= minY, (a, b) => lerpY(a, b, minY)],
+    [(p) => p[1] <= maxY, (a, b) => lerpY(a, b, maxY)]
+  ];
+  let output = points;
+  for (const [keep, intersect] of edges) {
+    const input = output;
+    output = [];
+    for (let i = 0;i < input.length; i++) {
+      const curr = input[i];
+      const prev = input[(i + input.length - 1) % input.length];
+      const currIn = keep(curr);
+      const prevIn = keep(prev);
+      if (currIn) {
+        if (!prevIn)
+          output.push(intersect(prev, curr));
+        output.push(curr);
+      } else if (prevIn) {
+        output.push(intersect(prev, curr));
+      }
+    }
+    if (output.length === 0)
+      return [];
+  }
+  return output;
+}
+function lerpX(a, b, x) {
+  const t = (x - a[0]) / (b[0] - a[0] || 1);
+  return [x, a[1] + t * (b[1] - a[1])];
+}
+function lerpY(a, b, y) {
+  const t = (y - a[1]) / (b[1] - a[1] || 1);
+  return [a[0] + t * (b[0] - a[0]), y];
+}
+function overlaps(a, b) {
+  return a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+}
+function drawAirportLabels(doc, coords, proj, x, y, width, height) {
+  doc.setFontSize(6.5);
+  const points = [...coords].map(([iata, c]) => ({ iata, p: proj(c) })).filter(({ p }) => inside(p[0], p[1], x, y, width, height));
+  doc.setFillColor(DOT);
+  const taken = [];
+  for (const { p } of points) {
+    doc.circle(p[0], p[1], 1.1, "F");
+    taken.push([p[0] - 1.4, p[1] - 1.4, p[0] + 1.4, p[1] + 1.4]);
+  }
+  for (const { iata, p } of points) {
+    const label = cityName(iata);
+    const w = doc.getTextWidth(label);
+    const spot = placeLabel(p, w, taken, x, y, width, height);
+    taken.push(spot.box);
+    if (spot.distance > 5) {
+      doc.setDrawColor(LEADER);
+      doc.setLineWidth(0.2);
+      doc.line(p[0], p[1], spot.anchor[0], spot.anchor[1]);
+    }
+    doc.setTextColor(LABEL);
+    doc.text(label, spot.x, spot.y, { align: spot.align });
+  }
+}
+function placeLabel(p, w, taken, bx, by, bw, bh) {
+  const half = w / 2;
+  const candidates = [
+    { dx: 0, dy: -3.4, align: "center" },
+    { dx: 0, dy: 4.8, align: "center" },
+    { dx: 3, dy: 1, align: "left" },
+    { dx: -3, dy: 1, align: "right" }
+  ];
+  for (let step = 1;step <= 6; step++) {
+    candidates.push({ dx: 0, dy: -3.4 - step * 3.6, align: "center" });
+    candidates.push({ dx: 0, dy: 4.8 + step * 3.6, align: "center" });
+  }
+  for (const c of candidates) {
+    const cx2 = c.align === "center" ? Math.min(Math.max(p[0] + c.dx, bx + half + 1.5), bx + bw - half - 1.5) : p[0] + c.dx;
+    const cy2 = p[1] + c.dy;
+    const left = c.align === "center" ? cx2 - half : c.align === "left" ? cx2 : cx2 - w;
+    const box = [left - 0.8, cy2 - 2.6, left + w + 0.8, cy2 + 1];
+    if (box[0] < bx || box[2] > bx + bw || box[1] < by || box[3] > by + bh)
+      continue;
+    if (taken.some((t) => overlaps(t, box)))
+      continue;
+    const anchorY = c.dy < 0 ? box[3] : box[1];
+    return {
+      x: cx2,
+      y: cy2,
+      align: c.align,
+      box,
+      anchor: [(box[0] + box[2]) / 2, anchorY],
+      distance: Math.abs(c.dy)
+    };
+  }
+  const cy = Math.max(p[1] - 3.4, by + 3);
+  const cx = Math.min(Math.max(p[0], bx + half + 1.5), bx + bw - half - 1.5);
+  return {
+    x: cx,
+    y: cy,
+    align: "center",
+    box: [cx - half, cy - 2.6, cx + half, cy + 1],
+    anchor: [cx, cy + 1],
+    distance: 0
+  };
+}
+function drawRouteLegend(doc, routes, x, y, maxW) {
+  doc.setFontSize(7);
+  let lx = x;
+  let ly = y;
+  for (const route of routes) {
+    const w = doc.getTextWidth(route.label) + 12;
+    if (lx > x && lx + w > x + maxW) {
+      lx = x;
+      ly += 5;
+    }
+    doc.setFillColor(route.color);
+    doc.rect(lx, ly - 2.2, 5, 1.6, "F");
+    doc.setTextColor("#6b7280");
+    doc.text(route.label, lx + 6.5, ly);
+    lx += w;
+  }
+  return ly + 4;
+}
+function buildProjection(coords, bx, by, bw, bh) {
+  const lats = [...coords.values()].map((c) => c[0]);
+  const lons = [...coords.values()].map((c) => c[1]);
+  const midLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const midLon = (Math.min(...lons) + Math.max(...lons)) / 2;
+  const kx = Math.cos(midLat * Math.PI / 180) || 1;
+  const spanX = Math.max((Math.max(...lons) - Math.min(...lons)) * kx, 8) * 1.35;
+  const spanY = Math.max(Math.max(...lats) - Math.min(...lats), 8) * 1.5;
+  const scale = Math.min(bw / spanX, bh / spanY);
+  return ([lat, lon]) => [
+    bx + bw / 2 + (lon - midLon) * kx * scale,
+    by + bh / 2 - (lat - midLat) * scale
+  ];
+}
+
+// src/pdf.ts
+var INK2 = "#14181f";
+var TEXT = "#2a2a2a";
+var MUTED2 = "#6b7280";
+var ACCENT = "#0b5563";
+var ACCENT_SOFT = "#eaf1f2";
+var BORDER = "#dfe3e8";
+var SURFACE = "#f7f8f9";
+var WARN = "#b45309";
+var FONT2 = "helvetica";
+var MARGIN = 15;
+var PROJECT_URL = "https://github.com/doublej/flt";
+var PAGE_H = 297;
+var BOTTOM = PAGE_H - 22;
+function safe(s) {
+  return s.replace(/\u2192/g, ">").replace(/\u2014/g, "-").replace(/\u00B7/g, "-");
+}
+function fmtStops(n) {
+  if (n === 0)
+    return "Nonstop";
+  return `${n} stop${n > 1 ? "s" : ""}`;
 }
 function uniqueLegs(offers) {
   const seen = new Set;
@@ -61157,18 +62369,13 @@ function uniqueLegs(offers) {
     return true;
   }));
 }
-function legRoute2(o) {
-  if (o.legs.length === 0)
-    return "? > ?";
-  const codes = [o.legs[0].departure_airport];
-  for (const leg of o.legs)
-    codes.push(leg.arrival_airport);
-  return codes.filter((c, i) => i === 0 || c !== codes[i - 1]).join(" > ");
-}
 function totalPrice2(offers) {
   const total = offers.reduce((sum, o) => sum + parsePrice(o.price), 0);
   const cur = (offers[0]?.price ?? "EUR0").replace(/[0-9.,\s]/g, "") || "EUR";
   return `${cur}${Math.round(total)}`;
+}
+function arrivalLabel(o) {
+  return `${o.departure} > ${o.arrival}${o.arrival_time_ahead}`;
 }
 function formatSearchHeading(tag, entry) {
   const match = tag.match(/^([A-Z]{3})-([A-Z]{3})@(\d{4})(\d{2})(\d{2})/);
@@ -61176,134 +62383,557 @@ function formatSearchHeading(tag, entry) {
     return entry.query;
   const [, from, to, y, m, d] = match;
   const date = new Date(Number(y), Number(m) - 1, Number(d));
-  const fmt = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return `${from} > ${to} - ${fmt}`;
+  const fmt = date.toLocaleDateString("en-US", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+  return `${fmt}${cabinSuffix(entry)}`;
+}
+function cabinSuffix(entry) {
+  const cabin = entry.query.toLowerCase().match(/premium[- ]economy|business|first/)?.[0];
+  if (!cabin)
+    return "";
+  const words = cabin.replace("-", " ");
+  return ` - ${words[0].toUpperCase()}${words.slice(1)}`;
+}
+function searchConditions(entry) {
+  const parts = entry.query.split("\xB7").map((s) => s.trim());
+  return parts.slice(1).join(" - ");
+}
+function searchDate(tag) {
+  return tag.match(/@(\d{8})/)?.[1] ?? "";
+}
+function currentPage(doc) {
+  return doc.getCurrentPageInfo().pageNumber;
 }
 function lastTableY(doc, fallback) {
   return doc.lastAutoTable?.finalY ?? fallback;
 }
-function fitText(doc, text, cx, y, maxW, maxSize) {
-  let size = maxSize;
-  doc.setFontSize(size);
-  while (doc.getTextWidth(text) > maxW && size > 8) {
-    size -= 1;
-    doc.setFontSize(size);
-  }
-  doc.text(text, cx, y, { align: "center" });
+function ensureSpace(doc, cy, needed) {
+  if (cy + needed <= BOTTOM)
+    return cy;
+  doc.addPage();
+  return 22;
 }
-function wrappedText(doc, text, x, y, maxW) {
+function wrappedText(doc, text, x, y, maxW, lh = 4) {
   const lines = doc.splitTextToSize(text, maxW);
   for (const line of lines) {
     doc.text(line, x, y);
-    y += 4;
+    y += lh;
   }
   return y;
 }
 async function generatePdf(opts) {
   const doc = new import_jspdf.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
-  const usable = W - MARGIN * 2;
-  let cy = 20;
-  doc.setFont(FONT, "bold");
-  doc.setTextColor(TEXT);
-  fitText(doc, safe(opts.title ?? "Flight Search Results"), W / 2, cy, usable, 22);
-  cy += 7;
-  doc.setFont(FONT, "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(MUTED);
-  doc.text(`Generated ${new Date().toLocaleDateString("en-US", { dateStyle: "long" })}`, W / 2, cy, {
-    align: "center"
-  });
-  cy += 5;
-  drawAccentLine(doc, W, cy);
-  cy += 8;
-  const allOffers = opts.searches.flatMap(([, e]) => e.offers);
-  const allItinLegs = opts.itineraries.flatMap((it) => it.legs);
-  const mapOffers = allOffers.length > 0 ? allOffers : allItinLegs;
-  const legs = uniqueLegs(mapOffers);
-  if (legs.length >= 2 && legs.length <= 15) {
-    const mapW = Math.min(130, usable);
-    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 35);
-    cy += 41;
-  }
-  const rowLimit = opts.searches.length > 5 ? 5 : 10;
-  for (const [tag, entry] of opts.searches) {
-    cy = renderSearchSection(doc, tag, entry, opts.affiliate, opts.filters, W, cy, rowLimit);
-  }
-  if (opts.searches.length === 0 && opts.itineraries.length > 0) {
-    for (const itin of opts.itineraries) {
-      doc.setFont(FONT, "bold");
-      doc.setFontSize(9);
-      doc.setTextColor(TEXT);
-      doc.text(safe(itin.title), MARGIN, cy);
-      doc.setFont(FONT, "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(MUTED);
-      const info = `${itin.legs.length} legs - ${totalPrice2(itin.legs)}`;
-      doc.text(info, MARGIN, cy + 4);
-      cy += 10;
+  const title = safe(opts.title ?? "Flight Search Results");
+  const groups = groupByRoute(opts.searches).map((g) => ({
+    ...g,
+    color: ROUTE_COLORS[0],
+    searches: [...g.searches].sort((a, b) => searchDate(a[0]).localeCompare(searchDate(b[0])))
+  }));
+  for (const [i, g] of groups.entries())
+    g.color = ROUTE_COLORS[i % ROUTE_COLORS.length];
+  const allOffers = groups.flatMap((g) => g.offers);
+  const mapOffers = allOffers.length > 0 ? allOffers : opts.itineraries.flatMap((it) => it.legs);
+  renderCover(doc, opts, groups, W, title, mapOffers);
+  const sectionCount = groups.reduce((n, g) => n + g.searches.length, 0);
+  const wantsContents = sectionCount >= 3;
+  const contentsPages = [];
+  if (wantsContents) {
+    const rows = 1 + groups.length + sectionCount;
+    const needed = Math.max(1, Math.ceil((rows * 7 + groups.length * 3 + 12) / (BOTTOM - 26)));
+    for (let i = 0;i < needed; i++) {
+      doc.addPage();
+      contentsPages.push(currentPage(doc));
     }
+  }
+  const guidePage = allOffers.length > 0 ? renderReadingGuide(doc, W) : 0;
+  const index = { guidePage, routes: [] };
+  for (const group of groups) {
+    let cy = renderRouteOpener(doc, group, W);
+    const routeEntry = {
+      label: group.label,
+      color: group.color,
+      page: currentPage(doc),
+      sections: []
+    };
+    cy = renderPriceByDate(doc, group, W, cy);
+    for (const [i, [tag, entry]] of group.searches.entries()) {
+      cy = placeSection(doc, cy, shortlistFor(entry, group, opts).length);
+      routeEntry.sections.push({
+        label: formatSearchHeading(tag, entry),
+        number: i + 1,
+        page: currentPage(doc),
+        cheapest: entry.offers.length ? Math.min(...entry.offers.map((o) => parsePrice(o.price))) : Number.NaN,
+        currency: (entry.offers[0]?.price ?? "").replace(/[0-9.,\s]/g, "")
+      });
+      cy = renderSearchSection(doc, tag, entry, opts, group, W, cy, i + 1);
+    }
+    index.routes.push(routeEntry);
   }
   for (const itin of opts.itineraries) {
     renderItinerary(doc, itin, opts.affiliate, opts.filters, W);
   }
+  if (wantsContents) {
+    renderContents(doc, W, index, contentsPages);
+  }
+  drawFooters(doc, W, title);
   return Buffer.from(doc.output("arraybuffer"));
 }
-function renderSearchSection(doc, tag, entry, affiliate, filters, W, cy, rowLimit = 10) {
-  const heading = formatSearchHeading(tag, entry);
-  doc.setFont(FONT, "bold");
-  doc.setFontSize(10);
+function renderRouteOpener(doc, group, W) {
+  doc.addPage();
+  const usable = W - MARGIN * 2;
+  let cy = 24;
+  doc.setFillColor(group.color);
+  doc.rect(MARGIN, cy - 4, 3, 12, "F");
+  doc.setFont(FONT2, "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(group.color);
+  doc.text("ROUTE", MARGIN + 7, cy, { charSpace: 0.8 });
+  doc.setFontSize(16);
+  doc.setTextColor(INK2);
+  doc.text(safe(group.label), MARGIN + 7, cy + 7);
+  cy += 15;
+  const dates = new Set(group.offers.map((o) => o.departure_date));
+  const fastest = group.offers.length ? Math.min(...group.offers.map(durationMin)) : 0;
+  const cur = (group.offers[0]?.price ?? "").replace(/[0-9.,\s]/g, "");
+  doc.setFont(FONT2, "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(MUTED2);
+  doc.text(safe([
+    `${group.offers.length} options`,
+    `${dates.size} date${dates.size > 1 ? "s" : ""} searched`,
+    `from ${cur}${Math.round(group.cheapest)}`,
+    `quickest ${fmtMinutes(fastest)}`
+  ].join("   -   ")), MARGIN + 7, cy);
+  cy += 4;
+  doc.setDrawColor(BORDER);
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN, cy, W - MARGIN, cy);
+  return cy + 9;
+}
+function renderCover(doc, opts, groups, W, title, mapOffers) {
+  const usable = W - MARGIN * 2;
+  let cy = 26;
+  doc.setFont(FONT2, "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(ACCENT);
+  doc.text("FLIGHT REPORT", MARGIN, cy, { charSpace: 0.8 });
+  cy += 10;
+  doc.setFont(FONT2, "bold");
+  doc.setTextColor(INK2);
+  doc.setFontSize(24);
+  cy = wrappedText(doc, title, MARGIN, cy, usable, 10);
+  cy += 1;
+  const subtitle = safe(coverSubtitle(opts.searches));
+  if (subtitle) {
+    doc.setFont(FONT2, "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(MUTED2);
+    cy = wrappedText(doc, subtitle, MARGIN, cy, usable, 5.5);
+    cy += 1;
+  }
+  doc.setFont(FONT2, "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(MUTED2);
+  const offers = groups.flatMap((g) => g.offers);
+  const stamp = `Prepared ${new Date().toLocaleDateString("en-US", { dateStyle: "long" })}`;
+  const scope = offers.length > 0 ? `${offers.length} options - ${groups.length} route${groups.length > 1 ? "s" : ""}` : "";
+  doc.text(safe([stamp, scope].filter(Boolean).join("  -  ")), MARGIN, cy);
+  cy += 5;
+  doc.setDrawColor(BORDER);
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN, cy, W - MARGIN, cy);
+  cy += 9;
+  const multiRoute = groups.length > 1;
+  const cards = multiRoute ? groups.map((g) => ({ highlight: routeCard(g, opts.pick), color: g.color, heading: g.label })).filter((c) => Boolean(c.highlight)).slice(0, 6) : pickHighlights(offers, opts.pick).map((h, i) => ({
+    highlight: h,
+    color: ROUTE_COLORS[i % ROUTE_COLORS.length],
+    heading: h.labels.join(" / ")
+  }));
+  const routes = multiRoute ? groups.map((g) => {
+    const card = routeCard(g, opts.pick);
+    return { label: g.label, color: g.color, legs: card ? uniqueLegs([card.offer]) : [] };
+  }) : cards.map((c) => ({
+    label: `${c.heading} - ${c.highlight.offer.price}`,
+    color: c.color,
+    legs: uniqueLegs([c.highlight.offer])
+  }));
+  const drawable = routes.filter((r) => r.legs.length > 0);
+  if (drawable.length > 0) {
+    const mapH = cards.length > 4 ? 86 : 52;
+    const mapW = Math.min(mapH > 52 ? 175 : 150, usable);
+    drawRouteMap(doc, drawable, (W - mapW) / 2, cy, mapW, mapH);
+    cy += mapH + 4;
+    if (drawable.length > 1 || multiRoute) {
+      cy = drawRouteLegend(doc, drawable, MARGIN, cy, usable) + 6;
+    }
+  }
+  if (opts.note) {
+    cy = ensureSpace(doc, cy, 30);
+    doc.setFont(FONT2, "normal");
+    doc.setFontSize(9);
+    const noteLines = doc.splitTextToSize(safe(opts.note), usable - 12);
+    const boxH = noteLines.length * 4.4 + 14;
+    doc.setFillColor(ACCENT_SOFT);
+    doc.roundedRect(MARGIN, cy, usable, boxH, 1.5, 1.5, "F");
+    doc.setFont(FONT2, "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(ACCENT);
+    doc.text("SUMMARY", MARGIN + 6, cy + 7.5, { charSpace: 0.6 });
+    doc.setFont(FONT2, "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(TEXT);
+    let ny = cy + 13.5;
+    for (const line of noteLines) {
+      doc.text(line, MARGIN + 6, ny);
+      ny += 4.4;
+    }
+    cy += boxH + 9;
+  }
+  if (cards.length > 0) {
+    cy = ensureSpace(doc, cy, 14 + Math.ceil(cards.length / (cards.length <= 4 ? cards.length : 3)) * 46);
+    doc.setFont(FONT2, "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(INK2);
+    doc.text("Start here", MARGIN, cy);
+    cy += 4;
+    doc.setFont(FONT2, "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(MUTED2);
+    doc.text(safe(multiRoute ? "The best option on each route. Every route is reported separately from here on." : "The rest of this report is detail. These are the options worth deciding between."), MARGIN, cy);
+    cy += 6;
+    const gap = 6;
+    const perRow = cards.length <= 4 ? cards.length : 3;
+    const cardW = (usable - gap * (perRow - 1)) / perRow;
+    for (const [i, c] of cards.entries()) {
+      const x = MARGIN + i % perRow * (cardW + gap);
+      const y = cy + Math.floor(i / perRow) * 46;
+      drawHighlightCard(doc, c.highlight, x, y, cardW, c.color, c.heading);
+    }
+    cy += Math.ceil(cards.length / perRow) * 46;
+  }
+}
+function routeCard(group, pick) {
+  const picked = pick ? group.offers.find((o) => o.id === pick) : undefined;
+  if (picked) {
+    return { labels: ["Our pick"], why: "Chosen for this trip", offer: picked };
+  }
+  const id = cheapestId(group.offers);
+  const offer = group.offers.find((o) => o.id === id);
+  if (!offer)
+    return;
+  return {
+    labels: ["Lowest price"],
+    why: `Cheapest of ${group.offers.length} options on this route`,
+    offer
+  };
+}
+function renderContents(doc, W, index, pages) {
+  let page = 0;
+  doc.setPage(pages[0]);
+  let cy = 24;
+  doc.setFont(FONT2, "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(INK2);
+  doc.text("What is inside", MARGIN, cy);
+  cy += 6;
+  doc.setFont(FONT2, "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(MUTED2);
+  doc.text(safe("Every line is a link. Click it to jump to that page."), MARGIN, cy);
+  cy += 9;
+  const row = (marker, label, right, target, indent, bold2, color = ACCENT) => {
+    doc.setFont(FONT2, "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(color);
+    doc.text(marker, MARGIN + indent, cy);
+    doc.setFont(FONT2, bold2 ? "bold" : "normal");
+    doc.setTextColor(bold2 ? INK2 : TEXT);
+    doc.textWithLink(safe(label), MARGIN + indent + 10, cy, { pageNumber: target });
+    doc.setFont(FONT2, "normal");
+    doc.setTextColor(MUTED2);
+    doc.text(safe(right), W - MARGIN, cy, { align: "right" });
+    doc.link(MARGIN, cy - 3.5, W - MARGIN * 2, 5.5, { pageNumber: target });
+    doc.setDrawColor(BORDER);
+    doc.setLineWidth(0.1);
+    doc.line(MARGIN, cy + 2, W - MARGIN, cy + 2);
+    cy += 7;
+  };
+  if (index.guidePage > 0) {
+    row("--", "How to read this report - every column explained", `page ${index.guidePage}`, index.guidePage, 0, false);
+  }
+  const nextPage2 = (need = 8) => {
+    if (cy <= BOTTOM - need)
+      return;
+    if (page + 1 >= pages.length)
+      return;
+    page += 1;
+    doc.setPage(pages[page]);
+    cy = 24;
+  };
+  for (const route of index.routes) {
+    nextPage2(22);
+    cy += 3;
+    row(">", route.label, `page ${route.page}`, route.page, 0, true, route.color);
+    for (const sec of route.sections) {
+      nextPage2();
+      const price = Number.isNaN(sec.cheapest) ? "" : `from ${sec.currency}${Math.round(sec.cheapest)}   -   `;
+      row(String(sec.number).padStart(2, "0"), sec.label, `${price}page ${sec.page}`, sec.page, 6, false);
+    }
+  }
+}
+function drawHighlightCard(doc, h, x, y, w, color, heading) {
+  const H = 42;
+  doc.setFillColor("#ffffff");
+  doc.setDrawColor(BORDER);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(x, y, w, H, 1.5, 1.5, "FD");
+  doc.setFillColor(color);
+  doc.roundedRect(x, y, w, 7, 1.5, 1.5, "F");
+  doc.rect(x, y + 4, w, 3, "F");
+  doc.setFont(FONT2, "bold");
+  doc.setFontSize(6.8);
+  doc.setTextColor("#ffffff");
+  const bar = doc.splitTextToSize(safe(heading.toUpperCase()), w - 7);
+  doc.text(bar[0], x + 4, y + 4.8, { charSpace: 0.3 });
+  const o = h.offer;
+  doc.setFont(FONT2, "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(INK2);
+  doc.text(safe(o.price), x + 4, y + 17);
+  doc.setFont(FONT2, "normal");
+  doc.setFontSize(8);
   doc.setTextColor(TEXT);
-  doc.text(safe(heading), MARGIN, cy);
-  doc.setFont(FONT, "normal");
-  doc.setFontSize(7);
-  doc.setTextColor(MUTED);
-  const meta = `${entry.offers.length} results - ${new Date(entry.timestamp).toLocaleString()}`;
-  doc.text(safe(meta), MARGIN, cy + 4);
-  cy += 8;
-  const top = entry.offers.slice(0, rowLimit);
+  doc.text(safe(o.name.slice(0, 26)), x + 4, y + 22.5);
+  doc.setFontSize(7.5);
+  doc.setTextColor(MUTED2);
+  const via = `${viaLabel(o)}  -  ${o.duration}`;
+  const short = `${o.stops} stop${o.stops === 1 ? "" : "s"}  -  ${o.duration}`;
+  doc.text(safe(doc.getTextWidth(via) <= w - 8 ? via : short), x + 4, y + 27);
+  doc.text(safe(arrivalLabel(o)), x + 4, y + 31);
+  doc.setFontSize(6.5);
+  doc.setTextColor(MUTED2);
+  const why = doc.splitTextToSize(safe(`${o.id} - ${h.why}`), w - 8);
+  let wy = y + 35.5;
+  for (const line of why.slice(0, 2)) {
+    doc.text(line, x + 4, wy);
+    wy += 3.2;
+  }
+}
+function renderPriceByDate(doc, group, W, cy) {
+  const { days, currency } = pricePerDay(group.searches);
+  if (days.length < 2)
+    return cy;
+  const usable = W - MARGIN * 2;
+  cy = ensureSpace(doc, cy, 130);
+  doc.setFont(FONT2, "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(INK2);
+  doc.text("What each date costs", MARGIN, cy);
+  cy += 5;
+  doc.setFont(FONT2, "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(MUTED2);
+  cy = wrappedText(doc, safe("The dark bar is the cheapest fare found that day. The pale bar is the average across every option that day, which shows whether the low fare is one lucky outlier or the whole day is cheap."), MARGIN, cy, usable, 4.2);
+  cy += 5;
+  drawPriceChart(doc, days, currency, MARGIN, cy, usable, 66);
+  cy += 66 + 6;
+  drawChartLegend(doc, MARGIN, cy);
+  cy += 10;
+  const cheapestDay = days.reduce((a, b) => b.low < a.low ? b : a);
+  const dearestDay = days.reduce((a, b) => b.low > a.low ? b : a);
+  const fmtDay = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
+    weekday: "long",
+    day: "numeric",
+    month: "long"
+  });
+  const spread = Math.round(dearestDay.low - cheapestDay.low);
+  const cheapDays = days.filter((d) => d.low === cheapestDay.low).length;
+  const lines = [
+    cheapDays > 1 ? `Cheapest fare is ${currency}${Math.round(cheapestDay.low)}, available on ${cheapDays} of the ${days.length} dates searched, first on ${fmtDay(cheapestDay.date)}.` : `Cheapest day: ${fmtDay(cheapestDay.date)} at ${currency}${Math.round(cheapestDay.low)}.`,
+    `Dearest day: ${fmtDay(dearestDay.date)} at ${currency}${Math.round(dearestDay.low)}.`,
+    spread > 0 ? `Picking the right date is worth ${currency}${spread} per traveller on this route.` : "Every date searched came in at the same lowest fare."
+  ];
+  doc.setFont(FONT2, "normal");
+  doc.setFontSize(8.5);
+  for (const line of lines) {
+    cy = ensureSpace(doc, cy, 8);
+    doc.setTextColor(group.color);
+    doc.text("-", MARGIN, cy);
+    doc.setTextColor(TEXT);
+    cy = wrappedText(doc, safe(line), MARGIN + 4, cy, usable - 4, 4.2);
+    cy += 2;
+  }
+  return cy + 6;
+}
+function renderReadingGuide(doc, W) {
+  doc.addPage();
+  const page = currentPage(doc);
+  const usable = W - MARGIN * 2;
+  let cy = 24;
+  doc.setFont(FONT2, "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(INK2);
+  doc.text("How to read this report", MARGIN, cy);
+  cy += 6;
+  doc.setFont(FONT2, "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(MUTED2);
+  cy = wrappedText(doc, safe("Each section that follows is one search: one route, on one date, under one set of conditions. Every section holds the same table. Here is what each column means."), MARGIN, cy, usable, 4.4);
+  cy += 4;
+  autoTable(doc, {
+    startY: cy,
+    margin: { left: MARGIN, right: MARGIN, bottom: 26 },
+    head: [["Column", "What it tells you"]],
+    body: COLUMN_GLOSSARY.map(([k, v]) => [safe(k), safe(v)]),
+    ...tableTheme(),
+    columnStyles: { 0: { cellWidth: 32, fontStyle: "bold" } }
+  });
+  cy = lastTableY(doc, cy + 60) + 10;
+  doc.setFont(FONT2, "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(INK2);
+  doc.text("Before you book", MARGIN, cy);
+  cy += 6;
+  doc.setFont(FONT2, "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(TEXT);
+  for (const tip of READING_TIPS) {
+    cy = ensureSpace(doc, cy, 10);
+    doc.setTextColor(ACCENT);
+    doc.text("-", MARGIN, cy);
+    doc.setTextColor(TEXT);
+    cy = wrappedText(doc, safe(tip), MARGIN + 4, cy, usable - 4, 4.2);
+    cy += 2.5;
+  }
+  cy += 4;
+  return page;
+}
+function shortlistFor(entry, group, opts) {
+  const rowLimit = group.searches.length > 5 ? 6 : 10;
+  const byPrice = [...entry.offers].sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
+  const shortlist = byPrice.slice(0, rowLimit);
+  for (const id of [opts.pick, fastestId(entry.offers)]) {
+    if (!id || shortlist.some((o) => o.id === id))
+      continue;
+    const offer = byPrice.find((o) => o.id === id);
+    if (offer)
+      shortlist.push(offer);
+  }
+  return shortlist.sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
+}
+var HEAD_H = 17;
+var ROW_H = 7.4;
+function placeSection(doc, cy, rows) {
+  const room = BOTTOM - cy;
+  if (room >= HEAD_H + rows * ROW_H + 10)
+    return cy;
+  const fits = Math.floor((room - HEAD_H) / ROW_H);
+  if (fits >= 4 && rows - fits >= 4)
+    return cy;
+  doc.addPage();
+  return 22;
+}
+function renderSearchSection(doc, tag, entry, opts, group, W, cy, index) {
+  const top = shortlistFor(entry, group, opts);
+  doc.setFont(FONT2, "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(group.color);
+  doc.text(String(index).padStart(2, "0"), MARGIN, cy);
+  doc.setFontSize(12);
+  doc.setTextColor(INK2);
+  doc.text(safe(formatSearchHeading(tag, entry)), MARGIN + 9, cy);
+  doc.setFont(FONT2, "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(MUTED2);
+  const conditions = searchConditions(entry);
+  const shown = top.length < entry.offers.length ? `top ${top.length} of ${entry.offers.length}` : `${entry.offers.length} results`;
+  doc.text(safe([conditions, shown, `searched ${new Date(entry.timestamp).toLocaleDateString()}`].filter(Boolean).join("  -  ")), MARGIN + 9, cy + 4.5);
+  cy += 9;
   if (top.length > 0) {
+    const ids = {
+      cheapestId: cheapestId(entry.offers),
+      fastestId: fastestId(entry.offers),
+      pickId: opts.pick
+    };
     autoTable(doc, {
       startY: cy,
-      margin: { left: MARGIN, right: MARGIN },
-      head: [["ID", "Price", "Stops", "Duration", "Carrier", "Date", "Dep > Arr"]],
-      body: top.map((o) => {
-        const arr = `${o.arrival}${o.arrival_time_ahead}`;
-        return [o.id, o.price, fmtStops(o.stops), o.duration, o.name, o.departure_date, `${o.departure} > ${arr}`];
-      }),
-      ...tableTheme()
+      margin: { left: MARGIN, right: MARGIN, bottom: 26 },
+      head: [["#", "Price", "Airline", "Via", "Total time", "Depart > Arrive", "ID", "Note"]],
+      body: top.map((o, i) => [
+        String(i + 1),
+        safe(o.price) || "Not shown",
+        safe(o.name),
+        safe(viaLabel(o)),
+        safe(o.duration),
+        safe(arrivalLabel(o)),
+        o.id,
+        safe(rowBadges(o, ids))
+      ]),
+      ...tableTheme(),
+      columnStyles: {
+        0: { cellWidth: 8, textColor: MUTED2, halign: "center" },
+        1: { cellWidth: 15, fontStyle: "bold" },
+        4: { cellWidth: 17 },
+        5: { cellWidth: 26 },
+        6: { cellWidth: 14, textColor: MUTED2 },
+        7: { cellWidth: 22, fontStyle: "bold", textColor: group.color }
+      },
+      didParseCell: (data) => {
+        if (data.section === "body" && top[data.row.index]?.id === opts.pick) {
+          data.cell.styles.fillColor = ACCENT_SOFT;
+        }
+      }
     });
     cy = lastTableY(doc, cy + 30) + 4;
   }
   const cheapest = entry.offers[0];
   if (cheapest) {
-    const urls = buildOfferBookingUrls(cheapest, affiliate, filters);
+    const urls = buildOfferBookingUrls(cheapest, opts.affiliate, opts.filters);
     if (urls) {
+      cy = ensureSpace(doc, cy, 8);
+      doc.setFont(FONT2, "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(MUTED2);
+      doc.text("Book this route:", MARGIN, cy);
+      let lx = MARGIN + 24;
       for (const [program, url] of Object.entries(urls)) {
+        const label = PROGRAM_LABELS[program] ?? program;
         doc.setTextColor(ACCENT);
-        doc.setFontSize(7);
-        doc.textWithLink(`Book: ${PROGRAM_LABELS[program] ?? program}`, MARGIN + 2, cy, { url });
-        cy += 4;
+        doc.textWithLink(safe(label), lx, cy, { url });
+        lx += doc.getTextWidth(safe(label)) + 6;
       }
+      cy += 5;
     }
   }
-  cy += 4;
-  return cy;
+  return cy + 6;
 }
 function renderItinerary(doc, it, affiliate, filters, W) {
   doc.addPage();
   const usable = W - MARGIN * 2;
-  let cy = 20;
-  doc.setFont(FONT, "bold");
+  let cy = 24;
+  doc.setFont(FONT2, "bold");
+  doc.setFontSize(8);
   doc.setTextColor(ACCENT);
-  fitText(doc, safe(it.title), W / 2, cy, usable, 16);
-  cy += 5;
-  drawAccentLine(doc, W, cy);
+  doc.text("ITINERARY", MARGIN, cy, { charSpace: 0.8 });
+  cy += 8;
+  doc.setFontSize(16);
+  doc.setTextColor(INK2);
+  cy = wrappedText(doc, safe(it.title), MARGIN, cy, usable, 7);
+  cy += 2;
+  doc.setDrawColor(BORDER);
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN, cy, W - MARGIN, cy);
   cy += 8;
   const legs = uniqueLegs(it.legs);
   if (legs.length > 0) {
     const mapW = Math.min(100, usable);
-    drawRouteMap(doc, legs, (W - mapW) / 2, cy, mapW, 30);
+    const route = { label: it.title, color: ROUTE_COLORS[0], legs };
+    drawRouteMap(doc, [route], (W - mapW) / 2, cy, mapW, 30);
     cy += 36;
   }
   for (const [i, offer] of it.legs.entries()) {
@@ -61311,7 +62941,8 @@ function renderItinerary(doc, it, affiliate, filters, W) {
   }
   const warnings = checkConnections(it.legs);
   if (warnings.length > 0) {
-    doc.setFont(FONT, "italic");
+    cy = ensureSpace(doc, cy, 8 + warnings.length * 4);
+    doc.setFont(FONT2, "italic");
     doc.setFontSize(7.5);
     doc.setTextColor(WARN);
     for (const w of warnings) {
@@ -61322,25 +62953,28 @@ function renderItinerary(doc, it, affiliate, filters, W) {
   }
   const ttt = totalTravelTime(it.legs);
   if (ttt) {
-    doc.setFont(FONT, "normal");
+    cy = ensureSpace(doc, cy, 10);
+    doc.setFont(FONT2, "normal");
     doc.setFontSize(8);
-    doc.setTextColor(MUTED);
+    doc.setTextColor(MUTED2);
     doc.text(`Total travel time: ${ttt}`, MARGIN, cy);
     cy += 6;
   }
+  cy = ensureSpace(doc, cy, 16);
   drawTotalBadge(doc, totalPrice2(it.legs), MARGIN, cy);
   cy += 12;
   if (it.note) {
-    doc.setFont(FONT, "italic");
+    cy = ensureSpace(doc, cy, 10);
+    doc.setFont(FONT2, "italic");
     doc.setFontSize(8);
-    doc.setTextColor(MUTED);
-    doc.text(safe(it.note), MARGIN, cy);
+    doc.setTextColor(MUTED2);
+    wrappedText(doc, safe(it.note), MARGIN, cy, usable);
   }
 }
 function renderBookingBlock(doc, offer, idx, affiliate, filters, usable, cy) {
-  const arr = `${offer.arrival}${offer.arrival_time_ahead}`;
-  const summary = `Booking ${idx} - ${offer.departure_date} - ${legRoute2(offer)} - ${offer.price} - ${offer.duration} - ${fmtStops(offer.stops)} - ${offer.name} - ${offer.departure}>${arr}`;
-  doc.setFont(FONT, "bold");
+  cy = ensureSpace(doc, cy, 26);
+  const summary = `Leg ${idx} - ${offer.departure_date} - ${routeCities(offer)} - ${offer.price} - ${offer.duration} - ${fmtStops(offer.stops)} - ${offer.name} - ${arrivalLabel(offer)}`;
+  doc.setFont(FONT2, "bold");
   doc.setFontSize(8);
   doc.setTextColor(TEXT);
   cy = wrappedText(doc, safe(summary), MARGIN, cy, usable);
@@ -61351,7 +62985,7 @@ function renderBookingBlock(doc, offer, idx, affiliate, filters, usable, cy) {
       const flt = leg.flight_number ? `${leg.airline} ${leg.flight_number}` : leg.airline_name;
       body.push([
         flt,
-        `${leg.departure_airport} > ${leg.arrival_airport}`,
+        `${cityName(leg.departure_airport)} to ${cityName(leg.arrival_airport)}`,
         leg.departure_time,
         leg.arrival_time,
         fmtMinutes(leg.duration),
@@ -61359,10 +62993,10 @@ function renderBookingBlock(doc, offer, idx, affiliate, filters, usable, cy) {
       ]);
       if (j < offer.layovers.length) {
         const lo = offer.layovers[j];
-        const s = { fontStyle: "italic", textColor: MUTED };
+        const s = { fontStyle: "italic", textColor: MUTED2 };
         body.push([
           { content: "", styles: s },
-          { content: `${lo.airport} layover`, styles: s },
+          { content: `${cityName(lo.airport)} layover`, styles: s },
           { content: "", styles: s },
           { content: "", styles: s },
           { content: fmtMinutes(lo.duration), styles: s },
@@ -61372,7 +63006,7 @@ function renderBookingBlock(doc, offer, idx, affiliate, filters, usable, cy) {
     }
     autoTable(doc, {
       startY: cy,
-      margin: { left: MARGIN + 4, right: MARGIN },
+      margin: { left: MARGIN + 4, right: MARGIN, bottom: 26 },
       head: [["Flight", "Route", "Dep", "Arr", "Duration", "Aircraft"]],
       body,
       ...tableTheme(),
@@ -61384,14 +63018,14 @@ function renderBookingBlock(doc, offer, idx, affiliate, filters, usable, cy) {
   const urls = buildOfferBookingUrls(offer, affiliate, filters);
   if (urls) {
     for (const [program, url] of Object.entries(urls)) {
+      cy = ensureSpace(doc, cy, 6);
       doc.setTextColor(ACCENT);
       doc.setFontSize(7);
       doc.textWithLink(`Book: ${PROGRAM_LABELS[program] ?? program}`, MARGIN + 4, cy, { url });
       cy += 4;
     }
   }
-  cy += 3;
-  return cy;
+  return cy + 3;
 }
 function buildOfferBookingUrls(offer, affiliate, filters) {
   if (!affiliate)
@@ -61410,32 +63044,46 @@ function buildOfferBookingUrls(offer, affiliate, filters) {
 function tableTheme() {
   return {
     styles: {
-      font: FONT,
+      font: FONT2,
       fontSize: 8,
       textColor: TEXT,
       fillColor: "#ffffff",
       lineColor: BORDER,
-      lineWidth: 0.15,
-      cellPadding: 2.5
+      lineWidth: 0.1,
+      cellPadding: 2.2
     },
     headStyles: {
-      fillColor: ACCENT,
+      fillColor: INK2,
       textColor: "#ffffff",
-      fontSize: 8,
+      fontSize: 7.5,
       fontStyle: "bold"
     },
     alternateRowStyles: { fillColor: SURFACE },
+    rowPageBreak: "avoid",
     theme: "grid"
   };
 }
-function drawAccentLine(doc, W, y) {
-  doc.setDrawColor(ACCENT);
-  doc.setLineWidth(0.6);
-  doc.line(W / 2 - 25, y, W / 2 + 25, y);
+function drawFooters(doc, W, title) {
+  const pages = doc.getNumberOfPages();
+  for (let p = 1;p <= pages; p++) {
+    doc.setPage(p);
+    doc.setDrawColor(BORDER);
+    doc.setLineWidth(0.3);
+    doc.line(MARGIN, PAGE_H - 16, W - MARGIN, PAGE_H - 16);
+    doc.setFont(FONT2, "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(MUTED2);
+    const label = doc.splitTextToSize(title, 70);
+    doc.text(label[0], MARGIN, PAGE_H - 11);
+    doc.setTextColor(ACCENT);
+    doc.textWithLink(PROJECT_URL, W / 2, PAGE_H - 11, { url: PROJECT_URL, align: "center" });
+    doc.setTextColor(MUTED2);
+    doc.text(`${p} / ${pages}`, W - MARGIN, PAGE_H - 11, { align: "right" });
+  }
 }
 function drawTotalBadge(doc, price, x, y) {
   const label = `Total: ${price}`;
-  doc.setFont(FONT, "bold");
+  doc.setFont(FONT2, "bold");
   doc.setFontSize(10);
   const tw = doc.getTextWidth(label) + 12;
   doc.setFillColor(ACCENT);
@@ -61460,6 +63108,7 @@ function parseOneItin(raw, start) {
 }
 function parseItineraryArgs(raw) {
   const itineraries = [];
+  const consumed = new Set;
   let i = 0;
   while (i < raw.length) {
     if (raw[i] !== "--itin") {
@@ -61468,9 +63117,15 @@ function parseItineraryArgs(raw) {
     }
     const { itin, next } = parseOneItin(raw, i + 1);
     itineraries.push(itin);
+    for (let j = i;j < next; j++)
+      consumed.add(j);
     i = next;
   }
-  return itineraries;
+  return { itineraries, consumed };
+}
+function parseReportNote(raw, consumed) {
+  const i = raw.findIndex((a, idx) => a === "--note" && !consumed.has(idx));
+  return i >= 0 ? raw[i + 1] : undefined;
 }
 var takeoutCommand = defineCommand({
   meta: {
@@ -61484,6 +63139,14 @@ var takeoutCommand = defineCommand({
       description: "Output file path (default: ~/Desktop/flights-<date>.<ext>)"
     },
     title: { type: "string", description: "Document title" },
+    note: {
+      type: "string",
+      description: "Summary paragraph shown on the cover (outside an --itin block)"
+    },
+    pick: {
+      type: "string",
+      description: "Offer ID to mark as the recommended option (e.g. F2380)"
+    },
     refs: {
       type: "string",
       description: "Only include these search refs, comma-separated (default: all non-empty)"
@@ -61506,7 +63169,8 @@ var takeoutCommand = defineCommand({
       return;
     }
     const rawArgs = process.argv.slice(2);
-    const itinDefs = parseItineraryArgs(rawArgs);
+    const { itineraries: itinDefs, consumed } = parseItineraryArgs(rawArgs);
+    const reportNote = parseReportNote(rawArgs, consumed);
     const itineraries = [];
     for (const def of itinDefs) {
       const legs = [];
@@ -61546,7 +63210,14 @@ var takeoutCommand = defineCommand({
     const defaultPath = join4(process.env.HOME ?? ".", "Desktop", `flights-${date}-${time}.${ext}`);
     const outPath = args.output ?? defaultPath;
     if (args.pdf) {
-      const buf = await generatePdf({ searches, itineraries, affiliate, title: args.title });
+      const buf = await generatePdf({
+        searches,
+        itineraries,
+        affiliate,
+        title: args.title,
+        note: reportNote,
+        pick: args.pick
+      });
       await writeFile4(outPath, buf);
     } else {
       const md = buildMarkdown(searches, itineraries, { affiliate, title: args.title });
