@@ -32,6 +32,7 @@ just dev
 - `just flt <cmd>` — flight search CLI
 - `just tui` — Sabre-style terminal UI
 - `just mcp` — flt MCP server (stdio)
+- `just upstream` — fast-flights commits our scraper port hasn't been checked against (`--ack` after porting); runs as a SessionStart hook too
 
 Bureau (the commercial site):
 
