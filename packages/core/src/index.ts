@@ -35,7 +35,12 @@ export {
 } from './scrape'
 
 // Protobuf
-export { type FlightLeg as ProtoFlightLeg, type PassengerCounts, encodeFlightFilter } from './proto'
+export {
+  type FlightLeg as ProtoFlightLeg,
+  type GoogleFilters,
+  type PassengerCounts,
+  encodeFlightFilter,
+} from './proto'
 
 // Decode
 export { type DecodedFlight, decodeLeg, decodeLayover, decodeResult, extractDataArray } from './decode'
@@ -95,6 +100,7 @@ export {
   addFavorite,
   assignFlightIds,
   buildCacheKey,
+  activeFilters,
   buildCacheQuery,
   buildSearchRef,
   clearLatestSearch,

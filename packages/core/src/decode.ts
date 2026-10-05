@@ -22,7 +22,7 @@ function readVarint(buf: Uint8Array, pos: number): [number, number] {
 
 type ProtoFields = Map<number, Array<number | Uint8Array>>
 
-function readProto(buf: Uint8Array): ProtoFields {
+export function readProto(buf: Uint8Array): ProtoFields {
   const fields: ProtoFields = new Map()
   let pos = 0
   while (pos < buf.length) {

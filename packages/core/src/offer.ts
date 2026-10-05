@@ -1,4 +1,5 @@
 import type { Flight } from './types'
+import type { GoogleFilters } from './proto'
 
 export interface Offer extends Flight {
   id: string
@@ -19,6 +20,8 @@ export interface CacheQuery {
   seat: 'economy' | 'premium-economy' | 'business' | 'first'
   max_stops: number | null
   currency: string
+  /** Google-side filters; absent when unset so unfiltered cache keys stay unchanged. */
+  filters?: GoogleFilters
 }
 
 export interface SearchEntry {

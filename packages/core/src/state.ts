@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { Flight } from './types'
 import type { SearchQuery } from './search'
+import type { GoogleFilters } from './proto'
 import type { CacheQuery, Offer, SearchEntry, Session, SessionSearch, SessionState } from './offer'
 
 const SESSION_VERSION = 3
@@ -174,6 +175,7 @@ export function buildCacheQuery(
   depDate: string,
   retDate: string | null,
 ): CacheQuery {
+  const filters = activeFilters(q.filters)
   return {
     from_airport: q.from_airport.toUpperCase(),
     to_airport: q.to_airport.toUpperCase(),
@@ -187,6 +189,7 @@ export function buildCacheQuery(
     seat: q.seat,
     max_stops: q.max_stops ?? null,
     currency: q.currency.toUpperCase(),
+    ...(filters ? { filters } : {}),
   }
 }
 
@@ -201,12 +204,27 @@ export function buildSearchRef(params: CacheQuery): string {
   return `${params.from_airport}-${params.to_airport}@${dep}${ret}#${suffix}`
 }
 
+/** Only the filters actually set, or undefined — so unset flags never change a cache key. */
+export function activeFilters(f?: GoogleFilters): GoogleFilters | undefined {
+  const set = Object.entries(f ?? {}).filter(
+    ([, v]) => v !== undefined && v !== false && !(Array.isArray(v) && v.length === 0),
+  )
+  return set.length ? Object.fromEntries(set) : undefined
+}
+
+function filtersLabel(f: GoogleFilters): string {
+  return Object.entries(f)
+    .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join('+') : v}`)
+    .join(' ')
+}
+
 function buildConcreteQuery(params: CacheQuery): string {
   const parts = [`${params.from_airport} ${params.to_airport} ${params.departure_date}`]
   if (params.return_date) parts.push(`return ${params.return_from ? `from ${params.return_from} ` : ''}${params.return_date}`)
   parts.push(params.seat, paxLabel(params), params.currency)
   const stops = stopsLabel(params.max_stops)
   if (stops) parts.push(stops)
+  if (params.filters) parts.push(filtersLabel(params.filters))
   return parts.join(' · ')
 }
 
@@ -216,6 +234,8 @@ export function describeSearchRequest(q: SearchQuery): string {
   parts.push(q.seat, paxLabel(q), q.currency.toUpperCase())
   const stops = stopsLabel(q.max_stops ?? null)
   if (stops) parts.push(stops)
+  const filters = activeFilters(q.filters)
+  if (filters) parts.push(filtersLabel(filters))
   return parts.join(' · ')
 }
 

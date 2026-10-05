@@ -4,7 +4,7 @@
  */
 
 import type { Flight } from './types'
-import { type PassengerCounts, encodeFlightFilter } from './proto'
+import { type GoogleFilters, type PassengerCounts, encodeFlightFilter } from './proto'
 import { type Fetcher, type ScrapeError, buildGoogleFlightsUrl, fetchFlights } from './scrape'
 
 export const MAX_RANGE_DAYS = 7
@@ -41,6 +41,8 @@ export interface SearchQuery {
   seat: SeatType
   max_stops?: number
   currency: string
+  /** Applied by Google before results come back (vs. the client-side filter.ts). */
+  filters?: GoogleFilters
 }
 
 export interface SearchResult {
@@ -102,7 +104,7 @@ export async function searchSingle(
     legs.push({ date: ret_date, from: q.return_from ?? q.to_airport, to: q.from_airport, maxStops: q.max_stops })
   }
 
-  const b64 = encodeFlightFilter({ legs, passengers, seat: q.seat, trip })
+  const b64 = encodeFlightFilter({ legs, passengers, seat: q.seat, trip, filters: q.filters })
   const url = buildGoogleFlightsUrl(b64, q.currency)
 
   const result = await fetcher(b64, q.currency)
