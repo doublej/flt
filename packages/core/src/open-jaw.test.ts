@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import fixture from './fixtures/shopping-results.json'
 import { decodeShoppingResults } from './scrape'
 import { type SearchQuery, searchSingle } from './search'
 import { buildCacheKey, buildCacheQuery } from './state'
@@ -16,10 +17,13 @@ const query: SearchQuery = {
   currency: 'EUR',
 }
 
-/** Wrap a ds:1-shaped data array the way GetShoppingResults frames it. */
-function frame(data: unknown): string {
-  const row = JSON.stringify([['wrb.fr', null, JSON.stringify(data)]])
-  return `)]}'\n\n${row.length}\n${row}\n25\n[["e",4,null,null,131]]\n`
+/** Wrap ds:1-shaped data arrays the way GetShoppingResults frames its streamed snapshots. */
+function frame(...snapshots: unknown[]): string {
+  const rows = snapshots.map((data) => {
+    const row = JSON.stringify([['wrb.fr', null, JSON.stringify(data)]])
+    return `${row.length}\n${row}\n`
+  })
+  return `)]}'\n\n${rows.join('')}25\n[["e",4,null,null,131]]\n`
 }
 
 describe('decodeShoppingResults', () => {
@@ -43,6 +47,25 @@ describe('decodeShoppingResults', () => {
   it('reports no_data without a wrb.fr payload and no_flights for an empty one', () => {
     expect(decodeShoppingResults('[["wrb.fr",null,null,null,null,[13]]]').error).toBe('no_data')
     expect(decodeShoppingResults(frame([null, null, null, null])).error).toBe('no_flights')
+  })
+})
+
+describe('streamed snapshots', () => {
+  const rows = (raw: string) => decodeShoppingResults(raw).flights.map((f) => `${f.name} ${f.departure} ${f.price}`)
+
+  it('decodes the last snapshot, where Google has added fares the first lacked', () => {
+    const { first, last } = fixture.outbound
+    expect(rows(frame(first))).toEqual(['THAI 14:20 €843'])
+    expect(rows(frame(first, last))).toEqual([
+      'Qatar Airways 15:05 €769',
+      'THAI 14:20 €843',
+      'KLM, Vietnam Airlines 08:15 €1,743',
+    ])
+  })
+
+  it('skips a trailing snapshot without a payload', () => {
+    const raw = `${frame(fixture.outbound.last)}42\n[["wrb.fr",null,null,null,null,[13]]]\n`
+    expect(rows(raw)).toHaveLength(3)
   })
 })
 

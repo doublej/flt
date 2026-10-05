@@ -52,11 +52,16 @@ export type Fetcher = (b64: string, currency: string) => Promise<ScrapeResult>
 /**
  * Decode a GetShoppingResults response — what the page fetches after load when
  * the first HTML carries no results (multi-city). Chunked `)]}'` framing; the
- * payload is the JSON string in the `wrb.fr` row, same shape as ds:1 data.
+ * payload is the JSON string in a `wrb.fr` row, same shape as ds:1 data.
+ * Google streams several `wrb.fr` rows as it finds fares, each a fuller snapshot
+ * of the list (5 Oct: 1, 13, 11, 11, 11 rows), so the last one is the answer.
  */
 export function decodeShoppingResults(raw: string): ScrapeResult {
-  const row = raw.split('\n').find((line) => line.startsWith('[["wrb.fr"'))
-  const payload = row ? JSON.parse(row)[0][2] : null
+  const payload = raw
+    .split('\n')
+    .filter((line) => line.startsWith('[["wrb.fr"'))
+    .map((line) => JSON.parse(line)[0][2])
+    .findLast((p) => typeof p === 'string')
   if (typeof payload !== 'string') return { flights: [], error: 'no_data' }
   const flights = decodeResult(JSON.parse(payload))
   return flights.length ? { flights } : { flights: [], error: 'no_flights' }
