@@ -54,6 +54,11 @@ test:
     cd apps/mcp && bun run test
     cd apps/marketing && bun run test
 
+# fast-flights commits our port hasn't been checked against; `just upstream --ack` once ported or dismissed.
+[group('quality')]
+upstream *args:
+    scripts/upstream-check.sh {{args}}
+
 # Pull paid briefs out of Stripe into .bureau/queue for the desk to run.
 [group('bureau')]
 pull:
