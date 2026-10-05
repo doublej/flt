@@ -16557,14 +16557,14 @@ var require_uid = __commonJS((exports, module) => {
 var require_environment_user_agent = __commonJS((exports, module) => {
   var globalThis2 = require_global_this();
   var navigator2 = globalThis2.navigator;
-  var userAgent = navigator2 && navigator2.userAgent;
-  module.exports = userAgent ? String(userAgent) : "";
+  var userAgent2 = navigator2 && navigator2.userAgent;
+  module.exports = userAgent2 ? String(userAgent2) : "";
 });
 
 // ../../node_modules/.bun/core-js@3.48.0/node_modules/core-js/internals/environment-v8-version.js
 var require_environment_v8_version = __commonJS((exports, module) => {
   var globalThis2 = require_global_this();
-  var userAgent = require_environment_user_agent();
+  var userAgent2 = require_environment_user_agent();
   var process2 = globalThis2.process;
   var Deno2 = globalThis2.Deno;
   var versions = process2 && process2.versions || Deno2 && Deno2.version;
@@ -16575,10 +16575,10 @@ var require_environment_v8_version = __commonJS((exports, module) => {
     match = v8.split(".");
     version = match[0] > 0 && match[0] < 4 ? 1 : +(match[0] + match[1]);
   }
-  if (!version && userAgent) {
-    match = userAgent.match(/Edge\/(\d+)/);
+  if (!version && userAgent2) {
+    match = userAgent2.match(/Edge\/(\d+)/);
     if (!match || match[1] >= 74) {
-      match = userAgent.match(/Chrome\/(\d+)/);
+      match = userAgent2.match(/Chrome\/(\d+)/);
       if (match)
         version = +match[1];
     }
@@ -17472,10 +17472,10 @@ var require_export = __commonJS((exports, module) => {
 // ../../node_modules/.bun/core-js@3.48.0/node_modules/core-js/internals/environment.js
 var require_environment = __commonJS((exports, module) => {
   var globalThis2 = require_global_this();
-  var userAgent = require_environment_user_agent();
+  var userAgent2 = require_environment_user_agent();
   var classof = require_classof_raw();
   var userAgentStartsWith = function(string) {
-    return userAgent.slice(0, string.length) === string;
+    return userAgent2.slice(0, string.length) === string;
   };
   module.exports = function() {
     if (userAgentStartsWith("Bun/"))
@@ -17761,8 +17761,8 @@ var require_validate_arguments_length = __commonJS((exports, module) => {
 
 // ../../node_modules/.bun/core-js@3.48.0/node_modules/core-js/internals/environment-is-ios.js
 var require_environment_is_ios = __commonJS((exports, module) => {
-  var userAgent = require_environment_user_agent();
-  module.exports = /(?:ipad|iphone|ipod).*applewebkit/i.test(userAgent);
+  var userAgent2 = require_environment_user_agent();
+  module.exports = /(?:ipad|iphone|ipod).*applewebkit/i.test(userAgent2);
 });
 
 // ../../node_modules/.bun/core-js@3.48.0/node_modules/core-js/internals/task.js
@@ -17907,14 +17907,14 @@ var require_queue = __commonJS((exports, module) => {
 
 // ../../node_modules/.bun/core-js@3.48.0/node_modules/core-js/internals/environment-is-ios-pebble.js
 var require_environment_is_ios_pebble = __commonJS((exports, module) => {
-  var userAgent = require_environment_user_agent();
-  module.exports = /ipad|iphone|ipod/i.test(userAgent) && typeof Pebble != "undefined";
+  var userAgent2 = require_environment_user_agent();
+  module.exports = /ipad|iphone|ipod/i.test(userAgent2) && typeof Pebble != "undefined";
 });
 
 // ../../node_modules/.bun/core-js@3.48.0/node_modules/core-js/internals/environment-is-webos-webkit.js
 var require_environment_is_webos_webkit = __commonJS((exports, module) => {
-  var userAgent = require_environment_user_agent();
-  module.exports = /web0s(?!.*chrome)/i.test(userAgent);
+  var userAgent2 = require_environment_user_agent();
+  module.exports = /web0s(?!.*chrome)/i.test(userAgent2);
 });
 
 // ../../node_modules/.bun/core-js@3.48.0/node_modules/core-js/internals/microtask.js
@@ -38999,9 +38999,13 @@ function encodeAirport(iata) {
 function optionalInt(field, val) {
   return val === undefined ? [] : [int32Field(field, val)];
 }
+function encodeSelectedFlight(s) {
+  return concat(stringField(1, s.from), stringField(2, s.date), stringField(3, s.to), stringField(5, s.airline), stringField(6, s.flightNumber));
+}
 function encodeFlightData(leg, f) {
   const parts = [
     stringField(2, leg.date),
+    ...(leg.selected ?? []).map((s) => lenDelim(4, encodeSelectedFlight(s))),
     lenDelim(13, encodeAirport(leg.from)),
     lenDelim(14, encodeAirport(leg.to))
   ];
@@ -39138,6 +39142,11 @@ function formatDuration(minutes) {
     return `${h}h ${m}m`;
   return h ? `${h}h` : `${m}m`;
 }
+function formatDate(d) {
+  if (!Array.isArray(d) || d.length < 3)
+    return;
+  return `${d[0]}-${String(d[1]).padStart(2, "0")}-${String(d[2]).padStart(2, "0")}`;
+}
 function daysAhead(dep, arr) {
   if (!dep || !arr)
     return "";
@@ -39155,6 +39164,7 @@ function decodeLeg(leg) {
   const arrival_airport = at(leg, 6) ?? "";
   const departure_time = formatTime(leg[8]);
   const arrival_time = formatTime(leg[10]);
+  const departure_date = formatDate(leg[20]);
   const duration = leg[11] ?? 0;
   const operator = at(leg, 2) || undefined;
   const seat_pitch = at(leg, 14) || undefined;
@@ -39167,6 +39177,7 @@ function decodeLeg(leg) {
     arrival_airport,
     departure_time,
     arrival_time,
+    departure_date,
     duration,
     operator,
     seat_pitch
@@ -39222,6 +39233,7 @@ function decodeItinerary(el, is_best) {
       stops: layovers.length,
       delay: null,
       price: priceStr,
+      separate_tickets: at(el, 6) === true,
       legs,
       layovers
     };
@@ -39299,9 +39311,8 @@ async function rateLimit() {
   lastRequestTime = Date.now();
 }
 function decodeShoppingResults(raw) {
-  const row = raw.split(`
-`).find((line) => line.startsWith('[["wrb.fr"'));
-  const payload = row ? JSON.parse(row)[0][2] : null;
+  const payload = raw.split(`
+`).filter((line) => line.startsWith('[["wrb.fr"')).map((line) => JSON.parse(line)[0][2]).findLast((p) => typeof p === "string");
   if (typeof payload !== "string")
     return { flights: [], error: "no_data" };
   const flights = decodeResult(JSON.parse(payload));
@@ -39376,14 +39387,18 @@ function buildDatePairs(q) {
   }
   return pairs.slice(0, MAX_TOTAL_SEARCHES);
 }
-async function searchSingle(dep_date, ret_date, q, fetcher = fetchFlights) {
+function pickedFlights(outbound) {
+  const picked = outbound.legs.map((l) => l.departure_date ? { from: l.departure_airport, date: l.departure_date, to: l.arrival_airport, airline: l.airline, flightNumber: l.flight_number } : null);
+  return picked.every((p) => p !== null) ? picked : null;
+}
+async function searchSingle(dep_date, ret_date, q, fetcher = fetchFlights, outbound) {
   const passengers = {
     adults: q.adults,
     children: q.children,
     infants_in_seat: q.infants_in_seat,
     infants_on_lap: q.infants_on_lap
   };
-  const legs = [{ date: dep_date, from: q.from_airport, to: q.to_airport, maxStops: q.max_stops }];
+  const legs = [{ date: dep_date, from: q.from_airport, to: q.to_airport, maxStops: q.max_stops, selected: outbound }];
   const trip = !ret_date ? "one-way" : q.return_from ? "multi-city" : "round-trip";
   if (ret_date) {
     legs.push({ date: ret_date, from: q.return_from ?? q.to_airport, to: q.from_airport, maxStops: q.max_stops });
@@ -57712,13 +57727,194 @@ var airportsCommand = defineCommand({
       console.log(JSON.stringify(a));
   }
 });
+// src/pdf-summary.ts
+function durationMin(o) {
+  const legs = o.legs.reduce((s, l) => s + l.duration, 0);
+  const layovers = o.layovers.reduce((s, l) => s + l.duration, 0);
+  return legs + layovers;
+}
+function fmtMinutes(minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h && m)
+    return `${h}h ${m}m`;
+  return h ? `${h}h` : `${m}m`;
+}
+function cityName(code) {
+  return airportCity(code) ?? code;
+}
+function routeCities(o) {
+  if (o.legs.length === 0)
+    return "?";
+  const codes = [o.legs[0].departure_airport, ...o.legs.map((l) => l.arrival_airport)];
+  return codes.filter((c, i) => i === 0 || c !== codes[i - 1]).map(cityName).join(" to ");
+}
+function viaLabel(o) {
+  if (o.layovers.length === 0)
+    return "Nonstop";
+  return o.layovers.map((l) => `${cityName(l.airport)} ${fmtMinutes(l.duration)}`).join(", ");
+}
+function minBy(items, score2) {
+  return items.reduce((best, cur) => best === undefined || score2(cur) < score2(best) ? cur : best, undefined);
+}
+function bestValue(offers) {
+  if (offers.length === 0)
+    return;
+  const prices = offers.map((o) => parsePrice(o.price));
+  const durations = offers.map(durationMin);
+  const span = (xs) => Math.max(...xs) - Math.min(...xs) || 1;
+  const [pMin, dMin] = [Math.min(...prices), Math.min(...durations)];
+  const [pSpan, dSpan] = [span(prices), span(durations)];
+  const score2 = (o) => (parsePrice(o.price) - pMin) / pSpan + (durationMin(o) - dMin) / dSpan + o.stops * 0.01;
+  return minBy(offers, score2);
+}
+function pickHighlights(offers, pickId) {
+  if (offers.length === 0)
+    return [];
+  const cheapest = minBy(offers, (o) => parsePrice(o.price));
+  const fastest = fastestOffer(offers);
+  const picked = pickId ? offers.find((o) => o.id === pickId) : undefined;
+  const recommended = picked ?? bestValue(offers);
+  const out = [];
+  const add = (offer, label, why) => {
+    if (!offer)
+      return;
+    const existing = out.find((h) => h.offer.id === offer.id);
+    if (existing) {
+      existing.labels.push(label);
+      return;
+    }
+    out.push({ labels: [label], why, offer });
+  };
+  add(recommended, "Our pick", picked ? "Chosen for this trip" : "Best balance of price and travel time");
+  add(cheapest, "Lowest price", `Cheapest of ${offers.length} options found`);
+  const slowest = Math.max(...offers.map(durationMin));
+  add(fastest, "Fastest", fastest ? `${fmtMinutes(slowest - durationMin(fastest))} shorter than the slowest option` : "");
+  return out;
+}
+function rowBadges(offer, opts) {
+  const badges = [];
+  if (offer.id === opts.pickId)
+    badges.push("Our pick");
+  if (offer.id === opts.cheapestId)
+    badges.push("Cheapest");
+  if (offer.id === opts.fastestId)
+    badges.push("Fastest");
+  if (offer.stops === 0 && badges.length < 2)
+    badges.push("Nonstop");
+  return badges.slice(0, 2).join(" / ");
+}
+function cheapestId(offers) {
+  return minBy(offers, (o) => parsePrice(o.price))?.id;
+}
+function fastestId(offers) {
+  return fastestOffer(offers)?.id;
+}
+function fastestOffer(offers) {
+  return minBy(offers, (o) => durationMin(o) * 1e5 + parsePrice(o.price));
+}
+function coverSubtitle(searches) {
+  const offers = searches.flatMap(([, e]) => e.offers);
+  if (offers.length === 0)
+    return "";
+  const origins = new Set;
+  const destinations = [];
+  for (const [tag] of searches) {
+    const m = tag.match(/^([A-Z]{3})-([A-Z]{3})@/);
+    if (!m)
+      continue;
+    origins.add(cityName(m[1]));
+    const to = cityName(m[2]);
+    if (!destinations.includes(to))
+      destinations.push(to);
+  }
+  const dates = offers.map((o) => o.departure_date).sort();
+  const fmt = (d) => new Date(`${d}T00:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  const when = first === last ? fmt(first) : `${fmt(first)} - ${fmt(last)}`;
+  const route = origins.size === 1 && destinations.length > 0 ? `${[...origins][0]} to ${listWords(destinations)}` : destinations.join(", ");
+  return route ? `${route} - ${when}` : when;
+}
+function listWords(items) {
+  if (items.length <= 1)
+    return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+var COLUMN_GLOSSARY = [
+  ["#", "Position in this list. Cheapest first."],
+  ["Price", "Total fare for the passengers searched, in the currency shown."],
+  ["Airline", "Who markets the ticket. Two names means the trip is split across two carriers."],
+  [
+    "Via",
+    'The city where you change plane and how long you wait there. "Nonstop" means no change at all.'
+  ],
+  ["Total time", "Door-to-door travel time, including time spent connecting."],
+  ["Depart / Arrive", 'Local times at each airport. "+1" means you land the next calendar day.'],
+  ["ID", "Stable code for this exact flight. Quote it to pull up full detail or to book."],
+  ["Note", "Why the row stands out: our pick, cheapest, fastest, or nonstop."]
+];
+var READING_TIPS = [
+  "Connections under 1h 30m are tight for an international transfer. One delayed inbound and the onward flight is gone.",
+  "Two rows at the same price with very different total times differ by layover length, not by route quality.",
+  "Prices are what the search showed at the time stamped on each section. They move daily.",
+  "Baggage allowance, fare rules and seat selection are not covered here. Check them before you pay."
+];
+function pricePerDay(searches) {
+  const byDate = new Map;
+  let currency = "";
+  for (const [, entry] of searches) {
+    for (const o of entry.offers) {
+      const price = parsePrice(o.price);
+      if (!Number.isFinite(price))
+        continue;
+      if (!currency)
+        currency = o.price.replace(/[0-9.,\s]/g, "");
+      const day = byDate.get(o.departure_date) ?? new Map;
+      day.set(o.id, Math.min(day.get(o.id) ?? price, price));
+      byDate.set(o.departure_date, day);
+    }
+  }
+  const days = [...byDate.entries()].filter(([, offers]) => offers.size > 0).map(([date, offers]) => {
+    const prices = [...offers.values()];
+    const sum = prices.reduce((a, b) => a + b, 0);
+    return { date, low: Math.min(...prices), avg: sum / prices.length, count: prices.length };
+  }).sort((a, b) => a.date.localeCompare(b.date));
+  return { days, currency: currency || "" };
+}
+function groupByRoute(searches) {
+  const groups = new Map;
+  for (const item of searches) {
+    const key = item[0].match(/^([A-Z]{3}-[A-Z]{3})@/)?.[1] ?? item[0];
+    groups.set(key, [...groups.get(key) ?? [], item]);
+  }
+  return [...groups.entries()].map(([key, items]) => {
+    const offers = items.flatMap(([, e]) => e.offers);
+    const priced = offers.map((o) => parsePrice(o.price)).filter(Number.isFinite);
+    const [from, to] = key.split("-");
+    return {
+      key,
+      label: to ? `${cityName(from)} to ${cityName(to)}` : key,
+      searches: items,
+      offers,
+      cheapest: priced.length ? Math.min(...priced) : Number.NaN
+    };
+  }).sort((a, b) => (a.cheapest || Number.POSITIVE_INFINITY) - (b.cheapest || Number.POSITIVE_INFINITY));
+}
+
 // src/types.ts
 var DEFAULT_FIELDS = "id,price,stops,dur,car,dep,arr,date";
 var VIEW_FIELDS = {
   min: "id,price,stops,dur",
   std: DEFAULT_FIELDS,
-  full: "id,price,stops,dur,car,flt_no,dep,arr,date,best,ret,ahead"
+  full: "id,price,stops,dur,car,flt_no,dep,arr,date,best,ret,ahead,ticket"
 };
+var TRIP_FIELDS = `${DEFAULT_FIELDS},ticket`;
+var RETURN_FIELDS = "id,price,ticket,stops,via,dur,car,legs,dep,arr,ahead,date";
 
 // src/format.ts
 var FIELD_MAP = {
@@ -57734,7 +57930,10 @@ var FIELD_MAP = {
   ret: (o) => o.return_date ?? "",
   ahead: (o) => o.arrival_time_ahead,
   url: (o) => o.url,
-  flt_no: (o) => o.legs.map((l) => l.flight_number).join("/") || ""
+  flt_no: (o) => o.legs.map((l) => l.flight_number).join("/") || "",
+  legs: (o) => o.legs.map((l) => `${l.airline}${l.flight_number} ${l.departure_airport}-${l.arrival_airport}`).join(", "),
+  via: (o) => o.layovers.map((l) => `${l.airport} ${fmtMinutes(l.duration)}`).join(", "),
+  ticket: (o) => o.separate_tickets === undefined ? "" : o.separate_tickets ? "separate" : "one"
 };
 function resolveFields(fields, view) {
   const raw = fields ?? VIEW_FIELDS[view ?? "std"] ?? DEFAULT_FIELDS;
@@ -57772,7 +57971,7 @@ function formatOffers(offers, fmt, fields, view) {
 `);
     }
     case "brief":
-      return offers.map((o) => `${o.id} ${o.price} ${o.name} ${stopsLabel3(o.stops)} ${o.duration} ${o.departure_date} ${o.departure === "??:??" ? "\u2014" : o.departure}\u2192${o.arrival === "??:??" ? "\u2014" : o.arrival}${o.arrival_time_ahead}`).join(`
+      return offers.map((o) => `${o.id} ${o.price} ${o.name} ${stopsLabel3(o.stops)} ${o.duration} ${o.departure_date} ${o.departure === "??:??" ? "\u2014" : o.departure}\u2192${o.arrival === "??:??" ? "\u2014" : o.arrival}${o.arrival_time_ahead}${o.separate_tickets ? " separate tickets" : ""}`).join(`
 `);
   }
 }
@@ -58555,6 +58754,10 @@ var ATTEMPTS = 3;
 var COOKIES = CONSENT_COOKIE.split("; ").map((c) => [c.slice(0, c.indexOf("=")), c.slice(c.indexOf("=") + 1)]);
 var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 var isUp = () => fetch(`http://127.0.0.1:${PORT}/json/version`).then((r) => r.ok, () => false);
+async function userAgent() {
+  const version = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
+  return version["User-Agent"].replace("HeadlessChrome", "Chrome");
+}
 async function ensureChrome() {
   if (await isUp())
     return;
@@ -58603,6 +58806,7 @@ async function loadInTab(b64, currency) {
     resolveResult(decodeShoppingResults(res.base64Encoded ? Buffer.from(res.body, "base64").toString("utf8") : res.body));
   };
   await send("Network.enable");
+  await send("Network.setUserAgentOverride", { userAgent: await userAgent() });
   for (const [name, value] of COOKIES)
     await send("Network.setCookie", { name, value, domain: ".google.com", path: "/", secure: true });
   await send("Fetch.enable", { patterns: [{ urlPattern: "*GetShoppingResults*", requestStage: "Response" }] });
@@ -58877,8 +59081,14 @@ SEARCH:
     --sort price|dur|stops|dep  --fmt jsonl|tsv|table|brief  --view min|std|full  --fields <csv>
   Google-side (filters before Google picks results; the rest filter what came back):
     --max-price <N>  --via "HND,NRT"  --min-layover/--max-layover <min>  --less-emissions  --exclude-basic-economy
-  Open-jaw: \`flt search AMS SGN 2026-11-06 2026-12-05 --return-from HAN\` prices out-to-SGN + home-from-HAN as ONE ticket
+  Open-jaw: \`flt search AMS SGN 2026-11-06 2026-12-05 --return-from HAN\` prices out-to-SGN + home-from-HAN together
     (price = whole trip). Often beats two one-ways. Loads via headless Chrome, so ~5s per search.
+  Trip prices (round trip or open-jaw) are the cheapest whole trip with that outbound, and may combine
+    separate tickets (ticket=separate). \`flt returns <ID>\` shows the return flights behind the price.
+
+RETURNS (the flights home for one outbound of a trip search):
+  flt returns <ID> [--fmt table|brief|jsonl|tsv] [--fields <csv>]
+  Lists each return with its whole-trip price and ticket=one|separate. Hits Google (one page load).
 
 MATRIX:
   One-way: flt matrix <FROM> <TO> <START> <END>
@@ -59064,6 +59274,75 @@ ${formatLearnings(learnings)}`);
   }
 });
 
+// src/commands/returns.ts
+var returnsCommand = defineCommand({
+  meta: { name: "returns", description: "List the return flights for an outbound from a trip search" },
+  args: {
+    id: { type: "positional", description: "Outbound offer ID from a trip search (e.g. Fa3b7)", required: true },
+    fmt: { type: "string", description: "Output format: jsonl|tsv|table|brief", default: "table" },
+    fields: { type: "string", description: "Comma-separated fields" }
+  },
+  async run({ args: rawArgs }) {
+    const args = withDefaults(rawArgs, await loadConfig(), ["fmt"]);
+    const session = await loadSession();
+    if (!session) {
+      console.log(formatError("NO_SESSION", "No search results cached. Run `flt search` with a return date first."));
+      return;
+    }
+    const [ref, id] = args.id.includes(":") ? args.id.split(":") : ["", args.id];
+    const refs = ref ? [ref] : [...session.latest?.refs ?? [], ...Object.keys(session.searches).reverse()];
+    let found = null;
+    for (const r of refs) {
+      const entry = await loadSearchByRef(session, r);
+      const offer2 = entry?.offers.find((o) => o.id.toUpperCase() === id.toUpperCase());
+      if (offer2 && entry?.params) {
+        found = { offer: offer2, params: entry.params };
+        break;
+      }
+    }
+    if (!found) {
+      console.log(formatError("NOT_FOUND", `Offer '${args.id}' not found in this session's searches.`));
+      return;
+    }
+    const { offer, params } = found;
+    if (!params.return_date) {
+      console.log(formatError("NOT_A_TRIP", `${offer.id} comes from a one-way search; returns need a return date.`));
+      return;
+    }
+    const picked = pickedFlights(offer);
+    if (!picked) {
+      console.log(formatError("STALE", `${offer.id} was cached before flt read leg dates. Rerun the search with --refresh.`));
+      return;
+    }
+    const query = {
+      from_airport: params.from_airport,
+      to_airport: params.to_airport,
+      date: params.departure_date,
+      return_date: params.return_date,
+      return_from: params.return_from,
+      adults: params.adults,
+      children: params.children,
+      infants_in_seat: params.infants_in_seat,
+      infants_on_lap: params.infants_on_lap,
+      seat: params.seat,
+      max_stops: params.max_stops ?? undefined,
+      currency: params.currency,
+      filters: params.filters
+    };
+    await throttle();
+    const res = await searchSingle(params.departure_date, params.return_date, query, fetcherFor(query), picked);
+    if (!res.flights.length) {
+      console.log(formatError((res.error ?? "no_flights").toUpperCase(), "Google listed no return flights for this outbound. Try again.", res.url));
+      return;
+    }
+    const returns = assignFlightIds(res.flights.map((f) => ({ ...f, departure_date: f.legs[0]?.departure_date ?? params.return_date ?? "", url: res.url })));
+    printWithLegend(formatOffers(sortOffers(returns, "price"), args.fmt, args.fields ?? RETURN_FIELDS));
+    console.log(`
+  outbound: ${offer.id} ${offer.name} ${offer.departure_date} ${offer.departure}\u2192${offer.arrival}${offer.arrival_time_ahead}` + ` \xB7 home from ${query.return_from ?? query.to_airport} ${params.return_date}` + `
+  Prices are for the whole trip with this outbound.`);
+  }
+});
+
 // src/commands/search.ts
 var searchCommand = defineCommand({
   meta: { name: "search", description: "Search flights" },
@@ -59210,12 +59489,16 @@ var searchCommand = defineCommand({
     const truncated = totalAfterFilter > limit;
     setLatestSearch(session, offers, describeSearchRequest(query), results.flatMap((result) => result.ref ? [result.ref] : []));
     await saveSession(session);
-    printWithLegend(formatOffers(offers, args.fmt, args.fields, args.view));
+    const fields = args.fields ?? (returnDate && !args.view ? TRIP_FIELDS : undefined);
+    printWithLegend(formatOffers(offers, args.fmt, fields, args.view));
     const refs = results.flatMap((result) => result.ref ? [result.ref] : []);
     const refLabel = refs.length === 1 ? refs[0] : `${refs.length} refs`;
     const notes = [];
     if (truncated)
       notes.push(`Showing ${limit} of ${totalAfterFilter} results. Use --limit to see more.`);
+    if (returnDate) {
+      notes.push("Prices are the cheapest whole trip and may combine separate tickets; `flt returns <id>` lists the return options.");
+    }
     notes.push(`ref: ${refLabel}`);
     console.log(`
   ${notes.join(`
@@ -61312,185 +61595,6 @@ function drawChartLegend(doc, x, y) {
   }
 }
 
-// src/pdf-summary.ts
-function durationMin(o) {
-  const legs = o.legs.reduce((s, l) => s + l.duration, 0);
-  const layovers = o.layovers.reduce((s, l) => s + l.duration, 0);
-  return legs + layovers;
-}
-function fmtMinutes(minutes) {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h && m)
-    return `${h}h ${m}m`;
-  return h ? `${h}h` : `${m}m`;
-}
-function cityName(code) {
-  return airportCity(code) ?? code;
-}
-function routeCities(o) {
-  if (o.legs.length === 0)
-    return "?";
-  const codes = [o.legs[0].departure_airport, ...o.legs.map((l) => l.arrival_airport)];
-  return codes.filter((c, i) => i === 0 || c !== codes[i - 1]).map(cityName).join(" to ");
-}
-function viaLabel(o) {
-  if (o.layovers.length === 0)
-    return "Nonstop";
-  return o.layovers.map((l) => `${cityName(l.airport)} ${fmtMinutes(l.duration)}`).join(", ");
-}
-function minBy(items, score2) {
-  return items.reduce((best, cur) => best === undefined || score2(cur) < score2(best) ? cur : best, undefined);
-}
-function bestValue(offers) {
-  if (offers.length === 0)
-    return;
-  const prices = offers.map((o) => parsePrice(o.price));
-  const durations = offers.map(durationMin);
-  const span = (xs) => Math.max(...xs) - Math.min(...xs) || 1;
-  const [pMin, dMin] = [Math.min(...prices), Math.min(...durations)];
-  const [pSpan, dSpan] = [span(prices), span(durations)];
-  const score2 = (o) => (parsePrice(o.price) - pMin) / pSpan + (durationMin(o) - dMin) / dSpan + o.stops * 0.01;
-  return minBy(offers, score2);
-}
-function pickHighlights(offers, pickId) {
-  if (offers.length === 0)
-    return [];
-  const cheapest = minBy(offers, (o) => parsePrice(o.price));
-  const fastest = fastestOffer(offers);
-  const picked = pickId ? offers.find((o) => o.id === pickId) : undefined;
-  const recommended = picked ?? bestValue(offers);
-  const out = [];
-  const add = (offer, label, why) => {
-    if (!offer)
-      return;
-    const existing = out.find((h) => h.offer.id === offer.id);
-    if (existing) {
-      existing.labels.push(label);
-      return;
-    }
-    out.push({ labels: [label], why, offer });
-  };
-  add(recommended, "Our pick", picked ? "Chosen for this trip" : "Best balance of price and travel time");
-  add(cheapest, "Lowest price", `Cheapest of ${offers.length} options found`);
-  const slowest = Math.max(...offers.map(durationMin));
-  add(fastest, "Fastest", fastest ? `${fmtMinutes(slowest - durationMin(fastest))} shorter than the slowest option` : "");
-  return out;
-}
-function rowBadges(offer, opts) {
-  const badges = [];
-  if (offer.id === opts.pickId)
-    badges.push("Our pick");
-  if (offer.id === opts.cheapestId)
-    badges.push("Cheapest");
-  if (offer.id === opts.fastestId)
-    badges.push("Fastest");
-  if (offer.stops === 0 && badges.length < 2)
-    badges.push("Nonstop");
-  return badges.slice(0, 2).join(" / ");
-}
-function cheapestId(offers) {
-  return minBy(offers, (o) => parsePrice(o.price))?.id;
-}
-function fastestId(offers) {
-  return fastestOffer(offers)?.id;
-}
-function fastestOffer(offers) {
-  return minBy(offers, (o) => durationMin(o) * 1e5 + parsePrice(o.price));
-}
-function coverSubtitle(searches) {
-  const offers = searches.flatMap(([, e]) => e.offers);
-  if (offers.length === 0)
-    return "";
-  const origins = new Set;
-  const destinations = [];
-  for (const [tag] of searches) {
-    const m = tag.match(/^([A-Z]{3})-([A-Z]{3})@/);
-    if (!m)
-      continue;
-    origins.add(cityName(m[1]));
-    const to = cityName(m[2]);
-    if (!destinations.includes(to))
-      destinations.push(to);
-  }
-  const dates = offers.map((o) => o.departure_date).sort();
-  const fmt = (d) => new Date(`${d}T00:00:00`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  });
-  const first = dates[0];
-  const last = dates[dates.length - 1];
-  const when = first === last ? fmt(first) : `${fmt(first)} - ${fmt(last)}`;
-  const route = origins.size === 1 && destinations.length > 0 ? `${[...origins][0]} to ${listWords(destinations)}` : destinations.join(", ");
-  return route ? `${route} - ${when}` : when;
-}
-function listWords(items) {
-  if (items.length <= 1)
-    return items[0] ?? "";
-  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
-}
-var COLUMN_GLOSSARY = [
-  ["#", "Position in this list. Cheapest first."],
-  ["Price", "Total fare for the passengers searched, in the currency shown."],
-  ["Airline", "Who markets the ticket. Two names means the trip is split across two carriers."],
-  [
-    "Via",
-    'The city where you change plane and how long you wait there. "Nonstop" means no change at all.'
-  ],
-  ["Total time", "Door-to-door travel time, including time spent connecting."],
-  ["Depart / Arrive", 'Local times at each airport. "+1" means you land the next calendar day.'],
-  ["ID", "Stable code for this exact flight. Quote it to pull up full detail or to book."],
-  ["Note", "Why the row stands out: our pick, cheapest, fastest, or nonstop."]
-];
-var READING_TIPS = [
-  "Connections under 1h 30m are tight for an international transfer. One delayed inbound and the onward flight is gone.",
-  "Two rows at the same price with very different total times differ by layover length, not by route quality.",
-  "Prices are what the search showed at the time stamped on each section. They move daily.",
-  "Baggage allowance, fare rules and seat selection are not covered here. Check them before you pay."
-];
-function pricePerDay(searches) {
-  const byDate = new Map;
-  let currency = "";
-  for (const [, entry] of searches) {
-    for (const o of entry.offers) {
-      const price = parsePrice(o.price);
-      if (!Number.isFinite(price))
-        continue;
-      if (!currency)
-        currency = o.price.replace(/[0-9.,\s]/g, "");
-      const day = byDate.get(o.departure_date) ?? new Map;
-      day.set(o.id, Math.min(day.get(o.id) ?? price, price));
-      byDate.set(o.departure_date, day);
-    }
-  }
-  const days = [...byDate.entries()].filter(([, offers]) => offers.size > 0).map(([date, offers]) => {
-    const prices = [...offers.values()];
-    const sum = prices.reduce((a, b) => a + b, 0);
-    return { date, low: Math.min(...prices), avg: sum / prices.length, count: prices.length };
-  }).sort((a, b) => a.date.localeCompare(b.date));
-  return { days, currency: currency || "" };
-}
-function groupByRoute(searches) {
-  const groups = new Map;
-  for (const item of searches) {
-    const key = item[0].match(/^([A-Z]{3}-[A-Z]{3})@/)?.[1] ?? item[0];
-    groups.set(key, [...groups.get(key) ?? [], item]);
-  }
-  return [...groups.entries()].map(([key, items]) => {
-    const offers = items.flatMap(([, e]) => e.offers);
-    const priced = offers.map((o) => parsePrice(o.price)).filter(Number.isFinite);
-    const [from, to] = key.split("-");
-    return {
-      key,
-      label: to ? `${cityName(from)} to ${cityName(to)}` : key,
-      searches: items,
-      offers,
-      cheapest: priced.length ? Math.min(...priced) : Number.NaN
-    };
-  }).sort((a, b) => (a.cheapest || Number.POSITIVE_INFINITY) - (b.cheapest || Number.POSITIVE_INFINITY));
-}
-
 // src/world-land.ts
 var WORLD_LAND = [
   [
@@ -63320,6 +63424,7 @@ var takeoutCommand = defineCommand({
 var SUB_COMMANDS = {
   search: searchCommand,
   inspect: inspectCommand,
+  returns: returnsCommand,
   itinerary: itineraryCommand,
   matrix: matrixCommand,
   compare: compareCommand,
