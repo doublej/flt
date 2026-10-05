@@ -35,6 +35,8 @@ export interface Flight {
   stops: number
   delay: string | null
   price: string
+  /** The price combines separate tickets (Google's "Separate tickets"); on a trip's outbound row, its cheapest return does. */
+  separate_tickets?: boolean
   departure_date: string
   return_date: string | null
   countries: string[]

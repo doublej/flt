@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { decodeResult } from './decode'
 import fixture from './fixtures/shopping-results.json'
 import { decodeShoppingResults } from './scrape'
 import { type SearchQuery, searchSingle } from './search'
@@ -66,6 +67,22 @@ describe('streamed snapshots', () => {
   it('skips a trailing snapshot without a payload', () => {
     const raw = `${frame(fixture.outbound.last)}42\n[["wrb.fr",null,null,null,null,[13]]]\n`
     expect(rows(raw)).toHaveLength(3)
+  })
+})
+
+describe('separate tickets', () => {
+  const byName = (data: unknown) => Object.fromEntries(decodeResult(data).map((f) => [`${f.name} ${f.departure}`, f]))
+
+  it('flags return rows Google labels "Separate tickets"', () => {
+    const rets = byName(fixture.returns.last)
+    expect(rets['Etihad 08:15'].separate_tickets).toBe(true)
+    expect(rets['THAI 20:25'].separate_tickets).toBe(false)
+  })
+
+  it('flags an outbound whose cheapest whole trip combines separate tickets', () => {
+    const outs = byName(fixture.outbound.last)
+    expect(outs['THAI 14:20'].separate_tickets).toBe(true)
+    expect(outs['Qatar Airways 15:05'].separate_tickets).toBe(false)
   })
 })
 

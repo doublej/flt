@@ -136,6 +136,7 @@ export interface DecodedFlight {
   stops: number
   delay: null
   price: string
+  separate_tickets: boolean
   legs: FlightLeg[]
   layovers: FlightLayover[]
 }
@@ -227,6 +228,8 @@ function decodeItinerary(el: NL, is_best: boolean): DecodedFlight | null {
       stops: layovers.length,
       delay: null,
       price: priceStr,
+      // el[6]: true on rows Google labels "Separate tickets" (and their outbound rows), false otherwise.
+      separate_tickets: at(el, 6) === true,
       legs,
       layovers,
     }
