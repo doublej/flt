@@ -111,12 +111,15 @@ export async function searchSingle(
 
   if (result.error) return { dep_date, ret_date, flights: [], url, error: result.error }
 
-  const flights: Flight[] = result.flights.map((f) => ({
-    ...f,
-    departure_date: dep_date,
-    return_date: ret_date,
-    countries: [],
-  }))
+  const flights: Flight[] = result.flights
+    // Google keeps unpriced itineraries under a max price; they can't meet the cap.
+    .filter((f) => !q.filters?.maxPrice || f.price)
+    .map((f) => ({
+      ...f,
+      departure_date: dep_date,
+      return_date: ret_date,
+      countries: [],
+    }))
 
   return { dep_date, ret_date, flights, url }
 }

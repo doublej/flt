@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readProto } from './decode'
 import { type GoogleFilters, encodeFlightFilter } from './proto'
-import type { SearchQuery } from './search'
+import { type SearchQuery, searchSingle } from './search'
 import { buildCacheKey, buildCacheQuery } from './state'
 
 // Mirrors fast-flights tests/test_querying.py (#110): decode the tfs and check fields.
@@ -92,5 +92,25 @@ describe('Google-side filter cache keys', () => {
     )
     expect(buildCacheKey(unset)).toBe(buildCacheKey(plain))
     expect(buildCacheKey(filtered)).not.toBe(buildCacheKey(plain))
+  })
+})
+
+describe('max price', () => {
+  it('drops itineraries Google returned without a fare', async () => {
+    const flight = (price: string) => ({ price, name: 'X', legs: [], layovers: [] }) as never
+    const q: SearchQuery = {
+      from_airport: 'AMS',
+      to_airport: 'BCN',
+      date: '2026-11-12',
+      adults: 1,
+      children: 0,
+      infants_in_seat: 0,
+      infants_on_lap: 0,
+      seat: 'economy',
+      currency: 'EUR',
+      filters: { maxPrice: 50 },
+    }
+    const res = await searchSingle(q.date, null, q, async () => ({ flights: [flight('€45'), flight('')] }))
+    expect(res.flights.map((f) => f.price)).toEqual(['€45'])
   })
 })
