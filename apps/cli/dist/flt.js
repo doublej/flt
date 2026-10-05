@@ -58551,6 +58551,7 @@ import { spawn } from "child_process";
 var PORT = 9222;
 var CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 var TIMEOUT_MS = 20000;
+var ATTEMPTS = 3;
 var COOKIES = CONSENT_COOKIE.split("; ").map((c) => [c.slice(0, c.indexOf("=")), c.slice(c.indexOf("=") + 1)]);
 var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 var isUp = () => fetch(`http://127.0.0.1:${PORT}/json/version`).then((r) => r.ok, () => false);
@@ -58571,6 +58572,13 @@ async function ensureChrome() {
 var fetcherFor = (q) => q.return_from ? fetchFlightsViaChrome : undefined;
 async function fetchFlightsViaChrome(b64, currency) {
   await ensureChrome();
+  let result = await loadInTab(b64, currency);
+  for (let attempt = 1;attempt < ATTEMPTS && result.error === "no_data"; attempt++) {
+    result = await loadInTab(b64, currency);
+  }
+  return result;
+}
+async function loadInTab(b64, currency) {
   const tab = await (await fetch(`http://127.0.0.1:${PORT}/json/new?about:blank`, { method: "PUT" })).json();
   const ws = new WebSocket(tab.webSocketDebuggerUrl);
   await new Promise((r) => ws.onopen = r);
@@ -58580,8 +58588,8 @@ async function fetchFlightsViaChrome(b64, currency) {
     pending.set(++id, r);
     ws.send(JSON.stringify({ id, method, params }));
   });
-  let resolveBody = () => {};
-  const body = new Promise((r) => resolveBody = r);
+  let resolveResult = () => {};
+  const decoded = new Promise((r) => resolveResult = r);
   ws.onmessage = async (e) => {
     const m = JSON.parse(e.data);
     if (m.id)
@@ -58590,8 +58598,9 @@ async function fetchFlightsViaChrome(b64, currency) {
       return;
     const res = await send("Fetch.getResponseBody", { requestId: m.params.requestId });
     await send("Fetch.continueRequest", { requestId: m.params.requestId });
-    if (res)
-      resolveBody(res.base64Encoded ? Buffer.from(res.body, "base64").toString("utf8") : res.body);
+    if (!res)
+      return;
+    resolveResult(decodeShoppingResults(res.base64Encoded ? Buffer.from(res.body, "base64").toString("utf8") : res.body));
   };
   await send("Network.enable");
   for (const [name, value] of COOKIES)
@@ -58600,11 +58609,11 @@ async function fetchFlightsViaChrome(b64, currency) {
   await send("Page.navigate", { url: buildGoogleFlightsUrl(b64, currency) });
   let timer;
   const timeout = new Promise((r) => timer = setTimeout(() => r(null), TIMEOUT_MS));
-  const raw = await Promise.race([body, timeout]);
+  const result = await Promise.race([decoded, timeout]);
   clearTimeout(timer);
   ws.close();
   await fetch(`http://127.0.0.1:${PORT}/json/close/${tab.id}`);
-  return raw === null ? { flights: [], error: "no_data" } : decodeShoppingResults(raw);
+  return result ?? { flights: [], error: "no_data" };
 }
 
 // src/commands/matrix.ts
