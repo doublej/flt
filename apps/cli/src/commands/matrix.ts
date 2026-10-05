@@ -9,6 +9,7 @@ import {
 } from '@flights/core'
 import { type CellResult, dateRange, pickCheapest } from '@flights/core'
 import { defineCommand } from 'citty'
+import { fetcherFor } from '../chrome'
 import { applyFilters, parsePrice } from '../filter'
 import { loadConfig, withDefaults } from '../config'
 import { formatError } from '../format'
@@ -26,7 +27,7 @@ import {
   throttle,
 } from '../state'
 import type { Offer, SessionState, SortKey } from '../types'
-import { normalizeDate, parsePax, validateAirport } from '../validate'
+import { normalizeDate, parsePax, parseReturnFrom, validateAirport } from '../validate'
 
 async function fetchAndCache(
   dep: string,
@@ -41,7 +42,7 @@ async function fetchAndCache(
   }
 
   await throttle()
-  const result = await searchSingle(dep, ret, query)
+  const result = await searchSingle(dep, ret, query, fetcherFor(query))
   if (result.error || result.flights.length === 0) {
     // Transient failure (blocked, empty page) — don't cache it for 6h.
     return { offers: [], ref: '', err: result.error ?? 'no_flights' }
@@ -127,6 +128,10 @@ export const matrixCommand = defineCommand({
     dateEnd: { type: 'positional', description: 'End date (YYYY-MM-DD)', required: true },
     returnStart: { type: 'positional', description: 'Return start date', required: false },
     returnEnd: { type: 'positional', description: 'Return end date', required: false },
+    'return-from': {
+      type: 'string',
+      description: 'Fly home from this airport instead (open-jaw, one ticket; needs return dates; loads via headless Chrome)',
+    },
     seat: { type: 'string', default: 'economy' },
     pax: { type: 'string', default: '1ad' },
     'max-stops': { type: 'string' },
@@ -169,6 +174,8 @@ export const matrixCommand = defineCommand({
         ? normalizeDate(args.returnEnd, 'Return end')
         : undefined
 
+    const returnFrom = parseReturnFrom(args['return-from'], !!returnStart)
+
     const pax = parsePax(args.pax)
     const maxStops = args['max-stops'] != null ? Number.parseInt(args['max-stops']) : undefined
     const maxDur = args['max-dur'] != null ? Number.parseInt(args['max-dur']) : undefined
@@ -176,6 +183,7 @@ export const matrixCommand = defineCommand({
       from_airport: args.from.toUpperCase(),
       to_airport: args.to.toUpperCase(),
       date: dateStart,
+      return_from: returnFrom,
       ...pax,
       seat: args.seat as SeatType,
       max_stops: maxStops,
@@ -260,6 +268,7 @@ export const matrixCommand = defineCommand({
     if (codes.length) console.log(`  ${formatLegend(codes)}\n`)
     printGrid(depDates, retDates, cells, args.fmt)
     if (
+      !returnFrom &&
       cells.some(
         (c) => c.err === 'no_flights' && c.ret && rtStayDays(c.dep, c.ret) > LONG_RT_STAY_DAYS,
       )

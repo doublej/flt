@@ -24,7 +24,15 @@ export {
 export type { SearchResult as EngineSearchResult } from './search'
 
 // Scrape
-export { type ScrapeError, type ScrapeResult, fetchFlights, buildGoogleFlightsUrl } from './scrape'
+export {
+  type Fetcher,
+  type ScrapeError,
+  type ScrapeResult,
+  CONSENT_COOKIE,
+  fetchFlights,
+  buildGoogleFlightsUrl,
+  decodeShoppingResults,
+} from './scrape'
 
 // Protobuf
 export { type FlightLeg as ProtoFlightLeg, type PassengerCounts, encodeFlightFilter } from './proto'

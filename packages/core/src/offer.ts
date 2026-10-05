@@ -10,6 +10,8 @@ export interface CacheQuery {
   to_airport: string
   departure_date: string
   return_date: string | null
+  /** Open-jaw return airport; absent for round trips so their cache keys stay unchanged. */
+  return_from?: string
   adults: number
   children: number
   infants_in_seat: number

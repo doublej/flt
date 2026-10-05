@@ -8,6 +8,10 @@
 
 import { type DecodedFlight, decodeResult, extractDataArray } from './decode'
 
+/** Pre-answered EU consent, so Google serves results instead of the consent wall. */
+export const CONSENT_COOKIE =
+  'CONSENT=PENDING+987; SOCS=CAESHAgBEhJnd3NfMjAyMzA4MTAtMF9SQzIaAmRlIAEaBgiAo_CmBg'
+
 const CHROME_HEADERS: Record<string, string> = {
   'User-Agent':
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
@@ -22,7 +26,7 @@ const CHROME_HEADERS: Record<string, string> = {
   'Sec-Fetch-Mode': 'navigate',
   'Sec-Fetch-Site': 'none',
   'Upgrade-Insecure-Requests': '1',
-  Cookie: 'CONSENT=PENDING+987; SOCS=CAESHAgBEhJnd3NfMjAyMzA4MTAtMF9SQzIaAmRlIAEaBgiAo_CmBg',
+  Cookie: CONSENT_COOKIE,
 }
 
 // Global rate limiter: at most 1 request per MIN_INTERVAL_MS
@@ -41,6 +45,21 @@ export interface ScrapeResult {
   flights: DecodedFlight[]
   error?: ScrapeError
   httpStatus?: number
+}
+
+export type Fetcher = (b64: string, currency: string) => Promise<ScrapeResult>
+
+/**
+ * Decode a GetShoppingResults response — what the page fetches after load when
+ * the first HTML carries no results (multi-city). Chunked `)]}'` framing; the
+ * payload is the JSON string in the `wrb.fr` row, same shape as ds:1 data.
+ */
+export function decodeShoppingResults(raw: string): ScrapeResult {
+  const row = raw.split('\n').find((line) => line.startsWith('[["wrb.fr"'))
+  const payload = row ? JSON.parse(row)[0][2] : null
+  if (typeof payload !== 'string') return { flights: [], error: 'no_data' }
+  const flights = decodeResult(JSON.parse(payload))
+  return flights.length ? { flights } : { flights: [], error: 'no_flights' }
 }
 
 export async function fetchFlights(b64: string, currency: string): Promise<ScrapeResult> {

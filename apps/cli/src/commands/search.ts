@@ -11,6 +11,7 @@ import { defineCommand } from 'citty'
 import { loadConfig, withDefaults } from '../config'
 import { applyFilters, sortOffers } from '../filter'
 import { formatError, formatOffers } from '../format'
+import { fetcherFor } from '../chrome'
 import { printWithLegend } from '../legend'
 import {
   createEmptySession,
@@ -25,7 +26,7 @@ import {
   throttle,
 } from '../state'
 import type { Format, Offer, SortKey, View } from '../types'
-import { normalizeDate, parsePax, validateAirport } from '../validate'
+import { normalizeDate, parsePax, parseReturnFrom, validateAirport } from '../validate'
 
 export const searchCommand = defineCommand({
   meta: { name: 'search', description: 'Search flights' },
@@ -34,6 +35,10 @@ export const searchCommand = defineCommand({
     to: { type: 'positional', description: 'Destination airport (IATA)', required: true },
     date: { type: 'positional', description: 'Departure date (YYYY-MM-DD)', required: true },
     returnDate: { type: 'positional', description: 'Return date (YYYY-MM-DD)', required: false },
+    'return-from': {
+      type: 'string',
+      description: 'Fly home from this airport instead (open-jaw, one ticket; needs a return date; loads via headless Chrome)',
+    },
     'date-end': { type: 'string', description: 'Flexible departure end date' },
     'return-date-end': { type: 'string', description: 'Flexible return end date' },
     seat: { type: 'string', description: 'Cabin class', default: 'economy' },
@@ -81,6 +86,8 @@ export const searchCommand = defineCommand({
       ? normalizeDate(args['return-date-end'], 'Return end date')
       : undefined
 
+    const returnFrom = parseReturnFrom(args['return-from'], !!returnDate)
+
     const pax = parsePax(args.pax)
     const maxStops = args['max-stops'] != null ? Number.parseInt(args['max-stops']) : undefined
 
@@ -91,6 +98,7 @@ export const searchCommand = defineCommand({
       return_date: returnDate,
       date_end: dateEnd,
       return_date_end: returnDateEnd,
+      return_from: returnFrom,
       ...pax,
       seat: args.seat as SeatType,
       max_stops: maxStops,
@@ -116,7 +124,7 @@ export const searchCommand = defineCommand({
       }
 
       await throttle()
-      const res = await searchSingle(d, r, query)
+      const res = await searchSingle(d, r, query, fetcherFor(query))
       if (!res.flights.length) {
         results.push({ offers: [], ref: '', url: res.url, error: res.error })
         continue
@@ -147,6 +155,7 @@ export const searchCommand = defineCommand({
       // though both directions have flights — steer towards two one-ways.
       if (
         returnDate &&
+        !returnFrom &&
         (err === 'no_flights' || err === undefined) &&
         rtStayDays(date, returnDate) > LONG_RT_STAY_DAYS
       ) {

@@ -49,10 +49,13 @@ SEARCH:
     --carrier "<sub>"  --exclude-carrier "X,Y"  --exclude-hub "DXB,DOH"  --exclude-region "gulf,russia"
     --dep-after/before HH:MM  --arr-after/before HH:MM  --max-dur <min>
     --sort price|dur|stops|dep  --fmt jsonl|tsv|table|brief  --view min|std|full  --fields <csv>
+  Open-jaw: \`flt search AMS SGN 2026-11-06 2026-12-05 --return-from HAN\` prices out-to-SGN + home-from-HAN as ONE ticket
+    (price = whole trip). Often beats two one-ways. Loads via headless Chrome, so ~5s per search.
 
 MATRIX:
   One-way: flt matrix <FROM> <TO> <START> <END>
   Round-trip: flt matrix <FROM> <TO> <DEP_START> <DEP_END> <RET_START> <RET_END>
+  Open-jaw: add \`--return-from <IATA>\` to the round-trip form.
   Same filter options as search. One-way supports \`--sort price\` and \`--limit N\`.
   Default output: table; \`--fmt jsonl\` for parsing.
 

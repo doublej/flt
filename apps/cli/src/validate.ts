@@ -35,6 +35,17 @@ export function validateAirport(code: string, label: string): void {
   }
 }
 
+/** Upper-cased --return-from airport, or exit when it is unknown or has no return date. */
+export function parseReturnFrom(code: string | undefined, hasReturnDate: boolean): string | undefined {
+  if (!code) return undefined
+  validateAirport(code.toUpperCase(), 'Return airport')
+  if (!hasReturnDate) {
+    console.log(JSON.stringify({ err: 'USAGE', hint: '--return-from needs a return date.' }))
+    process.exit(1)
+  }
+  return code.toUpperCase()
+}
+
 export function parsePax(s: string) {
   const ad = Number.parseInt(s.match(/(\d+)ad/)?.[1] ?? '1')
   const ch = Number.parseInt(s.match(/(\d+)ch/)?.[1] ?? '0')

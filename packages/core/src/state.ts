@@ -179,6 +179,7 @@ export function buildCacheQuery(
     to_airport: q.to_airport.toUpperCase(),
     departure_date: depDate,
     return_date: retDate,
+    ...(q.return_from ? { return_from: q.return_from.toUpperCase() } : {}),
     adults: q.adults,
     children: q.children,
     infants_in_seat: q.infants_in_seat,
@@ -202,7 +203,7 @@ export function buildSearchRef(params: CacheQuery): string {
 
 function buildConcreteQuery(params: CacheQuery): string {
   const parts = [`${params.from_airport} ${params.to_airport} ${params.departure_date}`]
-  if (params.return_date) parts.push(`return ${params.return_date}`)
+  if (params.return_date) parts.push(`return ${params.return_from ? `from ${params.return_from} ` : ''}${params.return_date}`)
   parts.push(params.seat, paxLabel(params), params.currency)
   const stops = stopsLabel(params.max_stops)
   if (stops) parts.push(stops)
@@ -211,7 +212,7 @@ function buildConcreteQuery(params: CacheQuery): string {
 
 export function describeSearchRequest(q: SearchQuery): string {
   const parts = [`${q.from_airport} ${q.to_airport} ${dateSpan(q.date, q.date_end)}`]
-  if (q.return_date) parts.push(`return ${dateSpan(q.return_date, q.return_date_end)}`)
+  if (q.return_date) parts.push(`return ${q.return_from ? `from ${q.return_from} ` : ''}${dateSpan(q.return_date, q.return_date_end)}`)
   parts.push(q.seat, paxLabel(q), q.currency.toUpperCase())
   const stops = stopsLabel(q.max_stops ?? null)
   if (stops) parts.push(stops)

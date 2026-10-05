@@ -5,7 +5,7 @@
 
 import type { Flight } from './types'
 import { type PassengerCounts, encodeFlightFilter } from './proto'
-import { type ScrapeError, buildGoogleFlightsUrl, fetchFlights } from './scrape'
+import { type Fetcher, type ScrapeError, buildGoogleFlightsUrl, fetchFlights } from './scrape'
 
 export const MAX_RANGE_DAYS = 7
 export const MAX_TOTAL_SEARCHES = 21
@@ -23,13 +23,15 @@ export function rtStayDays(depDate: string, retDate: string): number {
 }
 
 export type SeatType = 'economy' | 'premium-economy' | 'business' | 'first'
-export type TripType = 'round-trip' | 'one-way'
+export type TripType = 'round-trip' | 'one-way' | 'multi-city'
 
 export interface SearchQuery {
   from_airport: string
   to_airport: string
   date: string
   return_date?: string
+  /** Fly home from this airport instead of to_airport (open-jaw). Needs return_date. */
+  return_from?: string
   date_end?: string
   return_date_end?: string
   adults: number
@@ -83,6 +85,7 @@ export async function searchSingle(
   dep_date: string,
   ret_date: string | null,
   q: SearchQuery,
+  fetcher: Fetcher = fetchFlights,
 ): Promise<SearchResult> {
   const passengers: PassengerCounts = {
     adults: q.adults,
@@ -92,16 +95,17 @@ export async function searchSingle(
   }
 
   const legs = [{ date: dep_date, from: q.from_airport, to: q.to_airport, maxStops: q.max_stops }]
-  const trip: TripType = ret_date ? 'round-trip' : 'one-way'
+  // Google prices an open-jaw as one multi-city ticket; the price covers both legs.
+  const trip: TripType = !ret_date ? 'one-way' : q.return_from ? 'multi-city' : 'round-trip'
 
   if (ret_date) {
-    legs.push({ date: ret_date, from: q.to_airport, to: q.from_airport, maxStops: q.max_stops })
+    legs.push({ date: ret_date, from: q.return_from ?? q.to_airport, to: q.from_airport, maxStops: q.max_stops })
   }
 
   const b64 = encodeFlightFilter({ legs, passengers, seat: q.seat, trip })
   const url = buildGoogleFlightsUrl(b64, q.currency)
 
-  const result = await fetchFlights(b64, q.currency)
+  const result = await fetcher(b64, q.currency)
 
   if (result.error) return { dep_date, ret_date, flights: [], url, error: result.error }
 
