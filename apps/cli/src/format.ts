@@ -1,3 +1,4 @@
+import { fmtMinutes } from './pdf-summary'
 import type { Format, Offer, View } from './types'
 import { DEFAULT_FIELDS, VIEW_FIELDS } from './types'
 
@@ -17,6 +18,10 @@ const FIELD_MAP: Record<string, FieldGetter> = {
   ahead: (o) => o.arrival_time_ahead,
   url: (o) => o.url,
   flt_no: (o) => o.legs.map((l) => l.flight_number).join('/') || '',
+  legs: (o) => o.legs.map((l) => `${l.airline}${l.flight_number} ${l.departure_airport}-${l.arrival_airport}`).join(', '),
+  via: (o) => o.layovers.map((l) => `${l.airport} ${fmtMinutes(l.duration)}`).join(', '),
+  // Blank for results cached before flt read the flag.
+  ticket: (o) => (o.separate_tickets === undefined ? '' : o.separate_tickets ? 'separate' : 'one'),
 }
 
 function resolveFields(fields?: string, view?: View): string[] {
@@ -60,7 +65,7 @@ export function formatOffers(offers: Offer[], fmt: Format, fields?: string, view
       return offers
         .map(
           (o) =>
-            `${o.id} ${o.price} ${o.name} ${stopsLabel(o.stops)} ${o.duration} ${o.departure_date} ${o.departure === '??:??' ? '—' : o.departure}→${o.arrival === '??:??' ? '—' : o.arrival}${o.arrival_time_ahead}`,
+            `${o.id} ${o.price} ${o.name} ${stopsLabel(o.stops)} ${o.duration} ${o.departure_date} ${o.departure === '??:??' ? '—' : o.departure}→${o.arrival === '??:??' ? '—' : o.arrival}${o.arrival_time_ahead}${o.separate_tickets ? ' separate tickets' : ''}`,
         )
         .join('\n')
   }

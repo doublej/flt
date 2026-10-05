@@ -18,5 +18,9 @@ export const DEFAULT_FIELDS = 'id,price,stops,dur,car,dep,arr,date'
 export const VIEW_FIELDS: Record<View, string> = {
   min: 'id,price,stops,dur',
   std: DEFAULT_FIELDS,
-  full: 'id,price,stops,dur,car,flt_no,dep,arr,date,best,ret,ahead',
+  full: 'id,price,stops,dur,car,flt_no,dep,arr,date,best,ret,ahead,ticket',
 }
+/** Trip searches: the price may combine separate tickets, so say which. */
+export const TRIP_FIELDS = `${DEFAULT_FIELDS},ticket`
+/** Return options: the flight home, its connections, and the whole-trip price. */
+export const RETURN_FIELDS = 'id,price,ticket,stops,via,dur,car,legs,dep,arr,ahead,date'

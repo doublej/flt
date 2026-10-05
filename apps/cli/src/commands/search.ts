@@ -26,7 +26,7 @@ import {
   setLatestSearch,
   throttle,
 } from '../state'
-import type { Format, Offer, SortKey, View } from '../types'
+import { type Format, type Offer, type SortKey, TRIP_FIELDS, type View } from '../types'
 import { normalizeDate, parseGoogleFilters, parsePax, parseReturnFrom, validateAirport } from '../validate'
 
 export const searchCommand = defineCommand({
@@ -228,14 +228,16 @@ export const searchCommand = defineCommand({
     )
     await saveSession(session)
 
-    printWithLegend(
-      formatOffers(offers, args.fmt as Format, args.fields, args.view as View | undefined),
-    )
+    const fields = args.fields ?? (returnDate && !args.view ? TRIP_FIELDS : undefined)
+    printWithLegend(formatOffers(offers, args.fmt as Format, fields, args.view as View | undefined))
 
     const refs = results.flatMap((result) => (result.ref ? [result.ref] : []))
     const refLabel = refs.length === 1 ? refs[0] : `${refs.length} refs`
     const notes: string[] = []
     if (truncated) notes.push(`Showing ${limit} of ${totalAfterFilter} results. Use --limit to see more.`)
+    if (returnDate) {
+      notes.push('Prices are the cheapest whole trip and may combine separate tickets; `flt returns <id>` lists the return options.')
+    }
     notes.push(`ref: ${refLabel}`)
     console.log(`\n  ${notes.join('\n  ')}`)
   },

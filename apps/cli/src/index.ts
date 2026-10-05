@@ -9,6 +9,7 @@ import { itineraryCommand } from './commands/itinerary'
 import { learnCommand, learningsCommand, voteCommand } from './commands/learn'
 import { matrixCommand } from './commands/matrix'
 import { primeCommand } from './commands/prime'
+import { returnsCommand } from './commands/returns'
 import { searchCommand } from './commands/search'
 import { sessionCommand } from './commands/session'
 import { takeoutCommand } from './commands/takeout'
@@ -16,6 +17,7 @@ import { takeoutCommand } from './commands/takeout'
 const SUB_COMMANDS = {
   search: searchCommand,
   inspect: inspectCommand,
+  returns: returnsCommand,
   itinerary: itineraryCommand,
   matrix: matrixCommand,
   compare: compareCommand,

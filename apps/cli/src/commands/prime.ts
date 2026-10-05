@@ -51,8 +51,14 @@ SEARCH:
     --sort price|dur|stops|dep  --fmt jsonl|tsv|table|brief  --view min|std|full  --fields <csv>
   Google-side (filters before Google picks results; the rest filter what came back):
     --max-price <N>  --via "HND,NRT"  --min-layover/--max-layover <min>  --less-emissions  --exclude-basic-economy
-  Open-jaw: \`flt search AMS SGN 2026-11-06 2026-12-05 --return-from HAN\` prices out-to-SGN + home-from-HAN as ONE ticket
+  Open-jaw: \`flt search AMS SGN 2026-11-06 2026-12-05 --return-from HAN\` prices out-to-SGN + home-from-HAN together
     (price = whole trip). Often beats two one-ways. Loads via headless Chrome, so ~5s per search.
+  Trip prices (round trip or open-jaw) are the cheapest whole trip with that outbound, and may combine
+    separate tickets (ticket=separate). \`flt returns <ID>\` shows the return flights behind the price.
+
+RETURNS (the flights home for one outbound of a trip search):
+  flt returns <ID> [--fmt table|brief|jsonl|tsv] [--fields <csv>]
+  Lists each return with its whole-trip price and ticket=one|separate. Hits Google (one page load).
 
 MATRIX:
   One-way: flt matrix <FROM> <TO> <START> <END>
